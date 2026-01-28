@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Button } from "@/components/ui/button"
+import { ModeToggle } from "@/components/mode-toggle"
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   return (
     <div>
-      <Button variant="outline">Click me</Button>
+      <ModeToggle />
     </div>
   )
 }

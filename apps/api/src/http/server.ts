@@ -1,14 +1,9 @@
-import { cors } from "@elysiajs/cors"
 import { Elysia } from "elysia"
 import { authPuglin } from "./plugins/auth"
+import { corsPlugin } from "./plugins/cors"
 
 const app = new Elysia()
-  .use(
-    cors({
-      origin: "http://localhost:3000",
-      credentials: true,
-    })
-  )
+  .use(corsPlugin)
   .use(authPuglin)
   .get("/", () => "Hello Elysia")
   .get("/protected", () => "Hello Protected", { auth: true })

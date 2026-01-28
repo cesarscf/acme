@@ -6,7 +6,8 @@
 http/
 ├── server.ts          # Main entry point
 ├── plugins/           # Elysia plugins
-│   └── auth.ts        # Authentication plugin with macro
+│   ├── auth.ts        # Authentication plugin with macro
+│   └── cors.ts        # CORS configuration
 └── routes/            # Route modules (future)
 ```
 
@@ -20,6 +21,13 @@ The server configures:
 - Base routes
 
 ## Plugins
+
+### CORS Plugin (`plugins/cors.ts`)
+
+Configures CORS for frontend communication.
+
+- **Origin**: `http://localhost:3000`
+- **Credentials**: Enabled (required for auth cookies)
 
 ### Auth Plugin (`plugins/auth.ts`)
 

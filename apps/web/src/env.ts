@@ -4,7 +4,7 @@ export const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  VITE_API_URL: z.string(),
+  VITE_API_URL: z.url(),
 })
 
 export const env = envSchema.parse(import.meta.env)

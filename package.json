@@ -4,8 +4,7 @@
   "scripts": {
     "check": "biome check ./apps",
     "lint": "biome lint ./apps",
-    "format": "biome format ./apps --write",
-    "format:check": "biome format ./apps"
+    "format": "biome format ./apps --write"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.1.3"

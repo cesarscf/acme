@@ -5,7 +5,7 @@
 - **Framework**: React 19 with TypeScript
 - **Bundler**: Vite 7
 - **Styling**: Tailwind CSS 4
-- **UI Components**: Base UI + shadcn/ui patterns
+- **UI Components**: shadcn/ui (Base UI primitives)
 - **Routing**: TanStack Router (file-based routing)
 - **Data Fetching**: TanStack Query
 
@@ -15,15 +15,30 @@
 
 - Use **named exports** for components (not default exports)
 - Components should be functions (function components)
+- **Always use `function` declarations**, avoid arrow functions with `const`
+- **Use `React.useState`, `React.useEffect`, etc.** instead of destructured imports
 
 ```tsx
 // Correct
+import React from "react"
+
 export function MyComponent() {
-  return <div>...</div>
+  const [count, setCount] = React.useState(0)
+
+  React.useEffect(() => {
+    // ...
+  }, [])
+
+  return <div>{count}</div>
 }
 
 // Avoid
-export default function MyComponent() { ... }
+import { useState, useEffect } from "react"
+
+const MyComponent = () => {
+  const [count, setCount] = useState(0)
+  // ...
+}
 ```
 
 ### Path Aliases
@@ -33,6 +48,18 @@ The project uses the `@/*` alias pointing to `./src/`. Always prefer imports wit
 ```tsx
 import { Button } from "@/components/ui/button"
 ```
+
+### UI Components (shadcn/ui)
+
+Components are located in `src/components/ui/`. To add new components, use the shadcn CLI:
+
+```bash
+bunx --bun shadcn@latest add button
+bunx --bun shadcn@latest add card
+bunx --bun shadcn@latest add dialog
+```
+
+Always use shadcn/ui components from `@/components/ui/` instead of creating custom ones.
 
 ### Styling
 

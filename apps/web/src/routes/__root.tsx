@@ -6,6 +6,7 @@ import {
   Scripts,
 } from "@tanstack/react-router"
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
+import { ThemeProvider } from "@/components/theme-provider"
 import { QueryDevtools } from "@/integrations/tanstack-query/devtools"
 
 interface RouterContext {
@@ -23,7 +24,9 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        <ThemeProvider defaultTheme="system" storageKey="acme-ui-theme">
+          <Outlet />
+        </ThemeProvider>
         <TanStackRouterDevtools />
         <QueryDevtools />
         <Scripts />

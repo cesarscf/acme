@@ -17,6 +17,26 @@ database/
     └── *.ts           # Individual schema files
 ```
 
+## Naming Conventions
+
+- Use **snake_case** for table and column names
+- Use **plural** for table names
+
+```ts
+// Correct
+export const user_profiles = pgTable("user_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").notNull(),
+  display_name: text("display_name"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+})
+
+// Wrong
+export const UserProfile = pgTable("UserProfile", {  // PascalCase
+  userId: uuid("userId"),                            // camelCase
+})
+```
+
 ## Code Patterns
 
 ### Creating a New Schema

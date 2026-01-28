@@ -9,6 +9,17 @@ bun install
 bun run <script>
 ```
 
+## File Naming
+
+Use **kebab-case** for all file names across the project:
+
+```
+user-profile.ts       # Correct
+order-items.tsx       # Correct
+UserProfile.ts        # Wrong (PascalCase)
+userProfile.ts        # Wrong (camelCase)
+```
+
 ## Linting and Formatting
 
 This project uses **Biome.js** configured at the root (`biome.json`) for linting and formatting all code. The apps in `apps/web` and `apps/api` do not have their own ESLint, Prettier, or other linter configurations - they all use Biome from the root.

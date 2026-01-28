@@ -7,6 +7,7 @@
 - **Styling**: Tailwind CSS 4
 - **UI Components**: Base UI + shadcn/ui patterns
 - **Routing**: TanStack Router (file-based routing)
+- **Data Fetching**: TanStack Query
 
 ## Code Patterns
 
@@ -75,6 +76,44 @@ function UserPage() {
 ```
 
 **Nested layouts:** Create a `_layout.tsx` file or use folder structure with `__root.tsx` for shared layouts.
+
+### Data Fetching (TanStack Query)
+
+QueryClient is configured in `src/integrations/tanstack-query/` and provided via router context.
+
+**Basic query:**
+
+```tsx
+import { useQuery } from "@tanstack/react-query"
+
+function MyComponent() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => fetch("/api/users").then(res => res.json()),
+  })
+
+  if (isLoading) return <div>Loading...</div>
+  return <div>{data}</div>
+}
+```
+
+**Mutation:**
+
+```tsx
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+
+function MyComponent() {
+  const queryClient = useQueryClient()
+
+  const { mutate } = useMutation({
+    mutationFn: (data) => fetch("/api/users", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  })
+}
+```
 
 ## Scripts
 

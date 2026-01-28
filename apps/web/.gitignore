@@ -29,3 +29,7 @@ coverage/
 
 # Vite
 *.local
+
+# TanStack Router generated files
+src/route-tree.gen.ts
+.tanstack/

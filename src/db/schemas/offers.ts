@@ -1,0 +1,28 @@
+import { relations } from "drizzle-orm"
+import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+
+import { tenants } from "./tenants"
+
+export const offers = pgTable("offers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  url: text("url"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+})
+
+export const offersRelations = relations(offers, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [offers.tenantId],
+    references: [tenants.id],
+  }),
+}))

@@ -22,12 +22,12 @@ export default async function DashboardLayout({
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
+          "--sidebar-width": "calc(var(--spacing) * 64)",
+          "--header-height": "calc(var(--spacing) * 12 + 1px)",
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" email={session.user.email} />
+      <AppSidebar email={session.user.email} />
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   )

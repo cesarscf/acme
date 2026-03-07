@@ -34,9 +34,10 @@ export default async function TenantDetailPage({
 
   return (
     <>
-      <SiteHeader />
-      <div className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
-        <div className="flex w-full flex-col gap-6">
+      <SiteHeader title={tenant.name} />
+      <div className="flex flex-1 flex-col">
+        <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
           <div>
             <Link
               href="/dashboard"
@@ -116,6 +117,7 @@ export default async function TenantDetailPage({
               </p>
             </TabsContent>
           </Tabs>
+          </div>
         </div>
       </div>
     </>

@@ -49,6 +49,7 @@ Next.js 16 app with React 19, using the App Router and `src/` directory layout. 
 ## Workflow
 
 - When implementing something new, ask the user if there's any ambiguity — never guess how it should work.
+- When adding a new feature/module, ask the user where it should live before creating files.
 
 ## Key Conventions
 
@@ -60,3 +61,4 @@ Next.js 16 app with React 19, using the App Router and `src/` directory layout. 
 - **Styling:** Use `cn()` from `@/lib/utils` for conditional Tailwind classes.
 - **Formatting:** Prettier — no semicolons, double quotes, 2-space indent, trailing commas (es5). Tailwind plugin sorts classes automatically.
 - **Icons:** lucide-react
+- **Env** — t3-env para validação e tipagem de variáveis de ambiente

@@ -84,6 +84,7 @@ export default function LoginPage() {
                 name="email"
                 type="email"
                 placeholder="seu@email.com"
+                defaultValue={emailState.email}
                 autoFocus
                 autoComplete="email"
               />

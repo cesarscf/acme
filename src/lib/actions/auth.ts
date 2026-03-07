@@ -20,9 +20,12 @@ export async function sendOtp(
     email: formData.get("email"),
   })
 
+  const email = formData.get("email") as string
+
   if (!result.success) {
     return {
       step: "email",
+      email,
       errors: Object.fromEntries(
         Object.entries(z.flattenError(result.error).fieldErrors).map(
           ([key, messages]) => [key, messages?.[0] ?? ""]
@@ -31,21 +34,20 @@ export async function sendOtp(
     }
   }
 
-  const { email } = result.data
-
   const { error } = await authClient.emailOtp.sendVerificationOtp({
-    email,
+    email: result.data.email,
     type: "sign-in",
   })
 
   if (error) {
     return {
       step: "email",
+      email,
       errors: { email: error.message ?? "Erro ao enviar o codigo" },
     }
   }
 
-  return { step: "otp", email }
+  return { step: "otp", email: result.data.email }
 }
 
 export async function verifyOtp(
@@ -80,7 +82,7 @@ export async function verifyOtp(
     return {
       step: "otp",
       email,
-      errors: { otp: error.message ?? "Codigo invalido" },
+      errors: { otp: error.message ?? "Código inválido" },
     }
   }
 

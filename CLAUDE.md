@@ -65,3 +65,6 @@ Next.js 16 app with React 19, using the App Router and `src/` directory layout. 
 - **Formatting:** Prettier — no semicolons, double quotes, 2-space indent, trailing commas (es5). Tailwind plugin sorts classes automatically.
 - **Icons:** lucide-react
 - **Env** — t3-env para validação e tipagem de variáveis de ambiente
+- **Queries:** Funções de leitura no banco ficam em `src/lib/queries/`, separadas por contexto. Nunca fazer queries inline em pages ou actions.
+- **Validations:** Schemas Zod ficam em `src/lib/validations/`, separados por contexto. Actions importam daqui.
+- **Actions:** Server actions ficam em `src/lib/actions/`, separados por contexto.

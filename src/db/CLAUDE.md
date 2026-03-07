@@ -11,3 +11,4 @@ Camada de banco de dados usando Drizzle ORM com Neon Postgres (driver HTTP serve
 - Relations do Drizzle definidas no mesmo arquivo da tabela principal
 - Schemas organizados por domínio dentro da pasta `schemas/`, com barrel export via `index.ts`
 - O `schema.ts` na raiz re-exporta tudo para compatibilidade com drizzle-kit
+- A instância `db` é exportada com `schema` para habilitar `db.query.*` (relational queries)

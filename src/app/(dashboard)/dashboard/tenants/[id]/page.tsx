@@ -2,13 +2,16 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeftIcon, ExternalLink } from "lucide-react"
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { protocol, rootDomain } from "@/lib/utils"
 import { getTenantById } from "@/lib/queries/tenants"
+import { getLandingPageByTenantId } from "@/lib/queries/landing-pages"
 import { getLinkPagesByTenantId } from "@/lib/queries/link-pages"
 import { getOffersByTenantId } from "@/lib/queries/offers"
 import { SiteHeader } from "../../../_components/site-header"
 import { DeleteTenantButton } from "./_components/delete-tenant-button"
 import { DomainStatus } from "./_components/domain-status"
+import { LandingPageForm } from "./_components/landing-page-form"
 import { LinkPagesSection } from "./_components/link-pages-section"
 import { OffersSection } from "./_components/offers-section"
 
@@ -23,7 +26,8 @@ export default async function TenantDetailPage({
 
   if (!tenant) notFound()
 
-  const [tenantLinkPages, tenantOffers] = await Promise.all([
+  const [landingPage, tenantLinkPages, tenantOffers] = await Promise.all([
+    getLandingPageByTenantId(id),
     getLinkPagesByTenantId(id),
     getOffersByTenantId(id),
   ])
@@ -46,7 +50,7 @@ export default async function TenantDetailPage({
             <div>
               <h2 className="text-2xl font-semibold">{tenant.name}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Gerencie links, ofertas e dominio deste tenant
+                Gerencie landing page, links, ofertas e dominio
               </p>
               {(tenant.subdomain || tenant.customDomain) && (
                 <div className="mt-1 flex items-center gap-3">
@@ -80,8 +84,38 @@ export default async function TenantDetailPage({
 
           {tenant.customDomain && <DomainStatus domain={tenant.customDomain} />}
 
-          <LinkPagesSection tenantId={tenant.id} linkPages={tenantLinkPages} />
-          <OffersSection tenantId={tenant.id} offers={tenantOffers} />
+          <Tabs defaultValue="landing-page">
+            <TabsList>
+              <TabsTrigger value="landing-page">Landing Page</TabsTrigger>
+              <TabsTrigger value="links">Links</TabsTrigger>
+              <TabsTrigger value="ofertas">Ofertas</TabsTrigger>
+              <TabsTrigger value="metricas">Metricas</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="landing-page" className="mt-4">
+              <LandingPageForm
+                tenantId={tenant.id}
+                landingPage={landingPage ?? null}
+              />
+            </TabsContent>
+
+            <TabsContent value="links" className="mt-4">
+              <LinkPagesSection
+                tenantId={tenant.id}
+                linkPages={tenantLinkPages}
+              />
+            </TabsContent>
+
+            <TabsContent value="ofertas" className="mt-4">
+              <OffersSection tenantId={tenant.id} offers={tenantOffers} />
+            </TabsContent>
+
+            <TabsContent value="metricas" className="mt-4">
+              <p className="text-sm text-muted-foreground">
+                Metricas estarao disponiveis em breve.
+              </p>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </>

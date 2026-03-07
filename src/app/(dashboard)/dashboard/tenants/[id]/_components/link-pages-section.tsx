@@ -120,8 +120,6 @@ export function LinkPagesSection({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-xl font-semibold">Paginas de Links</h3>
-
       {linkPages.map((linkPage) => (
         <div
           key={linkPage.id}

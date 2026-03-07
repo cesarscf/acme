@@ -8,9 +8,9 @@ Módulos compartilhados da aplicação: auth, utilitários, server actions, quer
 - `auth-client.ts` — Cliente Better Auth para uso em componentes React
 - `utils.ts` — `cn()` para classes Tailwind, `rootDomain` e `protocol` para URLs multi-tenant
 - `vercel.ts` — Integração com Vercel Domains API (adicionar/remover domínios custom)
-- `actions/` — Server actions organizados por domínio (tenants, link-pages, links, offers, auth)
-- `queries/` — Funções de leitura no banco organizadas por domínio, reutilizáveis em qualquer parte do projeto
-- `validations/` — Schemas Zod organizados por domínio, usados nos server actions e formulários
+- `actions/` — Server actions organizados por domínio (tenants, landing-pages, link-pages, links, offers, auth)
+- `queries/` — Funções de leitura no banco organizadas por domínio (tenants, landing-pages, link-pages, offers), reutilizáveis em qualquer parte do projeto
+- `validations/` — Schemas Zod v4 organizados por domínio, usados nos server actions e formulários. Usar APIs top-level (`z.uuid()`, `z.url()`, `z.email()`) em vez de `z.string().uuid()` etc.
 
 ## Padrões
 

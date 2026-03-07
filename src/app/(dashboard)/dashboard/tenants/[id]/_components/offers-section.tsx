@@ -32,8 +32,6 @@ export function OffersSection({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-xl font-semibold">Ofertas</h3>
-
       {offers.length > 0 && (
         <div className="space-y-2">
           {offers.map((offer) => (

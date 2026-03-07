@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { getTenantBySlug } from "@/lib/queries/tenants"
+import { getLandingPageByTenantId } from "@/lib/queries/landing-pages"
 
 export default async function TenantLandingPage({
   params,
@@ -13,13 +14,27 @@ export default async function TenantLandingPage({
 
   if (!tenant) notFound()
 
+  const landingPage = await getLandingPageByTenantId(tenant.id)
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">
-      <div className="text-center">
+      <div className="max-w-lg space-y-4 text-center">
         <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-          {tenant.name}
+          {landingPage?.title ?? tenant.name}
         </h1>
-        <p className="mt-3 text-lg text-gray-600">Landing page</p>
+        {landingPage?.description && (
+          <p className="text-lg text-gray-600">{landingPage.description}</p>
+        )}
+        {landingPage?.url && (
+          <a
+            href={landingPage.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Saiba mais
+          </a>
+        )}
       </div>
     </div>
   )

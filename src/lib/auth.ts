@@ -5,6 +5,7 @@ import { emailOTP } from "better-auth/plugins"
 import { db } from "@/db"
 import * as schema from "@/db/schemas/auth"
 import { env } from "@/env"
+import { nextCookies } from "better-auth/next-js"
 
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
@@ -22,5 +23,6 @@ export const auth = betterAuth({
       otpLength: 4,
       disableSignUp: false,
     }),
+    nextCookies()
   ],
 })

@@ -35,7 +35,7 @@ export default function LoginPage() {
   )
 
   if (otpState.success) {
-    redirect("/")
+    redirect("/dashboard")
   }
 
   const isOtpStep = emailState.step === "otp"

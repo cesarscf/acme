@@ -1,7 +1,9 @@
 "use server"
 
+import { headers } from "next/headers"
 import { z } from "zod/v4"
-import { authClient } from "@/lib/auth-client"
+
+import { auth } from "@/lib/auth"
 import { emailSchema, otpSchema } from "@/lib/validations/auth"
 
 export type AuthState = {
@@ -34,16 +36,18 @@ export async function sendOtp(
     }
   }
 
-  const { error } = await authClient.emailOtp.sendVerificationOtp({
-    email: result.data.email,
-    type: "sign-in",
-  })
-
-  if (error) {
+  try {
+    await auth.api.sendVerificationOTP({
+      body: {
+        email: result.data.email,
+        type: "sign-in",
+      },
+    })
+  } catch {
     return {
       step: "email",
       email,
-      errors: { email: error.message ?? "Erro ao enviar o codigo" },
+      errors: { email: "Erro ao enviar o codigo" },
     }
   }
 
@@ -73,16 +77,16 @@ export async function verifyOtp(
 
   const { email, otp } = result.data
 
-  const { error } = await authClient.signIn.emailOtp({
-    email,
-    otp,
-  })
-
-  if (error) {
+  try {
+    await auth.api.signInEmailOTP({
+      body: { email, otp },
+      headers: await headers(),
+    })
+  } catch {
     return {
       step: "otp",
       email,
-      errors: { otp: error.message ?? "Código inválido" },
+      errors: { otp: "Código inválido" },
     }
   }
 

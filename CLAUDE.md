@@ -58,6 +58,7 @@ Next.js 16 app with React 19, using the App Router and `src/` directory layout. 
 - **File naming:** Always use kebab-case (e.g., `mode-toggle.tsx`, not `ModeToggle.tsx`).
 - **Code clarity:** Avoid comments — prefer descriptive variable and function names that make the code self-explanatory.
 
+- **Component placement:** Components specific to a single page/route go in `_components/` inside that route folder. Shared components used across multiple routes go in `src/components/`.
 - **shadcn/ui** — Add components via `npx shadcn@latest add <name>`.
 - **Path alias:** `@/*` maps to `src/*`
 - **Styling:** Use `cn()` from `@/lib/utils` for conditional Tailwind classes.

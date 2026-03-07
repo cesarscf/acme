@@ -23,13 +23,11 @@ export function SidebarUserCard({ email }: { email: string }) {
   const mounted = useMounted()
 
   return (
-    <Card> 
+    <Card>
       <CardContent>
         <div className="mb-3 grid gap-0.5">
-          <p className="text-muted-foreground text-xs">Conectado como</p>
-          <p className="truncate text-sm font-medium">
-            {email}
-          </p>
+          <p className="text-xs text-muted-foreground">Conectado como</p>
+          <p className="truncate text-sm font-medium">{email}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button

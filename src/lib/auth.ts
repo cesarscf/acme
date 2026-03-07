@@ -23,6 +23,6 @@ export const auth = betterAuth({
       otpLength: 4,
       disableSignUp: false,
     }),
-    nextCookies()
+    nextCookies(),
   ],
 })

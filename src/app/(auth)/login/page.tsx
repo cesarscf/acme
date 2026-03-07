@@ -89,9 +89,7 @@ export default function LoginPage() {
                 autoComplete="email"
               />
               {state.errors?.email && (
-                <p className="text-sm text-destructive">
-                  {state.errors.email}
-                </p>
+                <p className="text-sm text-destructive">{state.errors.email}</p>
               )}
             </div>
             <Button type="submit" disabled={emailPending}>

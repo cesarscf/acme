@@ -23,7 +23,7 @@ Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de
 ## Features
 
 - **Multi-tenancy** — Subdomínio (tenant.acme.com) + custom domain (tenant.com), resolvido via middleware com query direto no Postgres (sem cache no MVP)
-- **Auth** — Better Auth (email + senha), apenas agência, sem roles
+- **Auth** — Better Auth (email + OTP), apenas agência, sem roles
 - **Landing page** — Campos fixos por tenant: título, descrição e CTA (link)
 - **Páginas de links** — Múltiplas por tenant. Cada uma com título, descrição e lista de links (título + URL), estilo Linktree
 - **Páginas de oferta** — Múltiplas por tenant. Cada uma com título, descrição e CTA (link)
@@ -50,6 +50,7 @@ Next.js 16 app with React 19, using the App Router and `src/` directory layout. 
 ## Workflow
 
 - When implementing something new, ask the user if there's any ambiguity — never guess how it should work.
+- Before implementing, check if there's a CLI/skill available for the feature/lib/tech (e.g., `npx shadcn`, `npx @better-auth/cli`, `npx drizzle-kit`).
 - When adding a new feature/module, ask the user where it should live before creating files.
 
 ## Key Conventions

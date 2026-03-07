@@ -10,6 +10,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm format` — Format with Prettier
 - `pnpm typecheck` — TypeScript type checking
 
+## Project
+
+Plataforma multi-tenant para agência de marketing. A agência cadastra clientes (tenants), cada um com seu domínio ou subdomínio. Cada tenant possui:
+
+- **Landing page** — página principal do tenant
+- **Páginas de links** — múltiplas por tenant, segmentadas (ex: uma para cada cidade/loja)
+- **Páginas de oferta** — múltiplas por tenant, também segmentadas (ex: ofertas específicas por região)
+
+Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de Vitória, outra para Vila Velha, e páginas de oferta separadas para cada cidade. A agência gerencia tudo via painel admin.
+
 ## Architecture
 
 Next.js 16 app with React 19, using the App Router and `src/` directory layout. UI components come from shadcn/ui (radix-nova style). Styling is done with Tailwind CSS v4 and CSS variables for theming. Dark mode is handled via next-themes with class strategy.

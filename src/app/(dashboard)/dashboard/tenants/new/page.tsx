@@ -20,7 +20,7 @@ export default function NewTenantPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
-      <div className="w-full max-w-xl">
+      <div className="w-full ">
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
@@ -35,7 +35,7 @@ export default function NewTenantPage() {
           </p>
         </div>
       </div>
-      <Card className="w-full max-w-xl">
+      <Card className="w-full ">
         <CardHeader>
           <CardTitle>Dados do tenant</CardTitle>
         </CardHeader>

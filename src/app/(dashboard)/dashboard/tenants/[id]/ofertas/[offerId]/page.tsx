@@ -21,7 +21,7 @@ export default async function OfferDetailPage({
     <>
       <SiteHeader />
       <div className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
-        <div className="flex w-full max-w-xl flex-col gap-6">
+        <div className="flex w-full flex-col gap-6">
           <div>
             <Link
               href={`/dashboard/tenants/${tenantId}`}

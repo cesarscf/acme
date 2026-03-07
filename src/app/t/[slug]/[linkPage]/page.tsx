@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation"
-import { db } from "@/db"
-import { linkPages, links } from "@/db/schema"
-import { and, asc, eq } from "drizzle-orm"
 
 import { getTenantBySlug } from "@/lib/queries/tenants"
+import { getLinkPageBySlug, getLinksByPageId } from "@/lib/queries/link-pages"
 
 export default async function TenantLinkPage({
   params,
@@ -16,20 +14,11 @@ export default async function TenantLinkPage({
 
   if (!tenant) notFound()
 
-  const page = await db.query.linkPages.findFirst({
-    where: and(
-      eq(linkPages.tenantId, tenant.id),
-      eq(linkPages.slug, linkPageSlug)
-    ),
-  })
+  const page = await getLinkPageBySlug(tenant.id, linkPageSlug)
 
   if (!page) notFound()
 
-  const pageLinks = await db
-    .select()
-    .from(links)
-    .where(eq(links.linkPageId, page.id))
-    .orderBy(asc(links.position))
+  const pageLinks = await getLinksByPageId(page.id)
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">

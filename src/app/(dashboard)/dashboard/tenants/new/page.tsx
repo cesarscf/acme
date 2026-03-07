@@ -1,6 +1,8 @@
 "use client"
 
 import { useActionState } from "react"
+import Link from "next/link"
+import { ArrowLeftIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,9 +15,24 @@ export default function NewTenantPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
-      <Card className="mx-auto w-full max-w-lg">
+      <div className="w-full max-w-xl">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          Voltar
+        </Link>
+        <div className="mt-3">
+          <h2 className="text-2xl font-semibold">Novo Tenant</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Cadastre um novo cliente da agencia
+          </p>
+        </div>
+      </div>
+      <Card className="w-full max-w-xl">
         <CardHeader>
-          <CardTitle>Novo Tenant</CardTitle>
+          <CardTitle>Dados do tenant</CardTitle>
         </CardHeader>
         <CardContent>
           <form action={action} className="space-y-4">

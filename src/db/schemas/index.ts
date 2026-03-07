@@ -1,6 +1,4 @@
-export * from "./users"
-export * from "./accounts"
-export * from "./verifications"
+export * from "./auth"
 export * from "./tenants"
 export * from "./landing-pages"
 export * from "./link-pages"

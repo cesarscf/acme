@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { emailOTP } from "better-auth/plugins"
 
 import { db } from "@/db"
+import * as schema from "@/db/schemas/auth"
 import { env } from "@/env"
 
 export const auth = betterAuth({
@@ -11,12 +12,15 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     usePlural: true,
+    schema,
   }),
   plugins: [
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         console.log(`[OTP] ${email} (${type}): ${otp}`)
       },
+      otpLength: 4,
+      disableSignUp: false,
     }),
   ],
 })

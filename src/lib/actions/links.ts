@@ -24,7 +24,7 @@ export async function createLinkAction(
 
   await db.insert(links).values(parsed.data)
   const tenantId = formData.get("tenant_id") as string
-  revalidatePath(`/dashboard/tenants/${tenantId}`)
+  revalidatePath(`/dashboard/tenants/${tenantId}/links/${parsed.data.linkPageId}`)
   return { success: true }
 }
 
@@ -34,7 +34,8 @@ export async function deleteLinkAction(
 ) {
   const id = formData.get("id") as string
   const tenantId = formData.get("tenant_id") as string
+  const linkPageId = formData.get("link_page_id") as string
   await db.delete(links).where(eq(links.id, id))
-  revalidatePath(`/dashboard/tenants/${tenantId}`)
+  revalidatePath(`/dashboard/tenants/${tenantId}/links/${linkPageId}`)
   return { success: true }
 }

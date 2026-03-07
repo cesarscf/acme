@@ -10,6 +10,13 @@ export async function getLinkPagesByTenantId(tenantId: string) {
   })
 }
 
+export async function getLinkPageById(id: string) {
+  return db.query.linkPages.findFirst({
+    where: eq(linkPages.id, id),
+    with: { links: { orderBy: [asc(links.position)] } },
+  })
+}
+
 export async function getLinkPageBySlug(tenantId: string, slug: string) {
   return db.query.linkPages.findFirst({
     where: and(eq(linkPages.tenantId, tenantId), eq(linkPages.slug, slug)),

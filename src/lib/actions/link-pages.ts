@@ -4,8 +4,12 @@ import { db } from "@/db"
 import { linkPages } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 
-import { createLinkPageSchema } from "@/lib/validations/link-pages"
+import {
+  createLinkPageSchema,
+  updateLinkPageSchema,
+} from "@/lib/validations/link-pages"
 
 export async function createLinkPageAction(
   _prevState: unknown,
@@ -35,6 +39,41 @@ export async function createLinkPageAction(
   return { success: true }
 }
 
+export async function updateLinkPageAction(
+  _prevState: unknown,
+  formData: FormData
+) {
+  const parsed = updateLinkPageSchema.safeParse({
+    id: formData.get("id"),
+    tenantId: formData.get("tenant_id"),
+    slug: formData.get("slug"),
+    title: formData.get("title"),
+    description: formData.get("description"),
+  })
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const { id, tenantId, ...data } = parsed.data
+
+  try {
+    await db
+      .update(linkPages)
+      .set(data)
+      .where(eq(linkPages.id, id))
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes("unique")) {
+      return { error: "Slug ja esta em uso neste tenant" }
+    }
+    return { error: "Erro ao atualizar pagina de links" }
+  }
+
+  revalidatePath(`/dashboard/tenants/${tenantId}/links/${id}`)
+  revalidatePath(`/dashboard/tenants/${tenantId}`)
+  return { success: true }
+}
+
 export async function deleteLinkPageAction(
   _prevState: unknown,
   formData: FormData
@@ -43,5 +82,5 @@ export async function deleteLinkPageAction(
   const tenantId = formData.get("tenant_id") as string
   await db.delete(linkPages).where(eq(linkPages.id, id))
   revalidatePath(`/dashboard/tenants/${tenantId}`)
-  return { success: true }
+  redirect(`/dashboard/tenants/${tenantId}`)
 }

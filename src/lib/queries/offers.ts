@@ -10,6 +10,12 @@ export async function getOffersByTenantId(tenantId: string) {
     .orderBy(asc(offers.createdAt))
 }
 
+export async function getOfferById(id: string) {
+  return db.query.offers.findFirst({
+    where: eq(offers.id, id),
+  })
+}
+
 export async function getOfferBySlug(tenantId: string, slug: string) {
   return db.query.offers.findFirst({
     where: and(eq(offers.tenantId, tenantId), eq(offers.slug, slug)),

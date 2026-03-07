@@ -1,13 +1,14 @@
 "use client"
 
 import { useActionState, useEffect } from "react"
-import { Trash2 } from "lucide-react"
+import Link from "next/link"
+import { Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createOfferAction, deleteOfferAction } from "@/lib/actions/offers"
+import { createOfferAction } from "@/lib/actions/offers"
 
 type Offer = {
   id: string
@@ -29,7 +30,6 @@ export function OffersSection({
     createOfferAction,
     null
   )
-  const [, deleteAction, isDeleting] = useActionState(deleteOfferAction, null)
 
   useEffect(() => {
     if (createState?.success) toast.success("Oferta criada")
@@ -41,29 +41,25 @@ export function OffersSection({
       {offers.length > 0 && (
         <div className="space-y-2">
           {offers.map((offer) => (
-            <div
+            <Link
               key={offer.id}
-              className="flex items-center justify-between rounded-lg border bg-card p-3"
+              href={`/dashboard/tenants/${tenantId}/ofertas/${offer.id}`}
+              className="block rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
             >
-              <div>
-                <p className="font-medium">{offer.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  /ofertas/{offer.slug}
-                  {!offer.active && (
-                    <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs">
-                      inativa
-                    </span>
-                  )}
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{offer.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    /ofertas/{offer.slug}
+                    {!offer.active && (
+                      <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs">
+                        inativa
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
-              <form action={deleteAction}>
-                <input type="hidden" name="id" value={offer.id} />
-                <input type="hidden" name="tenant_id" value={tenantId} />
-                <Button variant="ghost" size="icon" disabled={isDeleting}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </form>
-            </div>
+            </Link>
           ))}
         </div>
       )}
@@ -72,6 +68,10 @@ export function OffersSection({
         action={createAction}
         className="space-y-3 rounded-lg border bg-card p-4"
       >
+        <div className="flex items-center gap-2">
+          <Plus className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm font-medium">Nova oferta</p>
+        </div>
         <input type="hidden" name="tenant_id" value={tenantId} />
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">

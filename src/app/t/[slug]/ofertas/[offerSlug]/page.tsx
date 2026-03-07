@@ -6,15 +6,15 @@ import { getOfferBySlug } from "@/lib/queries/offers"
 export default async function TenantOfferPage({
   params,
 }: {
-  params: Promise<{ slug: string; oferta: string }>
+  params: Promise<{ slug: string; offerSlug: string }>
 }) {
-  const { slug, oferta } = await params
+  const { slug, offerSlug } = await params
 
   const tenant = await getTenantBySlug(slug)
 
   if (!tenant) notFound()
 
-  const offer = await getOfferBySlug(tenant.id, oferta)
+  const offer = await getOfferBySlug(tenant.id, offerSlug)
 
   if (!offer || !offer.active) notFound()
 

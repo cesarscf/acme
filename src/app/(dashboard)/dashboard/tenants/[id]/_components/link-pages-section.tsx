@@ -135,7 +135,7 @@ export function LinkPagesSection({
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">{linkPage.title}</p>
-              <p className="text-sm text-muted-foreground">/{linkPage.slug}</p>
+              <p className="text-sm text-muted-foreground">/links/{linkPage.slug}</p>
             </div>
             <form action={deleteAction}>
               <input type="hidden" name="id" value={linkPage.id} />

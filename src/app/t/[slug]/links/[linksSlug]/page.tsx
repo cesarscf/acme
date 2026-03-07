@@ -6,15 +6,15 @@ import { getLinkPageBySlug, getLinksByPageId } from "@/lib/queries/link-pages"
 export default async function TenantLinkPage({
   params,
 }: {
-  params: Promise<{ slug: string; linkPage: string }>
+  params: Promise<{ slug: string; linksSlug: string }>
 }) {
-  const { slug, linkPage: linkPageSlug } = await params
+  const { slug, linksSlug } = await params
 
   const tenant = await getTenantBySlug(slug)
 
   if (!tenant) notFound()
 
-  const page = await getLinkPageBySlug(tenant.id, linkPageSlug)
+  const page = await getLinkPageBySlug(tenant.id, linksSlug)
 
   if (!page) notFound()
 

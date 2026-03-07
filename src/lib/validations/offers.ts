@@ -1,7 +1,7 @@
 import { z } from "zod/v4"
 
 export const createOfferSchema = z.object({
-  tenantId: z.string().uuid(),
+  tenantId: z.uuid(),
   slug: z
     .string()
     .min(1, "Slug e obrigatorio")
@@ -12,7 +12,6 @@ export const createOfferSchema = z.object({
     .optional()
     .transform((v) => v || null),
   url: z
-    .string()
     .url("URL invalida")
     .optional()
     .transform((v) => v || null),

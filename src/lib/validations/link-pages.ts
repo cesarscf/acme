@@ -1,7 +1,7 @@
 import { z } from "zod/v4"
 
 export const createLinkPageSchema = z.object({
-  tenantId: z.string().uuid(),
+  tenantId: z.uuid(),
   slug: z
     .string()
     .min(1, "Slug e obrigatorio")

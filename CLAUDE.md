@@ -22,7 +22,7 @@ Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de
 
 ## Features
 
-- **Multi-tenancy** — Subdomínio (tenant.acme.com) + custom domain (tenant.com), resolvido via middleware com query direto no Postgres (sem cache no MVP)
+- **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via proxy com query direto no Postgres (sem cache no MVP)
 - **Auth** — Better Auth (email + OTP), apenas agência, sem roles
 - **Landing page** — Campos fixos por tenant: título, descrição e CTA (link)
 - **Páginas de links** — Múltiplas por tenant. Cada uma com título, descrição e lista de links (título + URL), estilo Linktree
@@ -30,6 +30,53 @@ Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de
 - **Database** — Postgres (Neon) + Drizzle ORM
 - **Deploy** — Vercel + Vercel Domains API para custom domains
 - **Storage de imagens** — A definir em etapa futura
+
+## Business Rules
+
+### Auth
+- Apenas a agência acessa o dashboard (sem roles, sem multi-user por tenant)
+- Login via email OTP (4 dígitos), sem senha
+- OTP apenas logado no console em dev (integração com provedor de email pendente)
+
+### Tenants
+- Cada tenant pertence a um usuário (agência)
+- Slug é único e obrigatório (apenas letras minúsculas, números e hífens)
+- Se subdomínio não for informado, usa o slug como subdomínio
+- Custom domain é opcional; quando informado, é registrado na Vercel Domains API
+- Ao deletar tenant, remove o custom domain da Vercel e deleta em cascata (landing page, link pages, links, ofertas)
+
+### Multi-tenancy (Proxy)
+- Resolução de tenant via `proxy.ts`: subdomínio (`tenant.quiwork.com`) ou custom domain (`tenant.com`)
+- Em localhost: `tenant.localhost:3000`
+- Vercel preview: `tenant---project.vercel.app`
+- Rotas `/dashboard` e `/login` são bloqueadas em domínios de tenant (redireciona para `/`)
+- O proxy reescreve internamente para `/t/[slug]/...` — visitante nunca vê `/t/`
+
+### Landing Page
+- Uma por tenant (relação 1:1 via tabela `landing_pages`)
+- Todos os campos são opcionais (título, descrição, URL do CTA)
+- Upsert: enviar todos vazios deleta a landing page existente
+- Se não existe landing page, a página pública exibe o nome do tenant como fallback
+
+### Páginas de Links
+- Múltiplas por tenant (1:N)
+- Slug único por tenant (constraint de unicidade)
+- Cada página contém lista de links (título + URL) ordenados por posição
+- Links são deletados em cascata ao remover a página
+- Rota pública: `tenant.quiwork.com/links/[slug]`
+
+### Ofertas
+- Múltiplas por tenant (1:N)
+- Slug único por tenant (constraint de unicidade)
+- Campos: título, descrição, URL do CTA, flag ativa/inativa
+- Ofertas inativas retornam 404 na página pública
+- Rota pública: `tenant.quiwork.com/ofertas/[slug]`
+
+### Custom Domains
+- Ao criar tenant com custom domain, chama `addDomainToVercel()`
+- Ao deletar tenant com custom domain, chama `removeDomainFromVercel()`
+- Verificação DNS via API route `/api/domain-check` que consulta Vercel API
+- Status exibido no dashboard do tenant
 
 ## Architecture
 

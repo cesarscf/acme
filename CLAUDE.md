@@ -39,6 +39,7 @@ Next.js 16 app with React 19, using the App Router and `src/` directory layout. 
 
 - Use conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `style:`, `test:`, etc.
 - Never include `Co-Authored-By` lines.
+- Before committing, check if any `CLAUDE.md` (root or folder-level) needs to be created or updated to reflect the changes.
 
 ## Documentation
 

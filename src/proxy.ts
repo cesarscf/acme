@@ -49,7 +49,7 @@ function matchTenant(request: NextRequest): TenantMatch {
   return { type: "customDomain", value: hostname }
 }
 
-export async function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const tenant = matchTenant(request)
 

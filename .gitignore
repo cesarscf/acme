@@ -35,4 +35,8 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# claude code
+.claude/
+.agents/
+
 temp

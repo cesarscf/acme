@@ -1,8 +1,9 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +13,10 @@ import { createTenantAction } from "@/lib/actions/tenants"
 
 export default function NewTenantPage() {
   const [state, action, isPending] = useActionState(createTenantAction, null)
+
+  useEffect(() => {
+    if (state?.error) toast.error(state.error)
+  }, [state])
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
@@ -76,10 +81,6 @@ export default function NewTenantPage() {
                 placeholder="lojax.com"
               />
             </div>
-
-            {state?.error && (
-              <p className="text-sm text-destructive">{state.error}</p>
-            )}
 
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? "Criando..." : "Criar tenant"}

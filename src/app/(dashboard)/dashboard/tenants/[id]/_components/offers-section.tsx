@@ -1,7 +1,8 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useEffect } from "react"
 import { Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +30,11 @@ export function OffersSection({
     null
   )
   const [, deleteAction, isDeleting] = useActionState(deleteOfferAction, null)
+
+  useEffect(() => {
+    if (createState?.success) toast.success("Oferta criada")
+    if (createState?.error) toast.error(createState.error)
+  }, [createState])
 
   return (
     <div className="space-y-4">
@@ -105,10 +111,6 @@ export function OffersSection({
             placeholder="https://lojax.com/promo"
           />
         </div>
-
-        {createState?.error && (
-          <p className="text-sm text-destructive">{createState.error}</p>
-        )}
 
         <Button type="submit" size="sm" disabled={isCreating}>
           {isCreating ? "Adicionando..." : "Adicionar oferta"}

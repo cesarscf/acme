@@ -1,6 +1,7 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useEffect } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,6 +28,11 @@ export function LandingPageForm({
     null
   )
 
+  useEffect(() => {
+    if (state?.success) toast.success("Landing page salva com sucesso")
+    if (state?.error) toast.error(state.error)
+  }, [state])
+
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="tenant_id" value={tenantId} />
@@ -47,7 +53,7 @@ export function LandingPageForm({
           id="lp-description"
           name="description"
           defaultValue={landingPage?.description ?? ""}
-          placeholder="Conhca nossos produtos e servicos"
+          placeholder="Conheca nossos produtos e servicos"
           rows={4}
         />
       </div>
@@ -62,14 +68,6 @@ export function LandingPageForm({
           placeholder="https://lojax.com"
         />
       </div>
-
-      {state?.error && (
-        <p className="text-sm text-destructive">{state.error}</p>
-      )}
-
-      {state?.success && (
-        <p className="text-sm text-green-600">Salvo com sucesso</p>
-      )}
 
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>

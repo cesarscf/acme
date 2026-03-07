@@ -1,7 +1,8 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useEffect } from "react"
 import { Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +40,11 @@ function LinksSubsection({
     null
   )
   const [, deleteAction, isDeleting] = useActionState(deleteLinkAction, null)
+
+  useEffect(() => {
+    if (createState?.success) toast.success("Link adicionado")
+    if (createState?.error) toast.error(createState.error)
+  }, [createState])
 
   return (
     <div className="space-y-2 border-l-2 border-muted pl-4">
@@ -90,10 +96,6 @@ function LinksSubsection({
           </div>
         </div>
 
-        {createState?.error && (
-          <p className="text-sm text-destructive">{createState.error}</p>
-        )}
-
         <Button type="submit" size="sm" disabled={isCreating}>
           {isCreating ? "Adicionando..." : "Adicionar link"}
         </Button>
@@ -117,6 +119,11 @@ export function LinkPagesSection({
     deleteLinkPageAction,
     null
   )
+
+  useEffect(() => {
+    if (createState?.success) toast.success("Pagina de links criada")
+    if (createState?.error) toast.error(createState.error)
+  }, [createState])
 
   return (
     <div className="space-y-4">
@@ -177,10 +184,6 @@ export function LinkPagesSection({
             placeholder="Links da loja de Vitoria"
           />
         </div>
-
-        {createState?.error && (
-          <p className="text-sm text-destructive">{createState.error}</p>
-        )}
 
         <Button type="submit" size="sm" disabled={isCreating}>
           {isCreating ? "Adicionando..." : "Adicionar pagina de links"}

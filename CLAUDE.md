@@ -20,6 +20,17 @@ Plataforma multi-tenant para agência de marketing. A agência cadastra clientes
 
 Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de Vitória, outra para Vila Velha, e páginas de oferta separadas para cada cidade. A agência gerencia tudo via painel admin.
 
+## Features
+
+- **Multi-tenancy** — Subdomínio (tenant.acme.com) + custom domain (tenant.com), resolvido via middleware com query direto no Postgres (sem cache no MVP)
+- **Auth** — Better Auth (email + senha), apenas agência, sem roles
+- **Landing page** — Campos fixos por tenant: título, descrição e CTA (link)
+- **Páginas de links** — Múltiplas por tenant. Cada uma com título, descrição e lista de links (título + URL), estilo Linktree
+- **Páginas de oferta** — Múltiplas por tenant. Cada uma com título, descrição e CTA (link)
+- **Database** — Postgres (Neon) + Drizzle ORM
+- **Deploy** — Vercel + Vercel Domains API para custom domains
+- **Storage de imagens** — A definir em etapa futura
+
 ## Architecture
 
 Next.js 16 app with React 19, using the App Router and `src/` directory layout. UI components come from shadcn/ui (radix-nova style). Styling is done with Tailwind CSS v4 and CSS variables for theming. Dark mode is handled via next-themes with class strategy.

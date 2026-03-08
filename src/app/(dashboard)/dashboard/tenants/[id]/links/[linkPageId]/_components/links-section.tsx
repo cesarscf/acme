@@ -87,7 +87,7 @@ export function LinksSection({
   return (
     <div className="space-y-3">
       {links.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+        <div className="flex flex-col items-center justify-center rounded-xl bg-muted py-12">
           <Link2 className="h-10 w-10 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">Nenhum link cadastrado</p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -129,7 +129,7 @@ export function LinksSection({
           {links.map((link) => (
             <div
               key={link.id}
-              className="flex items-center justify-between rounded-lg border bg-card p-3"
+              className="flex items-center justify-between rounded-xl bg-muted p-4"
             >
               <div>
                 <p className="text-sm font-medium">{link.title}</p>
@@ -139,7 +139,7 @@ export function LinksSection({
                 <input type="hidden" name="id" value={link.id} />
                 <input type="hidden" name="tenant_id" value={tenantId} />
                 <input type="hidden" name="link_page_id" value={linkPageId} />
-                <Button variant="ghost" size="icon" disabled={isDeleting}>
+                <Button variant="destructive" size="icon" disabled={isDeleting}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </form>

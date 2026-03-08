@@ -7,6 +7,8 @@ import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { updateOfferAction, deleteOfferAction } from "@/lib/actions/offers"
 
 type Offer = {
@@ -37,8 +39,8 @@ export function OfferForm({
   }, [updateState])
 
   return (
-    <div className="space-y-4 rounded-lg border bg-card p-4">
-      <form action={updateAction} className="space-y-3">
+
+      <form action={updateAction} className="space-y-6">
         <input type="hidden" name="id" value={offer.id} />
         <input type="hidden" name="tenant_id" value={tenantId} />
         <div className="grid grid-cols-2 gap-3">
@@ -64,10 +66,11 @@ export function OfferForm({
         </div>
         <div className="space-y-1">
           <Label htmlFor="description">Descricao (opcional)</Label>
-          <Input
+          <Textarea
             id="description"
             name="description"
             defaultValue={offer.description ?? ""}
+            rows={3}
           />
         </div>
         <div className="space-y-1">
@@ -79,13 +82,12 @@ export function OfferForm({
             defaultValue={offer.url ?? ""}
           />
         </div>
-        <div className="flex items-center gap-2">
-          <input
+        <div className="flex items-center gap-3">
+          <Switch
             id="active"
             name="active"
-            type="checkbox"
             defaultChecked={offer.active}
-            className="h-4 w-4 rounded border-input"
+            value="on"
           />
           <Label htmlFor="active">Ativa</Label>
         </div>
@@ -99,7 +101,7 @@ export function OfferForm({
             <input type="hidden" name="tenant_id" value={tenantId} />
             <Button
               type="submit"
-              variant="ghost"
+              variant="destructive"
               size="icon"
               disabled={isDeleting}
             >
@@ -108,6 +110,6 @@ export function OfferForm({
           </form>
         </div>
       </form>
-    </div>
+
   )
 }

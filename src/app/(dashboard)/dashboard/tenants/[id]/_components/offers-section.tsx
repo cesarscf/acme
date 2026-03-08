@@ -153,8 +153,7 @@ export function OffersSection({
             {offers.map((offer) => (
               <div
                 key={offer.id}
-                className="rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md"
-              >
+                className="rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md space-y-1">
                 <div className="flex items-center justify-between">
                   <Link
                     href={`/dashboard/tenants/${tenantId}/ofertas/${offer.id}`}
@@ -174,7 +173,6 @@ export function OffersSection({
                     </a>
                   )}
                 </div>
-                <Separator className="my-4" />
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span>/ofertas/{offer.slug}</span>
                   {!offer.active && (

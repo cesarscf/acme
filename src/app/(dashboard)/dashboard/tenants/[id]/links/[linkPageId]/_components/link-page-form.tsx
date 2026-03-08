@@ -7,6 +7,7 @@ import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   updateLinkPageAction,
   deleteLinkPageAction,
@@ -41,8 +42,8 @@ export function LinkPageForm({
   }, [updateState])
 
   return (
-    <div className="space-y-4 rounded-lg border bg-card p-4">
-      <form action={updateAction} className="space-y-3">
+    <div>
+      <form action={updateAction} className="space-y-6">
         <input type="hidden" name="id" value={linkPage.id} />
         <input type="hidden" name="tenant_id" value={tenantId} />
         <div className="grid grid-cols-2 gap-3">
@@ -68,10 +69,11 @@ export function LinkPageForm({
         </div>
         <div className="space-y-1">
           <Label htmlFor="description">Descricao (opcional)</Label>
-          <Input
+          <Textarea
             id="description"
             name="description"
             defaultValue={linkPage.description ?? ""}
+            rows={3}
           />
         </div>
 
@@ -84,7 +86,7 @@ export function LinkPageForm({
             <input type="hidden" name="tenant_id" value={tenantId} />
             <Button
               type="submit"
-              variant="ghost"
+              variant="destructive"
               size="icon"
               disabled={isDeleting}
             >

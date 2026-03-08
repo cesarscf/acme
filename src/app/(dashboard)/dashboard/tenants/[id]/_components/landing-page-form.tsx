@@ -54,7 +54,7 @@ export function LandingPageForm({
             defaultValue={formState.values?.title ?? landingPage?.title ?? ""}
             disabled={pending}
             aria-invalid={!!formState.errors?.title?.length}
-            placeholder="Bem-vindo a Loja X"
+            placeholder="Digite o titulo aqui"
           />
           {formState.errors?.title && (
             <FieldError>{formState.errors.title[0]}</FieldError>
@@ -73,7 +73,7 @@ export function LandingPageForm({
             }
             disabled={pending}
             aria-invalid={!!formState.errors?.description?.length}
-            placeholder="Conheca nossos produtos e servicos"
+            placeholder="Digite a descricao aqui"
             rows={4}
           />
           {formState.errors?.description && (
@@ -90,7 +90,7 @@ export function LandingPageForm({
             defaultValue={formState.values?.url ?? landingPage?.url ?? ""}
             disabled={pending}
             aria-invalid={!!formState.errors?.url?.length}
-            placeholder="https://lojax.com"
+            placeholder="https://exemplo.com"
           />
           {formState.errors?.url && (
             <FieldError>{formState.errors.url[0]}</FieldError>

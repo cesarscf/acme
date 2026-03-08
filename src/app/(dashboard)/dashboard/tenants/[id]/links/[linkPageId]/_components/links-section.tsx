@@ -74,7 +74,7 @@ export function LinksSection({
           <Input
             id="link-title"
             name="title"
-            placeholder="Instagram"
+            placeholder="Digite o titulo aqui"
             defaultValue={formState.values?.title}
             disabled={pending}
             aria-invalid={!!formState.errors?.title?.length}
@@ -89,7 +89,7 @@ export function LinksSection({
             id="link-url"
             name="url"
             type="url"
-            placeholder="https://instagram.com/lojax"
+            placeholder="https://exemplo.com"
             defaultValue={formState.values?.url}
             disabled={pending}
             aria-invalid={!!formState.errors?.url?.length}

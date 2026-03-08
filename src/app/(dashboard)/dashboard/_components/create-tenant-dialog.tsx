@@ -56,7 +56,7 @@ export function CreateTenantDialog({ className }: { className?: string }) {
               <Input
                 id="name"
                 name="name"
-                placeholder="Farmacia X"
+                placeholder="Digite o nome aqui"
                 defaultValue={formState.values?.name}
                 disabled={pending}
                 aria-invalid={!!formState.errors?.name?.length}
@@ -72,7 +72,7 @@ export function CreateTenantDialog({ className }: { className?: string }) {
                 <Input
                   id="slug"
                   name="slug"
-                  placeholder="farmacia-x"
+                  placeholder="Digite o slug aqui"
                   defaultValue={formState.values?.slug}
                   disabled={pending}
                   aria-invalid={!!formState.errors?.slug?.length}

@@ -75,7 +75,7 @@ export function LinkPagesSection({
             <Input
               id="linkpage-title"
               name="title"
-              placeholder="Links Vitoria"
+              placeholder="Digite o titulo aqui"
               defaultValue={formState.values?.title}
               disabled={pending}
               aria-invalid={!!formState.errors?.title?.length}
@@ -89,7 +89,7 @@ export function LinkPagesSection({
             <Input
               id="linkpage-slug"
               name="slug"
-              placeholder="vitoria"
+              placeholder="Digite o slug aqui"
               defaultValue={formState.values?.slug}
               disabled={pending}
               aria-invalid={!!formState.errors?.slug?.length}
@@ -107,7 +107,7 @@ export function LinkPagesSection({
           <Input
             id="linkpage-description"
             name="description"
-            placeholder="Links da loja de Vitoria"
+            placeholder="Digite a descricao aqui"
             defaultValue={formState.values?.description}
             disabled={pending}
             aria-invalid={!!formState.errors?.description?.length}

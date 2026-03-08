@@ -67,6 +67,7 @@ export function LinkPageForm({
                 }
                 disabled={pending}
                 aria-invalid={!!formState.errors?.title?.length}
+                placeholder="Digite o titulo aqui"
               />
               {formState.errors?.title && (
                 <FieldError>{formState.errors.title[0]}</FieldError>
@@ -82,6 +83,7 @@ export function LinkPageForm({
                 }
                 disabled={pending}
                 aria-invalid={!!formState.errors?.slug?.length}
+                placeholder="Digite o slug aqui"
                 pattern="^[a-z0-9-]+$"
               />
               {formState.errors?.slug && (
@@ -103,6 +105,7 @@ export function LinkPageForm({
               }
               disabled={pending}
               aria-invalid={!!formState.errors?.description?.length}
+              placeholder="Digite a descricao aqui"
               rows={3}
             />
             {formState.errors?.description && (

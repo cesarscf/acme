@@ -61,6 +61,7 @@ export function OfferForm({
               defaultValue={formState.values?.title ?? offer.title}
               disabled={pending}
               aria-invalid={!!formState.errors?.title?.length}
+              placeholder="Digite o titulo aqui"
             />
             {formState.errors?.title && (
               <FieldError>{formState.errors.title[0]}</FieldError>
@@ -74,6 +75,7 @@ export function OfferForm({
               defaultValue={formState.values?.slug ?? offer.slug}
               disabled={pending}
               aria-invalid={!!formState.errors?.slug?.length}
+              placeholder="Digite o slug aqui"
               pattern="^[a-z0-9-]+$"
             />
             {formState.errors?.slug && (
@@ -91,6 +93,7 @@ export function OfferForm({
             }
             disabled={pending}
             aria-invalid={!!formState.errors?.description?.length}
+            placeholder="Digite a descricao aqui"
             rows={3}
           />
           {formState.errors?.description && (
@@ -106,6 +109,7 @@ export function OfferForm({
             defaultValue={formState.values?.url ?? offer.url ?? ""}
             disabled={pending}
             aria-invalid={!!formState.errors?.url?.length}
+            placeholder="https://exemplo.com"
           />
           {formState.errors?.url && (
             <FieldError>{formState.errors.url[0]}</FieldError>

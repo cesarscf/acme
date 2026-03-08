@@ -76,7 +76,7 @@ export function OffersSection({
             <Input
               id="offer-title"
               name="title"
-              placeholder="Black Friday"
+              placeholder="Digite o titulo aqui"
               defaultValue={formState.values?.title}
               disabled={pending}
               aria-invalid={!!formState.errors?.title?.length}
@@ -90,7 +90,7 @@ export function OffersSection({
             <Input
               id="offer-slug"
               name="slug"
-              placeholder="black-friday"
+              placeholder="Digite o slug aqui"
               defaultValue={formState.values?.slug}
               disabled={pending}
               aria-invalid={!!formState.errors?.slug?.length}
@@ -108,7 +108,7 @@ export function OffersSection({
           <Input
             id="offer-description"
             name="description"
-            placeholder="Ate 50% de desconto"
+            placeholder="Digite a descricao aqui"
             defaultValue={formState.values?.description}
             disabled={pending}
             aria-invalid={!!formState.errors?.description?.length}
@@ -123,7 +123,7 @@ export function OffersSection({
             id="offer-url"
             name="url"
             type="url"
-            placeholder="https://lojax.com/promo"
+            placeholder="https://exemplo.com"
             defaultValue={formState.values?.url}
             disabled={pending}
             aria-invalid={!!formState.errors?.url?.length}

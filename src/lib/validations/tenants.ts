@@ -1,5 +1,7 @@
 import { z } from "zod/v4"
 
+import type { FormState } from "@/lib/types"
+
 export const createTenantSchema = z.object({
   name: z.string().min(1, "Nome e obrigatorio"),
   slug: z
@@ -10,3 +12,5 @@ export const createTenantSchema = z.object({
       "Slug deve conter apenas letras minusculas, numeros e hifens"
     ),
 })
+
+export type CreateTenantFormState = FormState<{ name: string; slug: string }>

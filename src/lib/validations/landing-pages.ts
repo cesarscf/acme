@@ -1,5 +1,7 @@
 import { z } from "zod/v4"
 
+import type { FormState } from "@/lib/types"
+
 export const upsertLandingPageSchema = z.object({
   tenantId: z.uuid(),
   title: z
@@ -15,3 +17,9 @@ export const upsertLandingPageSchema = z.object({
     .optional()
     .transform((v) => v || null),
 })
+
+export type LandingPageFormState = FormState<{
+  title: string
+  description: string
+  url: string
+}>

@@ -6,6 +6,7 @@ import { ExternalLink, FileText, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -13,9 +14,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { createLinkPageAction } from "@/lib/actions/link-pages"
+import type { LinkPageFormState } from "@/lib/validations/link-pages"
 import { protocol, rootDomain } from "@/lib/utils"
 
 type LinkPage = {
@@ -25,6 +32,8 @@ type LinkPage = {
   description: string | null
   links: { id: string }[]
 }
+
+const initialState: LinkPageFormState = { errors: null, success: false }
 
 export function LinkPagesSection({
   tenantId,
@@ -38,23 +47,82 @@ export function LinkPagesSection({
   const [open, setOpen] = useState(false)
 
   const wrappedAction = useCallback(
-    async (prev: unknown, formData: FormData) => {
+    async (prev: LinkPageFormState, formData: FormData) => {
       const result = await createLinkPageAction(prev, formData)
-      if (result?.success) setOpen(false)
+      if (result.success) setOpen(false)
       return result
     },
     []
   )
 
-  const [createState, createAction, isCreating] = useActionState(
+  const [formState, createAction, pending] = useActionState(
     wrappedAction,
-    null
+    initialState
   )
 
   useEffect(() => {
-    if (createState?.success) toast.success("Pagina de links criada")
-    if (createState?.error) toast.error(createState.error)
-  }, [createState])
+    if (formState.success) toast.success("Pagina de links criada")
+    if (formState.errors?._root) toast.error(formState.errors._root[0])
+  }, [formState])
+
+  const createForm = (
+    <form action={createAction}>
+      <input type="hidden" name="tenant_id" value={tenantId} />
+      <FieldGroup>
+        <div className="grid grid-cols-2 gap-3">
+          <Field data-invalid={!!formState.errors?.title?.length}>
+            <FieldLabel htmlFor="linkpage-title">Titulo</FieldLabel>
+            <Input
+              id="linkpage-title"
+              name="title"
+              placeholder="Links Vitoria"
+              defaultValue={formState.values?.title}
+              disabled={pending}
+              aria-invalid={!!formState.errors?.title?.length}
+            />
+            {formState.errors?.title && (
+              <FieldError>{formState.errors.title[0]}</FieldError>
+            )}
+          </Field>
+          <Field data-invalid={!!formState.errors?.slug?.length}>
+            <FieldLabel htmlFor="linkpage-slug">Slug</FieldLabel>
+            <Input
+              id="linkpage-slug"
+              name="slug"
+              placeholder="vitoria"
+              defaultValue={formState.values?.slug}
+              disabled={pending}
+              aria-invalid={!!formState.errors?.slug?.length}
+              pattern="^[a-z0-9-]+$"
+            />
+            {formState.errors?.slug && (
+              <FieldError>{formState.errors.slug[0]}</FieldError>
+            )}
+          </Field>
+        </div>
+        <Field data-invalid={!!formState.errors?.description?.length}>
+          <FieldLabel htmlFor="linkpage-description">
+            Descricao (opcional)
+          </FieldLabel>
+          <Input
+            id="linkpage-description"
+            name="description"
+            placeholder="Links da loja de Vitoria"
+            defaultValue={formState.values?.description}
+            disabled={pending}
+            aria-invalid={!!formState.errors?.description?.length}
+          />
+          {formState.errors?.description && (
+            <FieldError>{formState.errors.description[0]}</FieldError>
+          )}
+        </Field>
+        <Button type="submit" className="w-full" disabled={pending}>
+          {pending && <Spinner />}
+          Criar pagina de links
+        </Button>
+      </FieldGroup>
+    </form>
+  )
 
   return (
     <div className="space-y-4">
@@ -78,43 +146,7 @@ export function LinkPagesSection({
               <DialogHeader>
                 <DialogTitle>Nova pagina de links</DialogTitle>
               </DialogHeader>
-              <form action={createAction} className="space-y-4">
-                <input type="hidden" name="tenant_id" value={tenantId} />
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="linkpage-title">Titulo</Label>
-                    <Input
-                      id="linkpage-title"
-                      name="title"
-                      placeholder="Links Vitoria"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="linkpage-slug">Slug</Label>
-                    <Input
-                      id="linkpage-slug"
-                      name="slug"
-                      placeholder="vitoria"
-                      required
-                      pattern="^[a-z0-9-]+$"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="linkpage-description">
-                    Descricao (opcional)
-                  </Label>
-                  <Input
-                    id="linkpage-description"
-                    name="description"
-                    placeholder="Links da loja de Vitoria"
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isCreating}>
-                  {isCreating ? "Criando..." : "Criar pagina de links"}
-                </Button>
-              </form>
+              {createForm}
             </DialogContent>
           </Dialog>
         </div>
@@ -132,47 +164,7 @@ export function LinkPagesSection({
                 <DialogHeader>
                   <DialogTitle>Nova pagina de links</DialogTitle>
                 </DialogHeader>
-                <form action={createAction} className="space-y-4">
-                  <input type="hidden" name="tenant_id" value={tenantId} />
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="linkpage-title">Titulo</Label>
-                      <Input
-                        id="linkpage-title"
-                        name="title"
-                        placeholder="Links Vitoria"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="linkpage-slug">Slug</Label>
-                      <Input
-                        id="linkpage-slug"
-                        name="slug"
-                        placeholder="vitoria"
-                        required
-                        pattern="^[a-z0-9-]+$"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="linkpage-description">
-                      Descricao (opcional)
-                    </Label>
-                    <Input
-                      id="linkpage-description"
-                      name="description"
-                      placeholder="Links da loja de Vitoria"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isCreating}
-                  >
-                    {isCreating ? "Criando..." : "Criar pagina de links"}
-                  </Button>
-                </form>
+                {createForm}
               </DialogContent>
             </Dialog>
           </div>

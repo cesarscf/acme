@@ -5,40 +5,65 @@ import { tenants } from "@/db/schema"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
+import { z } from "zod/v4"
 
 import { auth } from "@/lib/auth"
 import { getTenantById } from "@/lib/queries/tenants"
-import { createTenantSchema } from "@/lib/validations/tenants"
+import {
+  createTenantSchema,
+  type CreateTenantFormState,
+} from "@/lib/validations/tenants"
 import { removeDomainFromVercel } from "@/lib/vercel"
 import { eq } from "drizzle-orm"
 
 export async function createTenantAction(
-  _prevState: unknown,
+  _prevState: CreateTenantFormState,
   formData: FormData
-) {
+): Promise<CreateTenantFormState> {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return { error: "Nao autenticado" }
 
-  const parsed = createTenantSchema.safeParse({
-    name: formData.get("name"),
-    slug: formData.get("slug"),
-  })
+  const values = {
+    name: formData.get("name") as string,
+    slug: formData.get("slug") as string,
+  }
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+  if (!session) {
+    return {
+      values,
+      errors: { _root: ["Nao autenticado"] },
+      success: false,
+    }
+  }
+
+  const result = createTenantSchema.safeParse(values)
+
+  if (!result.success) {
+    return {
+      values,
+      errors: z.flattenError(result.error).fieldErrors,
+      success: false,
+    }
   }
 
   try {
     await db.insert(tenants).values({
-      name: parsed.data.name,
-      slug: parsed.data.slug,
+      name: result.data.name,
+      slug: result.data.slug,
       userId: session.user.id,
     })
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
-      return { error: "Slug ou dominio ja esta em uso" }
+      return {
+        values,
+        errors: { slug: ["Slug ou dominio ja esta em uso"] },
+        success: false,
+      }
     }
-    return { error: "Erro ao criar tenant" }
+    return {
+      values,
+      errors: { _root: ["Erro ao criar tenant"] },
+      success: false,
+    }
   }
 
   redirect("/dashboard")

@@ -5,57 +5,83 @@ import { linkPages } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { z } from "zod/v4"
 
 import {
   createLinkPageSchema,
   updateLinkPageSchema,
+  type LinkPageFormState,
 } from "@/lib/validations/link-pages"
 
 export async function createLinkPageAction(
-  _prevState: unknown,
+  _prevState: LinkPageFormState,
   formData: FormData
-) {
-  const parsed = createLinkPageSchema.safeParse({
+): Promise<LinkPageFormState> {
+  const values = {
+    title: formData.get("title") as string,
+    slug: formData.get("slug") as string,
+    description: formData.get("description") as string,
+  }
+
+  const result = createLinkPageSchema.safeParse({
     tenantId: formData.get("tenant_id"),
-    slug: formData.get("slug"),
-    title: formData.get("title"),
-    description: formData.get("description"),
+    ...values,
   })
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+  if (!result.success) {
+    return {
+      values,
+      errors: z.flattenError(result.error).fieldErrors,
+      success: false,
+    }
   }
 
   try {
-    await db.insert(linkPages).values(parsed.data)
+    await db.insert(linkPages).values(result.data)
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
-      return { error: "Slug ja esta em uso neste tenant" }
+      return {
+        values,
+        errors: { slug: ["Slug ja esta em uso neste tenant"] },
+        success: false,
+      }
     }
-    return { error: "Erro ao criar pagina de links" }
+    return {
+      values,
+      errors: { _root: ["Erro ao criar pagina de links"] },
+      success: false,
+    }
   }
 
-  revalidatePath(`/dashboard/tenants/${parsed.data.tenantId}`)
-  return { success: true }
+  revalidatePath(`/dashboard/tenants/${result.data.tenantId}`)
+  return { errors: null, success: true }
 }
 
 export async function updateLinkPageAction(
-  _prevState: unknown,
+  _prevState: LinkPageFormState,
   formData: FormData
-) {
-  const parsed = updateLinkPageSchema.safeParse({
-    id: formData.get("id"),
-    tenantId: formData.get("tenant_id"),
-    slug: formData.get("slug"),
-    title: formData.get("title"),
-    description: formData.get("description"),
-  })
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+): Promise<LinkPageFormState> {
+  const values = {
+    title: formData.get("title") as string,
+    slug: formData.get("slug") as string,
+    description: formData.get("description") as string,
   }
 
-  const { id, tenantId, ...data } = parsed.data
+  const result = updateLinkPageSchema.safeParse({
+    id: formData.get("id"),
+    tenantId: formData.get("tenant_id"),
+    ...values,
+  })
+
+  if (!result.success) {
+    return {
+      values,
+      errors: z.flattenError(result.error).fieldErrors,
+      success: false,
+    }
+  }
+
+  const { id, tenantId, ...data } = result.data
 
   try {
     await db
@@ -64,14 +90,22 @@ export async function updateLinkPageAction(
       .where(eq(linkPages.id, id))
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
-      return { error: "Slug ja esta em uso neste tenant" }
+      return {
+        values,
+        errors: { slug: ["Slug ja esta em uso neste tenant"] },
+        success: false,
+      }
     }
-    return { error: "Erro ao atualizar pagina de links" }
+    return {
+      values,
+      errors: { _root: ["Erro ao atualizar pagina de links"] },
+      success: false,
+    }
   }
 
   revalidatePath(`/dashboard/tenants/${tenantId}/links/${id}`)
   revalidatePath(`/dashboard/tenants/${tenantId}`)
-  return { success: true }
+  return { errors: null, success: true }
 }
 
 export async function deleteLinkPageAction(

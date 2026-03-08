@@ -5,6 +5,7 @@ import { Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -12,18 +13,29 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { createTenantAction } from "@/lib/actions/tenants"
+import type { CreateTenantFormState } from "@/lib/validations/tenants"
 import { cn } from "@/lib/utils"
+
+const initialState: CreateTenantFormState = { errors: null, success: false }
 
 export function CreateTenantDialog({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
-  const [state, action, isPending] = useActionState(createTenantAction, null)
+  const [formState, action, pending] = useActionState(
+    createTenantAction,
+    initialState
+  )
 
   useEffect(() => {
-    if (state?.error) toast.error(state.error)
-  }, [state])
+    if (formState.errors?._root) toast.error(formState.errors._root[0])
+  }, [formState])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -37,33 +49,51 @@ export function CreateTenantDialog({ className }: { className?: string }) {
         <DialogHeader>
           <DialogTitle>Novo tenant</DialogTitle>
         </DialogHeader>
-        <form action={action} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input id="name" name="name" placeholder="Farmacia X" required />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="slug">Slug</Label>
-            <div className="flex items-center">
+        <form action={action}>
+          <FieldGroup>
+            <Field data-invalid={!!formState.errors?.name?.length}>
+              <FieldLabel htmlFor="name">Nome</FieldLabel>
               <Input
-                id="slug"
-                name="slug"
-                placeholder="farmacia-x"
-                required
-                pattern="^[a-z0-9-]+$"
-                title="Apenas letras minusculas, numeros e hifens"
-                className="rounded-r-none"
+                id="name"
+                name="name"
+                placeholder="Farmacia X"
+                defaultValue={formState.values?.name}
+                disabled={pending}
+                aria-invalid={!!formState.errors?.name?.length}
               />
-              <span className="flex min-h-9 items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-                .acme.com
-              </span>
-            </div>
-          </div>
+              {formState.errors?.name && (
+                <FieldError>{formState.errors.name[0]}</FieldError>
+              )}
+            </Field>
 
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? "Criando..." : "Criar tenant"}
-          </Button>
+            <Field data-invalid={!!formState.errors?.slug?.length}>
+              <FieldLabel htmlFor="slug">Slug</FieldLabel>
+              <div className="flex items-center">
+                <Input
+                  id="slug"
+                  name="slug"
+                  placeholder="farmacia-x"
+                  defaultValue={formState.values?.slug}
+                  disabled={pending}
+                  aria-invalid={!!formState.errors?.slug?.length}
+                  pattern="^[a-z0-9-]+$"
+                  title="Apenas letras minusculas, numeros e hifens"
+                  className="rounded-r-none"
+                />
+                <span className="flex min-h-9 items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                  .acme.com
+                </span>
+              </div>
+              {formState.errors?.slug && (
+                <FieldError>{formState.errors.slug[0]}</FieldError>
+              )}
+            </Field>
+
+            <Button type="submit" className="w-full" disabled={pending}>
+              {pending && <Spinner />}
+              Criar tenant
+            </Button>
+          </FieldGroup>
         </form>
       </DialogContent>
     </Dialog>

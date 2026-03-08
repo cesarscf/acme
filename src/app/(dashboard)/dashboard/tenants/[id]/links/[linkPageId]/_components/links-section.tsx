@@ -5,6 +5,7 @@ import { Link2, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -12,9 +13,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { createLinkAction, deleteLinkAction } from "@/lib/actions/links"
+import type { CreateLinkFormState } from "@/lib/validations/links"
 
 type Link = {
   id: string
@@ -22,6 +29,8 @@ type Link = {
   url: string
   position: number
 }
+
+const initialState: CreateLinkFormState = { errors: null, success: false }
 
 export function LinksSection({
   tenantId,
@@ -35,52 +44,65 @@ export function LinksSection({
   const [open, setOpen] = useState(false)
 
   const wrappedAction = useCallback(
-    async (prev: unknown, formData: FormData) => {
+    async (prev: CreateLinkFormState, formData: FormData) => {
       const result = await createLinkAction(prev, formData)
-      if (result?.success) setOpen(false)
+      if (result.success) setOpen(false)
       return result
     },
     []
   )
 
-  const [createState, createAction, isCreating] = useActionState(
+  const [formState, createAction, pending] = useActionState(
     wrappedAction,
-    null
+    initialState
   )
   const [, deleteAction, isDeleting] = useActionState(deleteLinkAction, null)
 
   useEffect(() => {
-    if (createState?.success) toast.success("Link adicionado")
-    if (createState?.error) toast.error(createState.error)
-  }, [createState])
+    if (formState.success) toast.success("Link adicionado")
+    if (formState.errors?._root) toast.error(formState.errors._root[0])
+  }, [formState])
 
   const createForm = (
-    <form action={createAction} className="space-y-4">
+    <form action={createAction}>
       <input type="hidden" name="link_page_id" value={linkPageId} />
       <input type="hidden" name="tenant_id" value={tenantId} />
       <input type="hidden" name="position" value={links.length} />
-      <div className="space-y-2">
-        <Label htmlFor="link-title">Titulo</Label>
-        <Input
-          id="link-title"
-          name="title"
-          placeholder="Instagram"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="link-url">URL</Label>
-        <Input
-          id="link-url"
-          name="url"
-          type="url"
-          placeholder="https://instagram.com/lojax"
-          required
-        />
-      </div>
-      <Button type="submit" className="w-full" disabled={isCreating}>
-        {isCreating ? "Adicionando..." : "Adicionar link"}
-      </Button>
+      <FieldGroup>
+        <Field data-invalid={!!formState.errors?.title?.length}>
+          <FieldLabel htmlFor="link-title">Titulo</FieldLabel>
+          <Input
+            id="link-title"
+            name="title"
+            placeholder="Instagram"
+            defaultValue={formState.values?.title}
+            disabled={pending}
+            aria-invalid={!!formState.errors?.title?.length}
+          />
+          {formState.errors?.title && (
+            <FieldError>{formState.errors.title[0]}</FieldError>
+          )}
+        </Field>
+        <Field data-invalid={!!formState.errors?.url?.length}>
+          <FieldLabel htmlFor="link-url">URL</FieldLabel>
+          <Input
+            id="link-url"
+            name="url"
+            type="url"
+            placeholder="https://instagram.com/lojax"
+            defaultValue={formState.values?.url}
+            disabled={pending}
+            aria-invalid={!!formState.errors?.url?.length}
+          />
+          {formState.errors?.url && (
+            <FieldError>{formState.errors.url[0]}</FieldError>
+          )}
+        </Field>
+        <Button type="submit" className="w-full" disabled={pending}>
+          {pending && <Spinner />}
+          Adicionar link
+        </Button>
+      </FieldGroup>
     </form>
   )
 

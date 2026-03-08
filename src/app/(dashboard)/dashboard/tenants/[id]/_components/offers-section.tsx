@@ -6,7 +6,7 @@ import { ExternalLink, Gift, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -14,9 +14,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { createOfferAction } from "@/lib/actions/offers"
+import type { CreateOfferFormState } from "@/lib/validations/offers"
 import { protocol, rootDomain } from "@/lib/utils"
 
 type Offer = {
@@ -27,6 +33,8 @@ type Offer = {
   url: string | null
   active: boolean
 }
+
+const initialState: CreateOfferFormState = { errors: null, success: false }
 
 export function OffersSection({
   tenantId,
@@ -40,68 +48,95 @@ export function OffersSection({
   const [open, setOpen] = useState(false)
 
   const wrappedAction = useCallback(
-    async (prev: unknown, formData: FormData) => {
+    async (prev: CreateOfferFormState, formData: FormData) => {
       const result = await createOfferAction(prev, formData)
-      if (result?.success) setOpen(false)
+      if (result.success) setOpen(false)
       return result
     },
     []
   )
 
-  const [createState, createAction, isCreating] = useActionState(
+  const [formState, createAction, pending] = useActionState(
     wrappedAction,
-    null
+    initialState
   )
 
   useEffect(() => {
-    if (createState?.success) toast.success("Oferta criada")
-    if (createState?.error) toast.error(createState.error)
-  }, [createState])
+    if (formState.success) toast.success("Oferta criada")
+    if (formState.errors?._root) toast.error(formState.errors._root[0])
+  }, [formState])
 
   const createForm = (
-    <form action={createAction} className="space-y-4">
+    <form action={createAction}>
       <input type="hidden" name="tenant_id" value={tenantId} />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="offer-title">Titulo</Label>
-          <Input
-            id="offer-title"
-            name="title"
-            placeholder="Black Friday"
-            required
-          />
+      <FieldGroup>
+        <div className="grid grid-cols-2 gap-3">
+          <Field data-invalid={!!formState.errors?.title?.length}>
+            <FieldLabel htmlFor="offer-title">Titulo</FieldLabel>
+            <Input
+              id="offer-title"
+              name="title"
+              placeholder="Black Friday"
+              defaultValue={formState.values?.title}
+              disabled={pending}
+              aria-invalid={!!formState.errors?.title?.length}
+            />
+            {formState.errors?.title && (
+              <FieldError>{formState.errors.title[0]}</FieldError>
+            )}
+          </Field>
+          <Field data-invalid={!!formState.errors?.slug?.length}>
+            <FieldLabel htmlFor="offer-slug">Slug</FieldLabel>
+            <Input
+              id="offer-slug"
+              name="slug"
+              placeholder="black-friday"
+              defaultValue={formState.values?.slug}
+              disabled={pending}
+              aria-invalid={!!formState.errors?.slug?.length}
+              pattern="^[a-z0-9-]+$"
+            />
+            {formState.errors?.slug && (
+              <FieldError>{formState.errors.slug[0]}</FieldError>
+            )}
+          </Field>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="offer-slug">Slug</Label>
+        <Field data-invalid={!!formState.errors?.description?.length}>
+          <FieldLabel htmlFor="offer-description">
+            Descricao (opcional)
+          </FieldLabel>
           <Input
-            id="offer-slug"
-            name="slug"
-            placeholder="black-friday"
-            required
-            pattern="^[a-z0-9-]+$"
+            id="offer-description"
+            name="description"
+            placeholder="Ate 50% de desconto"
+            defaultValue={formState.values?.description}
+            disabled={pending}
+            aria-invalid={!!formState.errors?.description?.length}
           />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="offer-description">Descricao (opcional)</Label>
-        <Input
-          id="offer-description"
-          name="description"
-          placeholder="Ate 50% de desconto"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="offer-url">URL do CTA (opcional)</Label>
-        <Input
-          id="offer-url"
-          name="url"
-          type="url"
-          placeholder="https://lojax.com/promo"
-        />
-      </div>
-      <Button type="submit" className="w-full" disabled={isCreating}>
-        {isCreating ? "Criando..." : "Criar oferta"}
-      </Button>
+          {formState.errors?.description && (
+            <FieldError>{formState.errors.description[0]}</FieldError>
+          )}
+        </Field>
+        <Field data-invalid={!!formState.errors?.url?.length}>
+          <FieldLabel htmlFor="offer-url">URL do CTA (opcional)</FieldLabel>
+          <Input
+            id="offer-url"
+            name="url"
+            type="url"
+            placeholder="https://lojax.com/promo"
+            defaultValue={formState.values?.url}
+            disabled={pending}
+            aria-invalid={!!formState.errors?.url?.length}
+          />
+          {formState.errors?.url && (
+            <FieldError>{formState.errors.url[0]}</FieldError>
+          )}
+        </Field>
+        <Button type="submit" className="w-full" disabled={pending}>
+          {pending && <Spinner />}
+          Criar oferta
+        </Button>
+      </FieldGroup>
     </form>
   )
 
@@ -153,7 +188,8 @@ export function OffersSection({
             {offers.map((offer) => (
               <div
                 key={offer.id}
-                className="rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md space-y-1">
+                className="rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md space-y-1"
+              >
                 <div className="flex items-center justify-between">
                   <Link
                     href={`/dashboard/tenants/${tenantId}/ofertas/${offer.id}`}

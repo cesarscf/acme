@@ -5,34 +5,21 @@ import { z } from "zod/v4"
 
 import { auth } from "@/lib/auth"
 import { emailSchema, otpSchema } from "@/lib/validations/auth"
-
-export type AuthState = {
-  step: "email" | "otp"
-  email?: string
-  errors?: Record<string, string>
-  success?: boolean
-  message?: string
-}
+import type { AuthState } from "@/lib/validations/auth"
 
 export async function sendOtp(
   _prevState: AuthState,
   formData: FormData
 ): Promise<AuthState> {
-  const result = emailSchema.safeParse({
-    email: formData.get("email"),
-  })
-
   const email = formData.get("email") as string
+
+  const result = emailSchema.safeParse({ email })
 
   if (!result.success) {
     return {
       step: "email",
       email,
-      errors: Object.fromEntries(
-        Object.entries(z.flattenError(result.error).fieldErrors).map(
-          ([key, messages]) => [key, messages?.[0] ?? ""]
-        )
-      ),
+      errors: z.flattenError(result.error).fieldErrors,
     }
   }
 
@@ -47,48 +34,42 @@ export async function sendOtp(
     return {
       step: "email",
       email,
-      errors: { email: "Erro ao enviar o codigo" },
+      errors: { email: ["Erro ao enviar o codigo"] },
     }
   }
 
-  return { step: "otp", email: result.data.email }
+  return { step: "otp", email: result.data.email, errors: null }
 }
 
 export async function verifyOtp(
   _prevState: AuthState,
   formData: FormData
 ): Promise<AuthState> {
-  const result = otpSchema.safeParse({
-    email: formData.get("email"),
-    otp: formData.get("otp"),
-  })
+  const email = formData.get("email") as string
+  const otp = formData.get("otp") as string
+
+  const result = otpSchema.safeParse({ email, otp })
 
   if (!result.success) {
     return {
       step: "otp",
-      email: formData.get("email") as string,
-      errors: Object.fromEntries(
-        Object.entries(z.flattenError(result.error).fieldErrors).map(
-          ([key, messages]) => [key, messages?.[0] ?? ""]
-        )
-      ),
+      email,
+      errors: z.flattenError(result.error).fieldErrors,
     }
   }
 
-  const { email, otp } = result.data
-
   try {
     await auth.api.signInEmailOTP({
-      body: { email, otp },
+      body: { email: result.data.email, otp: result.data.otp },
       headers: await headers(),
     })
   } catch {
     return {
       step: "otp",
       email,
-      errors: { otp: "Código inválido" },
+      errors: { otp: ["Codigo invalido"] },
     }
   }
 
-  return { step: "otp", email, success: true }
+  return { step: "otp", email, errors: null, success: true }
 }

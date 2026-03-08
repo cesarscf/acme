@@ -5,11 +5,18 @@ import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { updateOfferAction, deleteOfferAction } from "@/lib/actions/offers"
+import type { UpdateOfferFormState } from "@/lib/validations/offers"
 
 type Offer = {
   id: string
@@ -20,6 +27,8 @@ type Offer = {
   active: boolean
 }
 
+const initialState: UpdateOfferFormState = { errors: null, success: false }
+
 export function OfferForm({
   tenantId,
   offer,
@@ -27,74 +36,96 @@ export function OfferForm({
   tenantId: string
   offer: Offer
 }) {
-  const [updateState, updateAction, isUpdating] = useActionState(
+  const [formState, updateAction, pending] = useActionState(
     updateOfferAction,
-    null
+    initialState
   )
   const [, deleteAction, isDeleting] = useActionState(deleteOfferAction, null)
 
   useEffect(() => {
-    if (updateState?.success) toast.success("Oferta atualizada")
-    if (updateState?.error) toast.error(updateState.error)
-  }, [updateState])
+    if (formState.success) toast.success("Oferta atualizada")
+    if (formState.errors?._root) toast.error(formState.errors._root[0])
+  }, [formState])
 
   return (
-
-      <form action={updateAction} className="space-y-6">
-        <input type="hidden" name="id" value={offer.id} />
-        <input type="hidden" name="tenant_id" value={tenantId} />
+    <form action={updateAction}>
+      <input type="hidden" name="id" value={offer.id} />
+      <input type="hidden" name="tenant_id" value={tenantId} />
+      <FieldGroup>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="title">Titulo</Label>
+          <Field data-invalid={!!formState.errors?.title?.length}>
+            <FieldLabel htmlFor="title">Titulo</FieldLabel>
             <Input
               id="title"
               name="title"
-              defaultValue={offer.title}
-              required
+              defaultValue={formState.values?.title ?? offer.title}
+              disabled={pending}
+              aria-invalid={!!formState.errors?.title?.length}
             />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="slug">Slug</Label>
+            {formState.errors?.title && (
+              <FieldError>{formState.errors.title[0]}</FieldError>
+            )}
+          </Field>
+          <Field data-invalid={!!formState.errors?.slug?.length}>
+            <FieldLabel htmlFor="slug">Slug</FieldLabel>
             <Input
               id="slug"
               name="slug"
-              defaultValue={offer.slug}
-              required
+              defaultValue={formState.values?.slug ?? offer.slug}
+              disabled={pending}
+              aria-invalid={!!formState.errors?.slug?.length}
               pattern="^[a-z0-9-]+$"
             />
-          </div>
+            {formState.errors?.slug && (
+              <FieldError>{formState.errors.slug[0]}</FieldError>
+            )}
+          </Field>
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="description">Descricao (opcional)</Label>
+        <Field data-invalid={!!formState.errors?.description?.length}>
+          <FieldLabel htmlFor="description">Descricao (opcional)</FieldLabel>
           <Textarea
             id="description"
             name="description"
-            defaultValue={offer.description ?? ""}
+            defaultValue={
+              formState.values?.description ?? offer.description ?? ""
+            }
+            disabled={pending}
+            aria-invalid={!!formState.errors?.description?.length}
             rows={3}
           />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="url">URL do CTA (opcional)</Label>
+          {formState.errors?.description && (
+            <FieldError>{formState.errors.description[0]}</FieldError>
+          )}
+        </Field>
+        <Field data-invalid={!!formState.errors?.url?.length}>
+          <FieldLabel htmlFor="url">URL do CTA (opcional)</FieldLabel>
           <Input
             id="url"
             name="url"
             type="url"
-            defaultValue={offer.url ?? ""}
+            defaultValue={formState.values?.url ?? offer.url ?? ""}
+            disabled={pending}
+            aria-invalid={!!formState.errors?.url?.length}
           />
-        </div>
-        <div className="flex items-center gap-3">
+          {formState.errors?.url && (
+            <FieldError>{formState.errors.url[0]}</FieldError>
+          )}
+        </Field>
+        <Field orientation="horizontal">
           <Switch
             id="active"
             name="active"
             defaultChecked={offer.active}
+            disabled={pending}
             value="on"
           />
-          <Label htmlFor="active">Ativa</Label>
-        </div>
+          <FieldLabel htmlFor="active">Ativa</FieldLabel>
+        </Field>
 
         <div className="flex items-center justify-between">
-          <Button type="submit" size="sm" disabled={isUpdating}>
-            {isUpdating ? "Salvando..." : "Salvar"}
+          <Button type="submit" size="sm" disabled={pending}>
+            {pending && <Spinner />}
+            Salvar
           </Button>
           <form action={deleteAction}>
             <input type="hidden" name="id" value={offer.id} />
@@ -109,7 +140,7 @@ export function OfferForm({
             </Button>
           </form>
         </div>
-      </form>
-
+      </FieldGroup>
+    </form>
   )
 }

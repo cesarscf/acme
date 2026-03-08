@@ -1,5 +1,7 @@
 import { z } from "zod/v4"
 
+import type { FormState } from "@/lib/types"
+
 export const createOfferSchema = z.object({
   tenantId: z.uuid(),
   slug: z
@@ -38,3 +40,18 @@ export const updateOfferSchema = z.object({
     .optional()
     .transform((v) => v === "on"),
 })
+
+export type CreateOfferFormState = FormState<{
+  title: string
+  slug: string
+  description: string
+  url: string
+}>
+
+export type UpdateOfferFormState = FormState<{
+  title: string
+  slug: string
+  description: string
+  url: string
+  active: string
+}>

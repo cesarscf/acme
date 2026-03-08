@@ -4,28 +4,42 @@ import { db } from "@/db"
 import { links } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { z } from "zod/v4"
 
-import { createLinkSchema } from "@/lib/validations/links"
+import {
+  createLinkSchema,
+  type CreateLinkFormState,
+} from "@/lib/validations/links"
 
 export async function createLinkAction(
-  _prevState: unknown,
+  _prevState: CreateLinkFormState,
   formData: FormData
-) {
-  const parsed = createLinkSchema.safeParse({
-    linkPageId: formData.get("link_page_id"),
-    title: formData.get("title"),
-    url: formData.get("url"),
-    position: formData.get("position"),
-  })
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+): Promise<CreateLinkFormState> {
+  const values = {
+    title: formData.get("title") as string,
+    url: formData.get("url") as string,
   }
 
-  await db.insert(links).values(parsed.data)
+  const result = createLinkSchema.safeParse({
+    linkPageId: formData.get("link_page_id"),
+    position: formData.get("position"),
+    ...values,
+  })
+
+  if (!result.success) {
+    return {
+      values,
+      errors: z.flattenError(result.error).fieldErrors,
+      success: false,
+    }
+  }
+
+  await db.insert(links).values(result.data)
   const tenantId = formData.get("tenant_id") as string
-  revalidatePath(`/dashboard/tenants/${tenantId}/links/${parsed.data.linkPageId}`)
-  return { success: true }
+  revalidatePath(
+    `/dashboard/tenants/${tenantId}/links/${result.data.linkPageId}`
+  )
+  return { errors: null, success: true }
 }
 
 export async function deleteLinkAction(

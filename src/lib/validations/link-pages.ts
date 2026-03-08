@@ -1,5 +1,7 @@
 import { z } from "zod/v4"
 
+import type { FormState } from "@/lib/types"
+
 export const createLinkPageSchema = z.object({
   tenantId: z.uuid(),
   slug: z
@@ -26,3 +28,9 @@ export const updateLinkPageSchema = z.object({
     .optional()
     .transform((v) => v || null),
 })
+
+export type LinkPageFormState = FormState<{
+  title: string
+  slug: string
+  description: string
+}>

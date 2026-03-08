@@ -4,23 +4,35 @@ import { db } from "@/db"
 import { landingPages } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { z } from "zod/v4"
 
 import { getLandingPageByTenantId } from "@/lib/queries/landing-pages"
-import { upsertLandingPageSchema } from "@/lib/validations/landing-pages"
+import {
+  upsertLandingPageSchema,
+  type LandingPageFormState,
+} from "@/lib/validations/landing-pages"
 
 export async function upsertLandingPageAction(
-  _prevState: unknown,
+  _prevState: LandingPageFormState,
   formData: FormData
-) {
+): Promise<LandingPageFormState> {
+  const values = {
+    title: formData.get("title") as string,
+    description: formData.get("description") as string,
+    url: formData.get("url") as string,
+  }
+
   const parsed = upsertLandingPageSchema.safeParse({
     tenantId: formData.get("tenant_id"),
-    title: formData.get("title"),
-    description: formData.get("description"),
-    url: formData.get("url"),
+    ...values,
   })
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+    return {
+      values,
+      errors: z.flattenError(parsed.error).fieldErrors,
+      success: false,
+    }
   }
 
   const { tenantId, title, description, url } = parsed.data
@@ -49,5 +61,5 @@ export async function upsertLandingPageAction(
   }
 
   revalidatePath(`/dashboard/tenants/${tenantId}`)
-  return { success: true }
+  return { errors: null, success: true }
 }

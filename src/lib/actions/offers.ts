@@ -5,60 +5,87 @@ import { offers } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { z } from "zod/v4"
 
 import {
   createOfferSchema,
   updateOfferSchema,
+  type CreateOfferFormState,
+  type UpdateOfferFormState,
 } from "@/lib/validations/offers"
 
 export async function createOfferAction(
-  _prevState: unknown,
+  _prevState: CreateOfferFormState,
   formData: FormData
-) {
-  const parsed = createOfferSchema.safeParse({
+): Promise<CreateOfferFormState> {
+  const values = {
+    title: formData.get("title") as string,
+    slug: formData.get("slug") as string,
+    description: formData.get("description") as string,
+    url: formData.get("url") as string,
+  }
+
+  const result = createOfferSchema.safeParse({
     tenantId: formData.get("tenant_id"),
-    slug: formData.get("slug"),
-    title: formData.get("title"),
-    description: formData.get("description"),
-    url: formData.get("url"),
+    ...values,
   })
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+  if (!result.success) {
+    return {
+      values,
+      errors: z.flattenError(result.error).fieldErrors,
+      success: false,
+    }
   }
 
   try {
-    await db.insert(offers).values(parsed.data)
+    await db.insert(offers).values(result.data)
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
-      return { error: "Slug ja esta em uso neste tenant" }
+      return {
+        values,
+        errors: { slug: ["Slug ja esta em uso neste tenant"] },
+        success: false,
+      }
     }
-    return { error: "Erro ao criar oferta" }
+    return {
+      values,
+      errors: { _root: ["Erro ao criar oferta"] },
+      success: false,
+    }
   }
 
-  revalidatePath(`/dashboard/tenants/${parsed.data.tenantId}`)
-  return { success: true }
+  revalidatePath(`/dashboard/tenants/${result.data.tenantId}`)
+  return { errors: null, success: true }
 }
 
 export async function updateOfferAction(
-  _prevState: unknown,
+  _prevState: UpdateOfferFormState,
   formData: FormData
-) {
-  const parsed = updateOfferSchema.safeParse({
-    id: formData.get("id"),
-    tenantId: formData.get("tenant_id"),
-    slug: formData.get("slug"),
-    title: formData.get("title"),
-    description: formData.get("description"),
-    url: formData.get("url"),
-    active: formData.get("active"),
-  })
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0].message }
+): Promise<UpdateOfferFormState> {
+  const values = {
+    title: formData.get("title") as string,
+    slug: formData.get("slug") as string,
+    description: formData.get("description") as string,
+    url: formData.get("url") as string,
+    active: formData.get("active") as string,
   }
 
-  const { id, tenantId, ...data } = parsed.data
+  const result = updateOfferSchema.safeParse({
+    id: formData.get("id"),
+    tenantId: formData.get("tenant_id"),
+    ...values,
+  })
+
+  if (!result.success) {
+    return {
+      values,
+      errors: z.flattenError(result.error).fieldErrors,
+      success: false,
+    }
+  }
+
+  const { id, tenantId, ...data } = result.data
 
   try {
     await db
@@ -67,14 +94,22 @@ export async function updateOfferAction(
       .where(eq(offers.id, id))
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
-      return { error: "Slug ja esta em uso neste tenant" }
+      return {
+        values,
+        errors: { slug: ["Slug ja esta em uso neste tenant"] },
+        success: false,
+      }
     }
-    return { error: "Erro ao atualizar oferta" }
+    return {
+      values,
+      errors: { _root: ["Erro ao atualizar oferta"] },
+      success: false,
+    }
   }
 
   revalidatePath(`/dashboard/tenants/${tenantId}/ofertas/${id}`)
   revalidatePath(`/dashboard/tenants/${tenantId}`)
-  return { success: true }
+  return { errors: null, success: true }
 }
 
 export async function deleteOfferAction(

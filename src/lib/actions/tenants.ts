@@ -9,7 +9,7 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { getTenantById } from "@/lib/queries/tenants"
 import { createTenantSchema } from "@/lib/validations/tenants"
-import { addDomainToVercel, removeDomainFromVercel } from "@/lib/vercel"
+import { removeDomainFromVercel } from "@/lib/vercel"
 import { eq } from "drizzle-orm"
 
 export async function createTenantAction(
@@ -22,8 +22,6 @@ export async function createTenantAction(
   const parsed = createTenantSchema.safeParse({
     name: formData.get("name"),
     slug: formData.get("slug"),
-    subdomain: formData.get("subdomain"),
-    customDomain: formData.get("custom_domain"),
   })
 
   if (!parsed.success) {
@@ -34,14 +32,8 @@ export async function createTenantAction(
     await db.insert(tenants).values({
       name: parsed.data.name,
       slug: parsed.data.slug,
-      subdomain: parsed.data.subdomain ?? parsed.data.slug,
-      customDomain: parsed.data.customDomain,
       userId: session.user.id,
     })
-
-    if (parsed.data.customDomain) {
-      await addDomainToVercel(parsed.data.customDomain)
-    }
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
       return { error: "Slug ou dominio ja esta em uso" }

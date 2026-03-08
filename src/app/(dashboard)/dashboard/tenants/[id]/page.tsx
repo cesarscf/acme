@@ -53,32 +53,28 @@ export default async function TenantDetailPage({
               <p className="mt-1 text-sm text-muted-foreground">
                 Gerencie landing page, links, ofertas e dominio
               </p>
-              {(tenant.subdomain || tenant.customDomain) && (
-                <div className="mt-1 flex items-center gap-3">
-                  {tenant.subdomain && (
-                    <a
-                      href={`${protocol}://${tenant.subdomain}.${rootDomain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-                    >
-                      {tenant.subdomain}.{rootDomain}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                  {tenant.customDomain && (
-                    <a
-                      href={`${protocol}://${tenant.customDomain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-                    >
-                      {tenant.customDomain}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-              )}
+              <div className="mt-1 flex items-center gap-3">
+                <a
+                  href={`${protocol}://${tenant.slug}.${rootDomain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                >
+                  {tenant.slug}.{rootDomain}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                {tenant.customDomain && (
+                  <a
+                    href={`${protocol}://${tenant.customDomain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                  >
+                    {tenant.customDomain}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
             </div>
             <DeleteTenantButton tenantId={tenant.id} />
           </div>

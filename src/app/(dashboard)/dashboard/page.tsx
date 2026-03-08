@@ -45,9 +45,7 @@ export default async function DashboardPage() {
                   >
                     <h3 className="font-semibold">{tenant.name}</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {tenant.subdomain
-                        ? `${tenant.subdomain}.acme.com`
-                        : tenant.customDomain || tenant.slug}
+                      {tenant.customDomain || `${tenant.slug}.acme.com`}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       {new Date(tenant.createdAt).toLocaleDateString("pt-BR")}

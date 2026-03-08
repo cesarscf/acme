@@ -9,13 +9,4 @@ export const createTenantSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug deve conter apenas letras minusculas, numeros e hifens"
     ),
-  subdomain: z
-    .string()
-    .regex(/^[a-z0-9-]*$/, "Subdominio invalido")
-    .optional()
-    .transform((v) => v || null),
-  customDomain: z
-    .string()
-    .optional()
-    .transform((v) => v || null),
 })

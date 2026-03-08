@@ -10,7 +10,6 @@ export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
-  subdomain: text("subdomain").unique(),
   customDomain: text("custom_domain").unique(),
   domainVerified: boolean("domain_verified").notNull().default(false),
   userId: text("user_id")

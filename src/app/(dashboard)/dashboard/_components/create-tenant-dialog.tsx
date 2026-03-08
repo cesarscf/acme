@@ -40,43 +40,25 @@ export function CreateTenantDialog({ className }: { className?: string }) {
         <form action={action} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nome</Label>
-            <Input id="name" name="name" placeholder="Loja X" required />
+            <Input id="name" name="name" placeholder="Farmacia X" required />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="slug">Slug</Label>
-            <Input
-              id="slug"
-              name="slug"
-              placeholder="lojax"
-              required
-              pattern="^[a-z0-9-]+$"
-              title="Apenas letras minusculas, numeros e hifens"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="subdomain">Subdominio (opcional)</Label>
             <div className="flex items-center">
               <Input
-                id="subdomain"
-                name="subdomain"
-                placeholder="lojax"
+                id="slug"
+                name="slug"
+                placeholder="farmacia-x"
+                required
+                pattern="^[a-z0-9-]+$"
+                title="Apenas letras minusculas, numeros e hifens"
                 className="rounded-r-none"
               />
               <span className="flex min-h-9 items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">
                 .acme.com
               </span>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="custom_domain">Dominio custom (opcional)</Label>
-            <Input
-              id="custom_domain"
-              name="custom_domain"
-              placeholder="lojax.com"
-            />
           </div>
 
           <Button type="submit" className="w-full" disabled={isPending}>

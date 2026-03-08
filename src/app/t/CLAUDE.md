@@ -1,10 +1,12 @@
 # t/
 
-Rotas públicas dos tenants. O visitante nunca acessa `/t/...` diretamente — o middleware reescreve internamente:
+Rotas públicas dos tenants. O visitante não deve acessar `/t/...` diretamente — quando o middleware for conectado, o proxy reescreverá internamente:
 
 - `tenant.acme.com/` → `/t/tenant`
 - `tenant.acme.com/links/vitoria` → `/t/tenant/links/vitoria`
 - `tenant.acme.com/ofertas/black-friday` → `/t/tenant/ofertas/black-friday`
+
+**Nota:** O middleware ainda não está conectado (lógica existe em `proxy.ts` mas falta `middleware.ts` na raiz).
 
 ## Estrutura
 

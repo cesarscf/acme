@@ -22,8 +22,8 @@ Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de
 
 ## Features
 
-- **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via proxy com query direto no Postgres (sem cache no MVP)
-- **Auth** — Better Auth (email + OTP), apenas agência, sem roles
+- **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via proxy com rewrite para `/t/[slug]/...` (proxy implementado mas middleware ainda não conectado)
+- **Auth** — Better Auth (email OTP + Google OAuth), apenas agência, sem roles
 - **Landing page** — Campos fixos por tenant: título, descrição e CTA (link)
 - **Páginas de links** — Múltiplas por tenant. Cada uma com título, descrição e lista de links (título + URL), estilo Linktree
 - **Páginas de oferta** — Múltiplas por tenant. Cada uma com título, descrição e CTA (link)
@@ -35,21 +35,20 @@ Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de
 
 ### Auth
 - Apenas a agência acessa o dashboard (sem roles, sem multi-user por tenant)
-- Login via email OTP (4 dígitos), sem senha
+- Login via email OTP (4 dígitos) ou Google OAuth
 - OTP apenas logado no console em dev (integração com provedor de email pendente)
 
 ### Tenants
 - Cada tenant pertence a um usuário (agência)
 - Slug é único e obrigatório (apenas letras minúsculas, números e hífens)
 - Se subdomínio não for informado, usa o slug como subdomínio
-- Custom domain é opcional; quando informado, é registrado na Vercel Domains API
-- Ao deletar tenant, remove o custom domain da Vercel e deleta em cascata (landing page, link pages, links, ofertas)
+- Custom domain é opcional (campo existe no schema, mas ainda não exposto no form de criação)
+- Ao deletar tenant, remove o custom domain da Vercel (se existir) e deleta em cascata (landing page, link pages, links, ofertas)
 
-### Multi-tenancy (Proxy)
-- Resolução de tenant via `proxy.ts`: subdomínio (`tenant.quiwork.com`) ou custom domain (`tenant.com`)
-- Em localhost: `tenant.localhost:3000`
-- Vercel preview: `tenant---project.vercel.app`
-- Rotas `/dashboard` e `/login` são bloqueadas em domínios de tenant (redireciona para `/`)
+### Multi-tenancy (Proxy) — pendente
+- Lógica implementada em `proxy.ts` mas **middleware não conectado** (falta `middleware.ts` na raiz invocando `proxy()`)
+- Quando conectado: subdomínio (`tenant.quiwork.com`), custom domain (`tenant.com`), localhost (`tenant.localhost:3000`), Vercel preview (`tenant---project.vercel.app`)
+- Rotas `/dashboard` e `/login` serão bloqueadas em domínios de tenant (redireciona para `/`)
 - O proxy reescreve internamente para `/t/[slug]/...` — visitante nunca vê `/t/`
 
 ### Landing Page
@@ -60,21 +59,22 @@ Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de
 
 ### Páginas de Links
 - Múltiplas por tenant (1:N)
-- Slug único por tenant (constraint de unicidade)
+- Slug único por tenant (validado via try-catch no insert, sem constraint composta no schema)
 - Cada página contém lista de links (título + URL) ordenados por posição
 - Links são deletados em cascata ao remover a página
 - Rota pública: `tenant.quiwork.com/links/[slug]`
 
 ### Ofertas
 - Múltiplas por tenant (1:N)
-- Slug único por tenant (constraint de unicidade)
+- Slug único por tenant (validado via try-catch no insert, sem constraint composta no schema)
 - Campos: título, descrição, URL do CTA, flag ativa/inativa
 - Ofertas inativas retornam 404 na página pública
 - Rota pública: `tenant.quiwork.com/ofertas/[slug]`
 
-### Custom Domains
-- Ao criar tenant com custom domain, chama `addDomainToVercel()`
-- Ao deletar tenant com custom domain, chama `removeDomainFromVercel()`
+### Custom Domains — parcialmente implementado
+- Funções `addDomainToVercel()` e `removeDomainFromVercel()` existem em `vercel.ts`
+- `deleteTenantAction()` já chama `removeDomainFromVercel()` se o tenant tiver custom domain
+- Criação de tenant com custom domain ainda não implementada (form não tem o campo, action não chama `addDomainToVercel()`)
 - Verificação DNS via API route `/api/domain-check` que consulta Vercel API
 - Status exibido no dashboard do tenant
 

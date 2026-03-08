@@ -2,10 +2,11 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { Gift, Plus } from "lucide-react"
+import { ExternalLink, Gift, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createOfferAction } from "@/lib/actions/offers"
+import { protocol, rootDomain } from "@/lib/utils"
 
 type Offer = {
   id: string
@@ -28,9 +30,11 @@ type Offer = {
 
 export function OffersSection({
   tenantId,
+  tenantSlug,
   offers,
 }: {
   tenantId: string
+  tenantSlug?: string
   offers: Offer[]
 }) {
   const [open, setOpen] = useState(false)
@@ -104,7 +108,7 @@ export function OffersSection({
   return (
     <div className="space-y-4">
       {offers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+        <div className="flex flex-col items-center justify-center rounded-xl bg-muted py-12">
           <Gift className="h-10 w-10 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">
             Nenhuma oferta cadastrada
@@ -145,27 +149,41 @@ export function OffersSection({
               </DialogContent>
             </Dialog>
           </div>
-          <div className="space-y-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {offers.map((offer) => (
-              <Link
+              <div
                 key={offer.id}
-                href={`/dashboard/tenants/${tenantId}/ofertas/${offer.id}`}
-                className="block rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
+                className="rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{offer.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      /ofertas/{offer.slug}
-                      {!offer.active && (
-                        <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs">
-                          inativa
-                        </span>
-                      )}
-                    </p>
-                  </div>
+                  <Link
+                    href={`/dashboard/tenants/${tenantId}/ofertas/${offer.id}`}
+                    className="font-semibold hover:underline"
+                  >
+                    {offer.title}
+                  </Link>
+                  {tenantSlug && (
+                    <a
+                      href={`${protocol}://${tenantSlug}.${rootDomain}/ofertas/${offer.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="ghost" size="icon-sm">
+                        <ExternalLink className="size-4" />
+                      </Button>
+                    </a>
+                  )}
                 </div>
-              </Link>
+                <Separator className="my-4" />
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>/ofertas/{offer.slug}</span>
+                  {!offer.active && (
+                    <span className="rounded bg-muted-foreground/10 px-1.5 py-0.5 text-xs">
+                      inativa
+                    </span>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </>

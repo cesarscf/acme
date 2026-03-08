@@ -2,7 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { FileText, Plus } from "lucide-react"
+import { ExternalLink, FileText, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createLinkPageAction } from "@/lib/actions/link-pages"
+import { protocol, rootDomain } from "@/lib/utils"
 
 type LinkPage = {
   id: string
@@ -27,9 +28,11 @@ type LinkPage = {
 
 export function LinkPagesSection({
   tenantId,
+  tenantSlug,
   linkPages,
 }: {
   tenantId: string
+  tenantSlug?: string
   linkPages: LinkPage[]
 }) {
   const [open, setOpen] = useState(false)
@@ -56,7 +59,7 @@ export function LinkPagesSection({
   return (
     <div className="space-y-4">
       {linkPages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+        <div className="flex flex-col items-center justify-center rounded-xl bg-muted py-12">
           <FileText className="h-10 w-10 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">
             Nenhuma pagina de links cadastrada
@@ -173,26 +176,39 @@ export function LinkPagesSection({
               </DialogContent>
             </Dialog>
           </div>
-          <div className="space-y-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {linkPages.map((linkPage) => (
-              <Link
+              <div
                 key={linkPage.id}
-                href={`/dashboard/tenants/${tenantId}/links/${linkPage.id}`}
-                className="block rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
+                className="rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md space-y-1"
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{linkPage.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      /links/{linkPage.slug}
-                    </p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
+                  <Link
+                    href={`/dashboard/tenants/${tenantId}/links/${linkPage.id}`}
+                    className="font-semibold hover:underline"
+                  >
+                    {linkPage.title}
+                  </Link>
+                  {tenantSlug && (
+                    <a
+                      href={`${protocol}://${tenantSlug}.${rootDomain}/links/${linkPage.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="ghost" size="icon-sm">
+                        <ExternalLink className="size-4" />
+                      </Button>
+                    </a>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>/links/{linkPage.slug}</span>
+                  <span>
                     {linkPage.links.length}{" "}
                     {linkPage.links.length === 1 ? "link" : "links"}
-                  </p>
+                  </span>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </>

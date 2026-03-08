@@ -30,7 +30,7 @@ export default async function DashboardTwoPage() {
             {allTenants.map((tenant) => (
               <Link
                 key={tenant.id}
-                href={`/dashboard/tenants/${tenant.id}`}
+                href={`/dashboard-two/tenants/${tenant.id}`}
                 className="block rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md"
               >
                 <div className="flex items-center gap-2">

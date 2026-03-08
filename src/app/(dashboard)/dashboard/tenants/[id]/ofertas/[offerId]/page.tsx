@@ -2,8 +2,8 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
 
+import { Card, CardContent } from "@/components/ui/card"
 import { getOfferById } from "@/lib/queries/offers"
-import { SiteHeader } from "../../../../../_components/site-header"
 import { OfferForm } from "./_components/offer-form"
 
 export default async function OfferDetailPage({
@@ -18,31 +18,29 @@ export default async function OfferDetailPage({
   if (!offer || offer.tenantId !== tenantId) notFound()
 
   return (
-    <>
-      <SiteHeader title={offer.title} />
-      <div className="flex flex-1 flex-col">
-        <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-6 py-4 md:py-6 px-4 lg:px-6">
-          <div>
-            <Link
-              href={`/dashboard/tenants/${tenantId}`}
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              Voltar
-            </Link>
-          </div>
-          <div>
-            <h2 className="text-2xl font-semibold">{offer.title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Edite os dados da oferta
-            </p>
-          </div>
+    <div className="flex flex-1 flex-col">
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 lg:px-6">
+        <Link
+          href={`/dashboard/tenants/${tenantId}`}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+        >
+          <ArrowLeftIcon className="size-4" />
+          Voltar
+        </Link>
 
-          <OfferForm tenantId={tenantId} offer={offer} />
-          </div>
+        <div className="mt-6">
+          <h2 className="text-2xl font-semibold">{offer.title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Edite os dados da oferta
+          </p>
         </div>
+
+        <Card className="mt-6">
+          <CardContent>
+            <OfferForm tenantId={tenantId} offer={offer} />
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </div>
   )
 }

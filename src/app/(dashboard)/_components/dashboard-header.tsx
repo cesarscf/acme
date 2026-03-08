@@ -20,7 +20,7 @@ export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-10">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 pb-6 pt-4 md:px-8">
-        <Link href="/dashboard-two" className="flex items-center gap-2">
+        <Link href="/dashboard" className="flex items-center gap-2">
           <Layers className="size-6" />
         </Link>
 

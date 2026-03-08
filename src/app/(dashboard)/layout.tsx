@@ -1,9 +1,8 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { auth } from "@/lib/auth"
-import { AppSidebar } from "./_components/app-sidebar"
+import { DashboardHeader } from "./_components/dashboard-header"
 
 export default async function DashboardLayout({
   children,
@@ -19,16 +18,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 64)",
-          "--header-height": "calc(var(--spacing) * 12 + 1px)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar email={session.user.email} />
-      <SidebarInset>{children}</SidebarInset>
-    </SidebarProvider>
+    <div className="flex min-h-svh flex-col bg-muted/60 font-semibold">
+      <DashboardHeader />
+      <main className="flex flex-1 flex-col">{children}</main>
+    </div>
   )
 }

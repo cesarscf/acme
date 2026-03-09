@@ -69,51 +69,39 @@ export function LinkPagesSection({
     <form action={createAction}>
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
-        <div className="grid grid-cols-2 gap-3">
-          <Field data-invalid={!!formState.errors?.title?.length}>
-            <FieldLabel htmlFor="linkpage-title">Titulo</FieldLabel>
-            <Input
-              id="linkpage-title"
-              name="title"
-              placeholder="Digite o titulo aqui"
-              defaultValue={formState.values?.title}
-              disabled={pending}
-              aria-invalid={!!formState.errors?.title?.length}
-            />
-            {formState.errors?.title && (
-              <FieldError>{formState.errors.title[0]}</FieldError>
-            )}
-          </Field>
-          <Field data-invalid={!!formState.errors?.slug?.length}>
-            <FieldLabel htmlFor="linkpage-slug">Slug</FieldLabel>
+        <Field data-invalid={!!formState.errors?.title?.length}>
+          <FieldLabel htmlFor="linkpage-title">Titulo</FieldLabel>
+          <Input
+            id="linkpage-title"
+            name="title"
+            placeholder="Digite o titulo aqui"
+            defaultValue={formState.values?.title}
+            disabled={pending}
+            aria-invalid={!!formState.errors?.title?.length}
+          />
+          {formState.errors?.title && (
+            <FieldError>{formState.errors.title[0]}</FieldError>
+          )}
+        </Field>
+        <Field data-invalid={!!formState.errors?.slug?.length}>
+          <FieldLabel htmlFor="linkpage-slug">Slug</FieldLabel>
+          <div className="flex items-center">
+            <span className="flex min-h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+              /links/
+            </span>
             <Input
               id="linkpage-slug"
               name="slug"
-              placeholder="Digite o slug aqui"
+              placeholder="vitoria"
               defaultValue={formState.values?.slug}
               disabled={pending}
               aria-invalid={!!formState.errors?.slug?.length}
               pattern="^[a-z0-9-]+$"
+              className="rounded-l-none"
             />
-            {formState.errors?.slug && (
-              <FieldError>{formState.errors.slug[0]}</FieldError>
-            )}
-          </Field>
-        </div>
-        <Field data-invalid={!!formState.errors?.description?.length}>
-          <FieldLabel htmlFor="linkpage-description">
-            Descricao (opcional)
-          </FieldLabel>
-          <Input
-            id="linkpage-description"
-            name="description"
-            placeholder="Digite a descricao aqui"
-            defaultValue={formState.values?.description}
-            disabled={pending}
-            aria-invalid={!!formState.errors?.description?.length}
-          />
-          {formState.errors?.description && (
-            <FieldError>{formState.errors.description[0]}</FieldError>
+          </div>
+          {formState.errors?.slug && (
+            <FieldError>{formState.errors.slug[0]}</FieldError>
           )}
         </Field>
         <Button type="submit" className="w-full" disabled={pending}>

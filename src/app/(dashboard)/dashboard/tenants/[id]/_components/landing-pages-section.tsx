@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -69,23 +70,26 @@ export function LandingPagesSection({
     <form action={createAction}>
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
-        <div className="grid grid-cols-2 gap-3">
-          <Field data-invalid={!!formState.errors?.title?.length}>
-            <FieldLabel htmlFor="lp-title">Titulo</FieldLabel>
-            <Input
-              id="lp-title"
-              name="title"
-              placeholder="Digite o titulo aqui"
-              defaultValue={formState.values?.title}
-              disabled={pending}
-              aria-invalid={!!formState.errors?.title?.length}
-            />
-            {formState.errors?.title && (
-              <FieldError>{formState.errors.title[0]}</FieldError>
-            )}
-          </Field>
-          <Field data-invalid={!!formState.errors?.slug?.length}>
-            <FieldLabel htmlFor="lp-slug">Slug (vazio = raiz)</FieldLabel>
+        <Field data-invalid={!!formState.errors?.title?.length}>
+          <FieldLabel htmlFor="lp-title">Titulo</FieldLabel>
+          <Input
+            id="lp-title"
+            name="title"
+            placeholder="Digite o titulo aqui"
+            defaultValue={formState.values?.title}
+            disabled={pending}
+            aria-invalid={!!formState.errors?.title?.length}
+          />
+          {formState.errors?.title && (
+            <FieldError>{formState.errors.title[0]}</FieldError>
+          )}
+        </Field>
+        <Field data-invalid={!!formState.errors?.slug?.length}>
+          <FieldLabel htmlFor="lp-slug">Slug</FieldLabel>
+          <div className="flex items-center">
+            <span className="flex min-h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+              /
+            </span>
             <Input
               id="lp-slug"
               name="slug"
@@ -94,39 +98,14 @@ export function LandingPagesSection({
               disabled={pending}
               aria-invalid={!!formState.errors?.slug?.length}
               pattern="^[a-z0-9-]*$"
+              className="rounded-l-none"
             />
-            {formState.errors?.slug && (
-              <FieldError>{formState.errors.slug[0]}</FieldError>
-            )}
-          </Field>
-        </div>
-        <Field data-invalid={!!formState.errors?.description?.length}>
-          <FieldLabel htmlFor="lp-description">Descricao (opcional)</FieldLabel>
-          <Input
-            id="lp-description"
-            name="description"
-            placeholder="Digite a descricao aqui"
-            defaultValue={formState.values?.description}
-            disabled={pending}
-            aria-invalid={!!formState.errors?.description?.length}
-          />
-          {formState.errors?.description && (
-            <FieldError>{formState.errors.description[0]}</FieldError>
-          )}
-        </Field>
-        <Field data-invalid={!!formState.errors?.url?.length}>
-          <FieldLabel htmlFor="lp-url">URL do CTA (opcional)</FieldLabel>
-          <Input
-            id="lp-url"
-            name="url"
-            type="url"
-            placeholder="https://exemplo.com"
-            defaultValue={formState.values?.url}
-            disabled={pending}
-            aria-invalid={!!formState.errors?.url?.length}
-          />
-          {formState.errors?.url && (
-            <FieldError>{formState.errors.url[0]}</FieldError>
+          </div>
+          <FieldDescription>
+            Deixe vazio para usar como pagina raiz do tenant
+          </FieldDescription>
+          {formState.errors?.slug && (
+            <FieldError>{formState.errors.slug[0]}</FieldError>
           )}
         </Field>
         <Button type="submit" className="w-full" disabled={pending}>

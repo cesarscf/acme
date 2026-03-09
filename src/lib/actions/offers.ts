@@ -38,8 +38,13 @@ export async function createOfferAction(
     }
   }
 
+  let createdId: string
   try {
-    await db.insert(offers).values(result.data)
+    const [created] = await db
+      .insert(offers)
+      .values(result.data)
+      .returning({ id: offers.id })
+    createdId = created.id
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
       return {
@@ -56,7 +61,7 @@ export async function createOfferAction(
   }
 
   revalidatePath(`/dashboard/tenants/${result.data.tenantId}`)
-  return { errors: null, success: true }
+  redirect(`/dashboard/tenants/${result.data.tenantId}/ofertas/${createdId}`)
 }
 
 export async function updateOfferAction(

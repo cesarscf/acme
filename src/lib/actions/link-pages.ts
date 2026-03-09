@@ -36,8 +36,13 @@ export async function createLinkPageAction(
     }
   }
 
+  let createdId: string
   try {
-    await db.insert(linkPages).values(result.data)
+    const [created] = await db
+      .insert(linkPages)
+      .values(result.data)
+      .returning({ id: linkPages.id })
+    createdId = created.id
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
       return {
@@ -54,7 +59,7 @@ export async function createLinkPageAction(
   }
 
   revalidatePath(`/dashboard/tenants/${result.data.tenantId}`)
-  return { errors: null, success: true }
+  redirect(`/dashboard/tenants/${result.data.tenantId}/links/${createdId}`)
 }
 
 export async function updateLinkPageAction(

@@ -58,10 +58,15 @@ export async function createLandingPageAction(
     }
   }
 
-  await db.insert(landingPages).values(result.data)
+  const [created] = await db
+    .insert(landingPages)
+    .values(result.data)
+    .returning({ id: landingPages.id })
 
   revalidatePath(`/dashboard/tenants/${result.data.tenantId}`)
-  return { errors: null, success: true }
+  redirect(
+    `/dashboard/tenants/${result.data.tenantId}/landing-pages/${created.id}`
+  )
 }
 
 export async function updateLandingPageAction(

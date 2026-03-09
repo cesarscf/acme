@@ -6,12 +6,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { protocol, rootDomain } from "@/lib/utils"
 import { getTenantById } from "@/lib/queries/tenants"
-import { getLandingPageByTenantId } from "@/lib/queries/landing-pages"
+import { getLandingPagesByTenantId } from "@/lib/queries/landing-pages"
 import { getLinkPagesByTenantId } from "@/lib/queries/link-pages"
 import { getOffersByTenantId } from "@/lib/queries/offers"
 import { DeleteTenantButton } from "./_components/delete-tenant-button"
 import { DomainStatus } from "./_components/domain-status"
-import { LandingPageForm } from "./_components/landing-page-form"
+import { LandingPagesSection } from "./_components/landing-pages-section"
 import { LinkPagesSection } from "./_components/link-pages-section"
 import { OffersSection } from "./_components/offers-section"
 
@@ -26,8 +26,8 @@ export default async function TenantDetailPage({
 
   if (!tenant) notFound()
 
-  const [landingPage, tenantLinkPages, tenantOffers] = await Promise.all([
-    getLandingPageByTenantId(id),
+  const [tenantLandingPages, tenantLinkPages, tenantOffers] = await Promise.all([
+    getLandingPagesByTenantId(id),
     getLinkPagesByTenantId(id),
     getOffersByTenantId(id),
   ])
@@ -80,21 +80,18 @@ export default async function TenantDetailPage({
 
         <Tabs defaultValue="landing-page" className="mt-6">
           <TabsList variant="line">
-            <TabsTrigger value="landing-page">Landing Page</TabsTrigger>
+            <TabsTrigger value="landing-page">Landing Pages</TabsTrigger>
             <TabsTrigger value="links">Links</TabsTrigger>
             <TabsTrigger value="ofertas">Ofertas</TabsTrigger>
             <TabsTrigger value="metricas">Metricas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="landing-page" className="mt-4">
-            <Card>
-              <CardContent >
-                <LandingPageForm
-                  tenantId={tenant.id}
-                  landingPage={landingPage ?? null}
-                />
-              </CardContent>
-            </Card>
+            <LandingPagesSection
+              tenantId={tenant.id}
+              tenantSlug={tenant.slug}
+              landingPages={tenantLandingPages}
+            />
           </TabsContent>
 
           <TabsContent value="links" className="mt-4">

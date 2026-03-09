@@ -3,18 +3,18 @@ import { notFound } from "next/navigation"
 import { getTenantBySlug } from "@/lib/queries/tenants"
 import { getLandingPageBySlug } from "@/lib/queries/landing-pages"
 
-export default async function TenantRootPage({
+export default async function TenantLandingPage({
   params,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string; lpSlug: string }>
 }) {
-  const { slug } = await params
+  const { slug, lpSlug } = await params
 
   const tenant = await getTenantBySlug(slug)
 
   if (!tenant) notFound()
 
-  const landingPage = await getLandingPageBySlug(tenant.id, "")
+  const landingPage = await getLandingPageBySlug(tenant.id, lpSlug)
 
   if (!landingPage) notFound()
 

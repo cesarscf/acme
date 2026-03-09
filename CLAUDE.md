@@ -14,17 +14,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Plataforma multi-tenant para agência de marketing. A agência cadastra clientes (tenants), cada um com seu domínio ou subdomínio. Cada tenant possui:
 
-- **Landing page** — página principal do tenant
+- **Landing pages** — múltiplas por tenant, segmentadas (ex: uma para cada cidade/loja). A LP com slug vazio é a raiz do tenant
 - **Páginas de links** — múltiplas por tenant, segmentadas (ex: uma para cada cidade/loja)
 - **Páginas de oferta** — múltiplas por tenant, também segmentadas (ex: ofertas específicas por região)
 
-Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de Vitória, outra para Vila Velha, e páginas de oferta separadas para cada cidade. A agência gerencia tudo via painel admin.
+Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pinheiros`), uma página de links para a loja de Vitória, outra para Vila Velha, e páginas de oferta separadas para cada cidade. A agência gerencia tudo via painel admin.
 
 ## Features
 
 - **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via proxy com rewrite para `/t/[slug]/...` (proxy implementado mas middleware ainda não conectado)
 - **Auth** — Better Auth (email OTP + Google OAuth), apenas agência, sem roles
-- **Landing page** — Campos fixos por tenant: título, descrição e CTA (link)
+- **Landing pages** — Múltiplas por tenant. Cada uma com título, descrição, CTA (link) e slug único. Slug vazio = raiz do tenant
 - **Páginas de links** — Múltiplas por tenant. Cada uma com título, descrição e lista de links (título + URL), estilo Linktree
 - **Páginas de oferta** — Múltiplas por tenant. Cada uma com título, descrição e CTA (link)
 - **Database** — Postgres (Neon) + Drizzle ORM
@@ -51,11 +51,15 @@ Exemplo: "Farmácia X" tem uma landing page, uma página de links para a loja de
 - Rotas `/dashboard` e `/login` serão bloqueadas em domínios de tenant (redireciona para `/`)
 - O proxy reescreve internamente para `/t/[slug]/...` — visitante nunca vê `/t/`
 
-### Landing Page
-- Uma por tenant (relação 1:1 via tabela `landing_pages`)
-- Todos os campos são opcionais (título, descrição, URL do CTA)
-- Upsert: enviar todos vazios deleta a landing page existente
-- Se não existe landing page, a página pública exibe o nome do tenant como fallback
+### Landing Pages
+- Múltiplas por tenant (1:N)
+- Slug único por tenant (validado via query antes do insert/update)
+- Slug pode ser vazio (`""`) — representa a raiz do tenant (`tenant.quiwork.com/`)
+- Não pode haver mais de uma LP com slug vazio por tenant
+- Campos: título (obrigatório), descrição, URL do CTA
+- CRUD completo: criar, editar, deletar (mesmo padrão de link pages e ofertas)
+- Se não existe LP com slug vazio, a raiz do tenant retorna 404
+- Rota pública: `tenant.quiwork.com/` (raiz) e `tenant.quiwork.com/[slug]` (demais)
 
 ### Páginas de Links
 - Múltiplas por tenant (1:N)

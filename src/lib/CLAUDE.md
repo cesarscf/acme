@@ -18,4 +18,7 @@ Módulos compartilhados da aplicação: auth, utilitários, server actions, quer
 - Server actions usam `useActionState` no client e recebem `(_prevState, formData)` como assinatura
 - Validação sempre via schemas Zod importados de `validations/`
 - Leitura de dados sempre via funções de `queries/`, nunca queries inline nos actions ou pages
+- Actions de criação usam `.returning()` para obter o ID e fazem `redirect()` para a página de detalhes
+- Campos opcionais de `formData.get()` devem usar `|| undefined` (não `as string` direto), pois `null` não é aceito por `z.string().optional()`
+- Campos booleanos são enviados via hidden input (`"true"`/`"false"`) e convertidos com `=== "true"` na action
 - Novos domínios devem seguir a mesma separação: um arquivo por contexto em cada subpasta

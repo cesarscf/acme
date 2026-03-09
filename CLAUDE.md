@@ -57,7 +57,7 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 - Slug pode ser vazio (`""`) — representa a raiz do tenant (`tenant.quiwork.com/`)
 - Não pode haver mais de uma LP com slug vazio por tenant
 - Campos: título (obrigatório), descrição, URL do CTA, flag ativa/inativa
-- CRUD completo: criar, editar, deletar (mesmo padrão de link pages e ofertas)
+- CRUD completo: criar, editar, deletar (mesmo padrão de link pages e ofertas). Ao criar, redireciona para a página de detalhes
 - LPs inativas retornam 404 na página pública
 - Se não existe LP com slug vazio, a raiz do tenant retorna 404
 - Rota pública: `tenant.quiwork.com/` (raiz) e `tenant.quiwork.com/[slug]` (demais)

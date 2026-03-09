@@ -2,7 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { ExternalLink, FileText, Plus } from "lucide-react"
+import { ChevronRight, ExternalLink, FileText, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -158,37 +158,40 @@ export function LinkPagesSection({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {linkPages.map((linkPage) => (
-              <div
+              <Link
                 key={linkPage.id}
-                className="rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md space-y-1"
+                href={`/dashboard/tenants/${tenantId}/links/${linkPage.id}`}
+                className="group relative flex items-center justify-between rounded-xl border border-transparent bg-muted p-5 transition-all hover:border-border hover:bg-accent/40"
               >
-                <div className="flex items-center justify-between">
-                  <Link
-                    href={`/dashboard/tenants/${tenantId}/links/${linkPage.id}`}
-                    className="font-semibold hover:underline"
-                  >
+                <div className="space-y-1">
+                  <span className="font-semibold">
                     {linkPage.title}
-                  </Link>
+                  </span>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span>/links/{linkPage.slug}</span>
+                    <span>
+                      {linkPage.links.length}{" "}
+                      {linkPage.links.length === 1 ? "link" : "links"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
                   {tenantSlug && (
                     <a
                       href={`${protocol}://${tenantSlug}.${rootDomain}/links/${linkPage.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="relative z-10"
                     >
                       <Button variant="ghost" size="icon-sm">
                         <ExternalLink className="size-4" />
                       </Button>
                     </a>
                   )}
+                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>/links/{linkPage.slug}</span>
-                  <span>
-                    {linkPage.links.length}{" "}
-                    {linkPage.links.length === 1 ? "link" : "links"}
-                  </span>
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
         </>

@@ -46,7 +46,7 @@ export function LinkPageForm({
   )
 
   useEffect(() => {
-    if (formState.success) toast.success("Pagina de links atualizada")
+    if (formState.success) toast.success("Página de links atualizada")
     if (formState.errors?._root) toast.error(formState.errors._root[0])
   }, [formState])
 
@@ -58,7 +58,7 @@ export function LinkPageForm({
         <FieldGroup>
           <div className="grid grid-cols-2 gap-3">
             <Field data-invalid={!!formState.errors?.title?.length}>
-              <FieldLabel htmlFor="title">Titulo</FieldLabel>
+              <FieldLabel htmlFor="title">Título</FieldLabel>
               <Input
                 id="title"
                 name="title"
@@ -67,7 +67,7 @@ export function LinkPageForm({
                 }
                 disabled={pending}
                 aria-invalid={!!formState.errors?.title?.length}
-                placeholder="Digite o titulo aqui"
+                placeholder="Digite o título aqui"
               />
               {formState.errors?.title && (
                 <FieldError>{formState.errors.title[0]}</FieldError>
@@ -93,7 +93,7 @@ export function LinkPageForm({
           </div>
           <Field data-invalid={!!formState.errors?.description?.length}>
             <FieldLabel htmlFor="description">
-              Descricao (opcional)
+              Descrição (opcional)
             </FieldLabel>
             <Textarea
               id="description"
@@ -105,7 +105,7 @@ export function LinkPageForm({
               }
               disabled={pending}
               aria-invalid={!!formState.errors?.description?.length}
-              placeholder="Digite a descricao aqui"
+              placeholder="Digite a descrição aqui"
               rows={3}
             />
             {formState.errors?.description && (

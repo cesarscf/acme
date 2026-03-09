@@ -58,14 +58,14 @@ export function LandingPageForm({
       <FieldGroup>
         <div className="grid grid-cols-2 gap-3">
           <Field data-invalid={!!formState.errors?.title?.length}>
-            <FieldLabel htmlFor="title">Titulo</FieldLabel>
+            <FieldLabel htmlFor="title">Título</FieldLabel>
             <Input
               id="title"
               name="title"
               defaultValue={formState.values?.title ?? landingPage.title}
               disabled={pending}
               aria-invalid={!!formState.errors?.title?.length}
-              placeholder="Digite o titulo aqui"
+              placeholder="Digite o título aqui"
             />
             {formState.errors?.title && (
               <FieldError>{formState.errors.title[0]}</FieldError>
@@ -88,7 +88,7 @@ export function LandingPageForm({
           </Field>
         </div>
         <Field data-invalid={!!formState.errors?.description?.length}>
-          <FieldLabel htmlFor="description">Descricao (opcional)</FieldLabel>
+          <FieldLabel htmlFor="description">Descrição (opcional)</FieldLabel>
           <Textarea
             id="description"
             name="description"
@@ -97,7 +97,7 @@ export function LandingPageForm({
             }
             disabled={pending}
             aria-invalid={!!formState.errors?.description?.length}
-            placeholder="Digite a descricao aqui"
+            placeholder="Digite a descrição aqui"
             rows={3}
           />
           {formState.errors?.description && (

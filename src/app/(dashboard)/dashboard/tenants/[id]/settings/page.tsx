@@ -29,7 +29,7 @@ export default async function TenantSettingsPage({
 
         <div className="mt-6">
           <h2 className="text-2xl font-semibold">
-            Configuracoes de {tenant.name}
+            Configurações de {tenant.name}
           </h2>
         </div>
 

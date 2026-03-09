@@ -71,7 +71,7 @@ export default async function TenantDetailPage({
           <Link href={`/dashboard/tenants/${tenant.id}/settings`}>
             <Button variant="outline" size="sm">
               <Settings className="mr-1 size-4" />
-              Configuracoes
+              Configurações
             </Button>
           </Link>
         </div>
@@ -81,7 +81,7 @@ export default async function TenantDetailPage({
             <TabsTrigger value="landing-page">Landing Pages</TabsTrigger>
             <TabsTrigger value="links">Links</TabsTrigger>
             <TabsTrigger value="ofertas">Ofertas</TabsTrigger>
-            <TabsTrigger value="metricas">Metricas</TabsTrigger>
+            <TabsTrigger value="metricas">Métricas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="landing-page" className="mt-4">
@@ -108,7 +108,7 @@ export default async function TenantDetailPage({
             <Card>
               <CardContent >
                 <p className="text-sm text-muted-foreground">
-                  Metricas estarao disponiveis em breve.
+                  Métricas estarão disponíveis em breve.
                 </p>
               </CardContent>
             </Card>

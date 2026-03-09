@@ -31,7 +31,7 @@ export function CustomDomainForm({
   )
 
   useEffect(() => {
-    if (formState.success) toast.success("Dominio atualizado")
+    if (formState.success) toast.success("Domínio atualizado")
     if (formState.errors?._root) toast.error(formState.errors._root[0])
   }, [formState])
 
@@ -40,7 +40,7 @@ export function CustomDomainForm({
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
         <Field data-invalid={!!formState.errors?.customDomain?.length}>
-          <FieldLabel htmlFor="custom-domain">Dominio</FieldLabel>
+          <FieldLabel htmlFor="custom-domain">Domínio</FieldLabel>
           <Input
             id="custom-domain"
             name="custom_domain"
@@ -52,7 +52,7 @@ export function CustomDomainForm({
             placeholder="meusite.com.br"
           />
           <FieldDescription>
-            Deixe vazio para remover o dominio personalizado
+            Deixe vazio para remover o domínio personalizado
           </FieldDescription>
           {formState.errors?.customDomain && (
             <FieldError>{formState.errors.customDomain[0]}</FieldError>

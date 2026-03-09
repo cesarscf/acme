@@ -8,25 +8,25 @@ const features = [
     icon: Globe,
     title: "Multi-tenancy",
     description:
-      "Cada cliente com seu subdominio ou dominio proprio, tudo gerenciado em um unico painel.",
+      "Cada cliente com seu subdomínio ou domínio próprio, tudo gerenciado em um único painel.",
   },
   {
     icon: Layout,
     title: "Landing pages",
     description:
-      "Crie paginas de apresentacao para cada cliente com titulo, descricao e CTA.",
+      "Crie páginas de apresentação para cada cliente com título, descrição e CTA.",
   },
   {
     icon: Link2,
-    title: "Paginas de links",
+    title: "Páginas de links",
     description:
-      "Monte paginas estilo Linktree segmentadas por cidade, loja ou campanha.",
+      "Monte páginas estilo Linktree segmentadas por cidade, loja ou campanha.",
   },
   {
     icon: Gift,
-    title: "Paginas de oferta",
+    title: "Páginas de oferta",
     description:
-      "Publique ofertas com ativacao e desativacao independente por cliente.",
+      "Publique ofertas com ativação e desativação independente por cliente.",
   },
 ]
 
@@ -43,15 +43,15 @@ export default function Page() {
       <main className="flex flex-1 flex-col">
         <section className="flex flex-col items-center justify-center gap-6 px-6 py-24 text-center">
           <h1 className="max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
-            Gerencie todos os seus clientes em um so lugar
+            Gerencie todos os seus clientes em um só lugar
           </h1>
           <p className="max-w-lg text-lg text-muted-foreground">
-            Plataforma para agencias criarem landing pages, paginas de links e
-            ofertas para cada cliente — cada um com seu proprio dominio.
+            Plataforma para agências criarem landing pages, páginas de links e
+            ofertas para cada cliente — cada um com seu próprio domínio.
           </p>
           <Button asChild size="lg">
             <Link href="/login">
-              Comecar agora
+              Começar agora
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -84,12 +84,12 @@ export default function Page() {
               <span className="text-2xl font-bold text-primary">1</span>
               <p className="mt-2 text-sm font-medium">Cadastre o cliente</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Defina nome, slug e dominio personalizado
+                Defina nome, slug e domínio personalizado
               </p>
             </div>
             <div className="rounded-xl bg-muted p-6">
               <span className="text-2xl font-bold text-primary">2</span>
-              <p className="mt-2 text-sm font-medium">Monte as paginas</p>
+              <p className="mt-2 text-sm font-medium">Monte as páginas</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Landing page, links e ofertas em minutos
               </p>
@@ -98,7 +98,7 @@ export default function Page() {
               <span className="text-2xl font-bold text-primary">3</span>
               <p className="mt-2 text-sm font-medium">Publique</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Tudo online no subdominio ou dominio do cliente
+                Tudo online no subdomínio ou domínio do cliente
               </p>
             </div>
           </div>
@@ -106,7 +106,7 @@ export default function Page() {
       </main>
 
       <footer className="border-t px-6 py-6 text-center text-sm text-muted-foreground">
-        acme — plataforma para agencias de marketing
+        acme — plataforma para agências de marketing
       </footer>
     </div>
   )

@@ -61,7 +61,7 @@ export function LinkPagesSection({
   )
 
   useEffect(() => {
-    if (formState.success) toast.success("Pagina de links criada")
+    if (formState.success) toast.success("Página de links criada")
     if (formState.errors?._root) toast.error(formState.errors._root[0])
   }, [formState])
 
@@ -70,11 +70,11 @@ export function LinkPagesSection({
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
         <Field data-invalid={!!formState.errors?.title?.length}>
-          <FieldLabel htmlFor="linkpage-title">Titulo</FieldLabel>
+          <FieldLabel htmlFor="linkpage-title">Título</FieldLabel>
           <Input
             id="linkpage-title"
             name="title"
-            placeholder="Digite o titulo aqui"
+            placeholder="Digite o título aqui"
             defaultValue={formState.values?.title}
             disabled={pending}
             aria-invalid={!!formState.errors?.title?.length}
@@ -106,7 +106,7 @@ export function LinkPagesSection({
         </Field>
         <Button type="submit" className="w-full" disabled={pending}>
           {pending && <Spinner />}
-          Criar pagina de links
+          Criar página de links
         </Button>
       </FieldGroup>
     </form>
@@ -118,21 +118,21 @@ export function LinkPagesSection({
         <div className="flex flex-col items-center justify-center rounded-xl bg-muted py-12">
           <FileText className="h-10 w-10 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">
-            Nenhuma pagina de links cadastrada
+            Nenhuma página de links cadastrada
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Crie uma pagina de links para o tenant
+            Crie uma página de links para o tenant
           </p>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="mt-4">
                 <Plus className="mr-1 h-4 w-4" />
-                Nova pagina de links
+                Nova página de links
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nova pagina de links</DialogTitle>
+                <DialogTitle>Nova página de links</DialogTitle>
               </DialogHeader>
               {createForm}
             </DialogContent>
@@ -145,12 +145,12 @@ export function LinkPagesSection({
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="mr-1 h-4 w-4" />
-                  Nova pagina de links
+                  Nova página de links
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Nova pagina de links</DialogTitle>
+                  <DialogTitle>Nova página de links</DialogTitle>
                 </DialogHeader>
                 {createForm}
               </DialogContent>

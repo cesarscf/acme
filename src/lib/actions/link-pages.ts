@@ -42,13 +42,13 @@ export async function createLinkPageAction(
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { slug: ["Slug ja esta em uso neste tenant"] },
+        errors: { slug: ["Slug já está em uso neste tenant"] },
         success: false,
       }
     }
     return {
       values,
-      errors: { _root: ["Erro ao criar pagina de links"] },
+      errors: { _root: ["Erro ao criar página de links"] },
       success: false,
     }
   }
@@ -92,13 +92,13 @@ export async function updateLinkPageAction(
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { slug: ["Slug ja esta em uso neste tenant"] },
+        errors: { slug: ["Slug já está em uso neste tenant"] },
         success: false,
       }
     }
     return {
       values,
-      errors: { _root: ["Erro ao atualizar pagina de links"] },
+      errors: { _root: ["Erro ao atualizar página de links"] },
       success: false,
     }
   }

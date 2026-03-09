@@ -6,9 +6,9 @@ export const createLinkPageSchema = z.object({
   tenantId: z.uuid(),
   slug: z
     .string()
-    .min(1, "Slug e obrigatorio")
-    .regex(/^[a-z0-9-]+$/, "Slug invalido"),
-  title: z.string().min(1, "Titulo e obrigatorio"),
+    .min(1, "Slug é obrigatório")
+    .regex(/^[a-z0-9-]+$/, "Slug inválido"),
+  title: z.string().min(1, "Título é obrigatório"),
   description: z
     .string()
     .optional()
@@ -20,9 +20,9 @@ export const updateLinkPageSchema = z.object({
   tenantId: z.uuid(),
   slug: z
     .string()
-    .min(1, "Slug e obrigatorio")
-    .regex(/^[a-z0-9-]+$/, "Slug invalido"),
-  title: z.string().min(1, "Titulo e obrigatorio"),
+    .min(1, "Slug é obrigatório")
+    .regex(/^[a-z0-9-]+$/, "Slug inválido"),
+  title: z.string().min(1, "Título é obrigatório"),
   description: z
     .string()
     .optional()

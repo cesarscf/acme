@@ -61,7 +61,7 @@ export default function LoginPage() {
         <CardTitle>Entrar</CardTitle>
         <CardDescription>
           {isOtpStep
-            ? `Digite o codigo enviado para ${emailState.email}`
+            ? `Digite o código enviado para ${emailState.email}`
             : "Digite seu email para continuar"}
         </CardDescription>
       </CardHeader>
@@ -71,7 +71,7 @@ export default function LoginPage() {
             <input type="hidden" name="email" value={emailState.email} />
             <FieldGroup>
               <Field data-invalid={!!state.errors?.otp?.length}>
-                <FieldLabel htmlFor="otp">Codigo</FieldLabel>
+                <FieldLabel htmlFor="otp">Código</FieldLabel>
                 <Input
                   id="otp"
                   name="otp"

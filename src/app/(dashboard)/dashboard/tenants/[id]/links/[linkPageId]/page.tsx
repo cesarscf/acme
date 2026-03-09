@@ -32,7 +32,7 @@ export default async function LinkPageDetailPage({
         <div className="mt-6">
           <h2 className="text-2xl font-semibold">{linkPage.title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Edite a pagina de links e gerencie os links
+            Edite a página de links e gerencie os links
           </p>
         </div>
 
@@ -45,7 +45,7 @@ export default async function LinkPageDetailPage({
         <div className="mt-8">
           <h3 className="text-lg font-semibold">Links</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie os links desta pagina
+            Gerencie os links desta página
           </p>
         </div>
 

@@ -77,7 +77,7 @@ export function CreateTenantDialog({ className }: { className?: string }) {
                   disabled={pending}
                   aria-invalid={!!formState.errors?.slug?.length}
                   pattern="^[a-z0-9-]+$"
-                  title="Apenas letras minusculas, numeros e hifens"
+                  title="Apenas letras minúsculas, números e hífens"
                   className="rounded-r-none"
                 />
                 <span className="flex min-h-9 items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">

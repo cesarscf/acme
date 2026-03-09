@@ -50,8 +50,8 @@ export async function createLandingPageAction(
       errors: {
         slug: [
           result.data.slug === ""
-            ? "Ja existe uma landing page na raiz"
-            : "Slug ja esta em uso neste tenant",
+            ? "Já existe uma landing page na raiz"
+            : "Slug já está em uso neste tenant",
         ],
       },
       success: false,
@@ -105,8 +105,8 @@ export async function updateLandingPageAction(
       errors: {
         slug: [
           data.slug === ""
-            ? "Ja existe uma landing page na raiz"
-            : "Slug ja esta em uso neste tenant",
+            ? "Já existe uma landing page na raiz"
+            : "Slug já está em uso neste tenant",
         ],
       },
       success: false,

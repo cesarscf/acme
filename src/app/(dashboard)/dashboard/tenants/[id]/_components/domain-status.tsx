@@ -67,7 +67,7 @@ function DomainStatusContent({
       <div className="space-y-2 text-sm text-yellow-800">
         <div className="space-y-1 rounded border border-yellow-200 bg-white p-3">
           <p className="text-xs font-medium text-yellow-600 uppercase">
-            Opcao 1 — Registro A
+            Opção 1 — Registro A
           </p>
           <div className="font-mono text-xs">
             <p>
@@ -84,7 +84,7 @@ function DomainStatusContent({
 
         <div className="space-y-1 rounded border border-yellow-200 bg-white p-3">
           <p className="text-xs font-medium text-yellow-600 uppercase">
-            Opcao 2 — Registro CNAME
+            Opção 2 — Registro CNAME
           </p>
           <div className="font-mono text-xs">
             <p>
@@ -103,7 +103,7 @@ function DomainStatusContent({
           status.verification.verification.length > 0 && (
             <div className="space-y-1 rounded border border-yellow-200 bg-white p-3">
               <p className="text-xs font-medium text-yellow-600 uppercase">
-                Verificacao TXT (se necessario)
+                Verificação TXT (se necessário)
               </p>
               {status.verification.verification.map((v, i) => (
                 <div key={i} className="font-mono text-xs">

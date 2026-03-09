@@ -19,7 +19,7 @@ type Tenant = {
 
 const sections = [
   { id: "geral", label: "Geral", icon: Settings },
-  { id: "dominio", label: "Dominio", icon: Globe },
+  { id: "dominio", label: "Domínio", icon: Globe },
 ] as const
 
 type SectionId = (typeof sections)[number]["id"]
@@ -55,7 +55,7 @@ export function SettingsContent({ tenant }: { tenant: Tenant }) {
           <>
             <Card>
               <CardHeader>
-                <CardTitle>Informacoes</CardTitle>
+                <CardTitle>Informações</CardTitle>
               </CardHeader>
               <CardContent>
                 <TenantInfoForm
@@ -75,7 +75,7 @@ export function SettingsContent({ tenant }: { tenant: Tenant }) {
                   <div>
                     <p className="text-sm font-medium">Excluir tenant</p>
                     <p className="text-sm text-muted-foreground">
-                      Esta acao e irreversivel e remove todos os dados
+                      Esta ação é irreversível e remove todos os dados
                     </p>
                   </div>
                   <DeleteTenantButton tenantId={tenant.id} />
@@ -88,7 +88,7 @@ export function SettingsContent({ tenant }: { tenant: Tenant }) {
         {active === "dominio" && (
           <Card>
             <CardHeader>
-              <CardTitle>Dominio personalizado</CardTitle>
+              <CardTitle>Domínio personalizado</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <CustomDomainForm

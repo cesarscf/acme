@@ -70,11 +70,11 @@ export function LinksSection({
       <input type="hidden" name="position" value={links.length} />
       <FieldGroup>
         <Field data-invalid={!!formState.errors?.title?.length}>
-          <FieldLabel htmlFor="link-title">Titulo</FieldLabel>
+          <FieldLabel htmlFor="link-title">Título</FieldLabel>
           <Input
             id="link-title"
             name="title"
-            placeholder="Digite o titulo aqui"
+            placeholder="Digite o título aqui"
             defaultValue={formState.values?.title}
             disabled={pending}
             aria-invalid={!!formState.errors?.title?.length}
@@ -113,7 +113,7 @@ export function LinksSection({
           <Link2 className="h-10 w-10 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">Nenhum link cadastrado</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Adicione o primeiro link a esta pagina
+            Adicione o primeiro link a esta página
           </p>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>

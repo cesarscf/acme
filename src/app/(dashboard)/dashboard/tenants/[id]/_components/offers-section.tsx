@@ -71,11 +71,11 @@ export function OffersSection({
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
         <Field data-invalid={!!formState.errors?.title?.length}>
-          <FieldLabel htmlFor="offer-title">Titulo</FieldLabel>
+          <FieldLabel htmlFor="offer-title">Título</FieldLabel>
           <Input
             id="offer-title"
             name="title"
-            placeholder="Digite o titulo aqui"
+            placeholder="Digite o título aqui"
             defaultValue={formState.values?.title}
             disabled={pending}
             aria-invalid={!!formState.errors?.title?.length}

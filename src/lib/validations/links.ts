@@ -4,8 +4,8 @@ import type { FormState } from "@/lib/types"
 
 export const createLinkSchema = z.object({
   linkPageId: z.uuid(),
-  title: z.string().min(1, "Titulo e obrigatorio"),
-  url: z.url("URL invalida"),
+  title: z.string().min(1, "Título é obrigatório"),
+  url: z.url("URL inválida"),
   position: z.coerce.number().int().default(0),
 })
 

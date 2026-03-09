@@ -6,9 +6,9 @@ export const createLandingPageSchema = z.object({
   tenantId: z.uuid(),
   slug: z
     .string()
-    .regex(/^[a-z0-9-]*$/, "Slug invalido")
+    .regex(/^[a-z0-9-]*$/, "Slug inválido")
     .transform((v) => v || ""),
-  title: z.string().min(1, "Titulo e obrigatorio"),
+  title: z.string().min(1, "Título é obrigatório"),
   description: z
     .string()
     .optional()
@@ -24,9 +24,9 @@ export const updateLandingPageSchema = z.object({
   tenantId: z.uuid(),
   slug: z
     .string()
-    .regex(/^[a-z0-9-]*$/, "Slug invalido")
+    .regex(/^[a-z0-9-]*$/, "Slug inválido")
     .transform((v) => v || ""),
-  title: z.string().min(1, "Titulo e obrigatorio"),
+  title: z.string().min(1, "Título é obrigatório"),
   description: z
     .string()
     .optional()

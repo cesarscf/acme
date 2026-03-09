@@ -71,11 +71,11 @@ export function LandingPagesSection({
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
         <Field data-invalid={!!formState.errors?.title?.length}>
-          <FieldLabel htmlFor="lp-title">Titulo</FieldLabel>
+          <FieldLabel htmlFor="lp-title">Título</FieldLabel>
           <Input
             id="lp-title"
             name="title"
-            placeholder="Digite o titulo aqui"
+            placeholder="Digite o título aqui"
             defaultValue={formState.values?.title}
             disabled={pending}
             aria-invalid={!!formState.errors?.title?.length}
@@ -102,7 +102,7 @@ export function LandingPagesSection({
             />
           </div>
           <FieldDescription>
-            Deixe vazio para usar como pagina raiz do tenant
+            Deixe vazio para usar como página raiz do tenant
           </FieldDescription>
           {formState.errors?.slug && (
             <FieldError>{formState.errors.slug[0]}</FieldError>

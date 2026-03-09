@@ -6,15 +6,15 @@ export const createOfferSchema = z.object({
   tenantId: z.uuid(),
   slug: z
     .string()
-    .min(1, "Slug e obrigatorio")
-    .regex(/^[a-z0-9-]+$/, "Slug invalido"),
-  title: z.string().min(1, "Titulo e obrigatorio"),
+    .min(1, "Slug é obrigatório")
+    .regex(/^[a-z0-9-]+$/, "Slug inválido"),
+  title: z.string().min(1, "Título é obrigatório"),
   description: z
     .string()
     .optional()
     .transform((v) => v || null),
   url: z
-    .url("URL invalida")
+    .url("URL inválida")
     .optional()
     .transform((v) => v || null),
 })
@@ -24,15 +24,15 @@ export const updateOfferSchema = z.object({
   tenantId: z.uuid(),
   slug: z
     .string()
-    .min(1, "Slug e obrigatorio")
-    .regex(/^[a-z0-9-]+$/, "Slug invalido"),
-  title: z.string().min(1, "Titulo e obrigatorio"),
+    .min(1, "Slug é obrigatório")
+    .regex(/^[a-z0-9-]+$/, "Slug inválido"),
+  title: z.string().min(1, "Título é obrigatório"),
   description: z
     .string()
     .optional()
     .transform((v) => v || null),
   url: z
-    .url("URL invalida")
+    .url("URL inválida")
     .optional()
     .transform((v) => v || null),
   active: z

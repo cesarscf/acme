@@ -34,7 +34,7 @@ export async function createTenantAction(
   if (!session) {
     return {
       values,
-      errors: { _root: ["Nao autenticado"] },
+      errors: { _root: ["Não autenticado"] },
       success: false,
     }
   }
@@ -59,7 +59,7 @@ export async function createTenantAction(
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { slug: ["Slug ou dominio ja esta em uso"] },
+        errors: { slug: ["Slug ou domínio já está em uso"] },
         success: false,
       }
     }
@@ -106,7 +106,7 @@ export async function updateTenantAction(
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { slug: ["Slug ja esta em uso"] },
+        errors: { slug: ["Slug já está em uso"] },
         success: false,
       }
     }
@@ -150,7 +150,7 @@ export async function updateCustomDomainAction(
   if (!tenant) {
     return {
       values,
-      errors: { _root: ["Tenant nao encontrado"] },
+      errors: { _root: ["Tenant não encontrado"] },
       success: false,
     }
   }
@@ -165,7 +165,7 @@ export async function updateCustomDomainAction(
     } catch {
       return {
         values,
-        errors: { customDomain: ["Erro ao registrar dominio na Vercel"] },
+        errors: { customDomain: ["Erro ao registrar domínio na Vercel"] },
         success: false,
       }
     }
@@ -180,13 +180,13 @@ export async function updateCustomDomainAction(
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { customDomain: ["Dominio ja esta em uso"] },
+        errors: { customDomain: ["Domínio já está em uso"] },
         success: false,
       }
     }
     return {
       values,
-      errors: { _root: ["Erro ao salvar dominio"] },
+      errors: { _root: ["Erro ao salvar domínio"] },
       success: false,
     }
   }

@@ -34,7 +34,7 @@ export async function sendOtp(
     return {
       step: "email",
       email,
-      errors: { email: ["Erro ao enviar o codigo"] },
+      errors: { email: ["Erro ao enviar o código"] },
     }
   }
 
@@ -67,7 +67,7 @@ export async function verifyOtp(
     return {
       step: "otp",
       email,
-      errors: { otp: ["Codigo invalido"] },
+      errors: { otp: ["Código inválido"] },
     }
   }
 

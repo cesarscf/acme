@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 
@@ -36,6 +36,7 @@ export function OfferForm({
   tenantId: string
   offer: Offer
 }) {
+  const [active, setActive] = useState(offer.active)
   const [formState, updateAction, pending] = useActionState(
     updateOfferAction,
     initialState
@@ -51,6 +52,21 @@ export function OfferForm({
     <form action={updateAction}>
       <input type="hidden" name="id" value={offer.id} />
       <input type="hidden" name="tenant_id" value={tenantId} />
+      <input type="hidden" name="active" value={String(active)} />
+      <div className="mb-6 flex items-center justify-between rounded-lg border bg-muted/50 p-4">
+        <div className="space-y-0.5">
+          <span className="text-sm font-medium">Status</span>
+          <p className="text-sm text-muted-foreground">
+            {active ? "Visível publicamente" : "Oculta para visitantes"}
+          </p>
+        </div>
+        <Switch
+          id="active-status"
+          checked={active}
+          onCheckedChange={setActive}
+          disabled={pending}
+        />
+      </div>
       <FieldGroup>
         <div className="grid grid-cols-2 gap-3">
           <Field data-invalid={!!formState.errors?.title?.length}>
@@ -115,17 +131,6 @@ export function OfferForm({
             <FieldError>{formState.errors.url[0]}</FieldError>
           )}
         </Field>
-        <Field orientation="horizontal">
-          <Switch
-            id="active"
-            name="active"
-            defaultChecked={offer.active}
-            disabled={pending}
-            value="on"
-          />
-          <FieldLabel htmlFor="active">Ativa</FieldLabel>
-        </Field>
-
         <div className="flex items-center justify-between">
           <Button type="submit" size="sm" disabled={pending}>
             {pending && <Spinner />}

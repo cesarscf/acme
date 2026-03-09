@@ -35,11 +35,13 @@ export const updateLandingPageSchema = z.object({
     .string()
     .optional()
     .transform((v) => v || null),
+  active: z.boolean(),
 })
 
 export type LandingPageFormState = FormState<{
   title: string
   slug: string
-  description: string
-  url: string
+  description?: string
+  url?: string
+  active?: boolean
 }>

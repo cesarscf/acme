@@ -21,8 +21,8 @@ export async function createOfferAction(
   const values = {
     title: formData.get("title") as string,
     slug: formData.get("slug") as string,
-    description: formData.get("description") as string,
-    url: formData.get("url") as string,
+    description: (formData.get("description") as string) || undefined,
+    url: (formData.get("url") as string) || undefined,
   }
 
   const result = createOfferSchema.safeParse({
@@ -66,9 +66,9 @@ export async function updateOfferAction(
   const values = {
     title: formData.get("title") as string,
     slug: formData.get("slug") as string,
-    description: formData.get("description") as string,
-    url: formData.get("url") as string,
-    active: formData.get("active") as string,
+    description: (formData.get("description") as string) || undefined,
+    url: (formData.get("url") as string) || undefined,
+    active: formData.get("active") === "true",
   }
 
   const result = updateOfferSchema.safeParse({

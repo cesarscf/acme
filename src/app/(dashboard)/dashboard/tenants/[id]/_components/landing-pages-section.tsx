@@ -32,6 +32,7 @@ type LandingPage = {
   title: string
   description: string | null
   url: string | null
+  active: boolean
 }
 
 const initialState: LandingPageFormState = { errors: null, success: false }
@@ -171,8 +172,13 @@ export function LandingPagesSection({
                   <span className="font-semibold">
                     {lp.title}
                   </span>
-                  <div className="text-sm text-muted-foreground">
-                    /{lp.slug || "(raiz)"}
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span>/{lp.slug || "(raiz)"}</span>
+                    {!lp.active && (
+                      <span className="rounded bg-muted-foreground/10 px-1.5 py-0.5 text-xs">
+                        inativa
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

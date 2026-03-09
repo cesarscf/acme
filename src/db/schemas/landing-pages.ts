@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm"
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
 
 import { tenants } from "./tenants"
 
@@ -12,6 +12,7 @@ export const landingPages = pgTable("landing_pages", {
   title: text("title").notNull(),
   description: text("description"),
   url: text("url"),
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

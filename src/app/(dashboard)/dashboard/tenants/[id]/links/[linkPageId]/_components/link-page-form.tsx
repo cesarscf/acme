@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 
@@ -13,6 +13,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import {
   updateLinkPageAction,
@@ -25,6 +26,7 @@ type LinkPage = {
   slug: string
   title: string
   description: string | null
+  active: boolean
 }
 
 const initialState: LinkPageFormState = { errors: null, success: false }
@@ -36,6 +38,7 @@ export function LinkPageForm({
   tenantId: string
   linkPage: LinkPage
 }) {
+  const [active, setActive] = useState(linkPage.active)
   const [formState, updateAction, pending] = useActionState(
     updateLinkPageAction,
     initialState
@@ -55,6 +58,21 @@ export function LinkPageForm({
       <form action={updateAction}>
         <input type="hidden" name="id" value={linkPage.id} />
         <input type="hidden" name="tenant_id" value={tenantId} />
+        <input type="hidden" name="active" value={String(active)} />
+        <div className="mb-6 flex items-center justify-between rounded-lg border bg-muted/50 p-4">
+          <div className="space-y-0.5">
+            <span className="text-sm font-medium">Status</span>
+            <p className="text-sm text-muted-foreground">
+              {active ? "Visível publicamente" : "Oculta para visitantes"}
+            </p>
+          </div>
+          <Switch
+            id="active"
+            checked={active}
+            onCheckedChange={setActive}
+            disabled={pending}
+          />
+        </div>
         <FieldGroup>
           <div className="grid grid-cols-2 gap-3">
             <Field data-invalid={!!formState.errors?.title?.length}>

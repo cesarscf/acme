@@ -27,10 +27,12 @@ export const updateLinkPageSchema = z.object({
     .string()
     .optional()
     .transform((v) => v || null),
+  active: z.boolean(),
 })
 
 export type LinkPageFormState = FormState<{
   title: string
   slug: string
-  description: string
+  description?: string
+  active?: boolean
 }>

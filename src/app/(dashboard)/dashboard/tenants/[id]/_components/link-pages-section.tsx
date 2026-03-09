@@ -30,6 +30,7 @@ type LinkPage = {
   slug: string
   title: string
   description: string | null
+  active: boolean
   links: { id: string }[]
 }
 
@@ -173,6 +174,11 @@ export function LinkPagesSection({
                       {linkPage.links.length}{" "}
                       {linkPage.links.length === 1 ? "link" : "links"}
                     </span>
+                    {!linkPage.active && (
+                      <span className="rounded bg-muted-foreground/10 px-1.5 py-0.5 text-xs">
+                        inativa
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

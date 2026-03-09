@@ -56,8 +56,9 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 - Slug único por tenant (validado via query antes do insert/update)
 - Slug pode ser vazio (`""`) — representa a raiz do tenant (`tenant.quiwork.com/`)
 - Não pode haver mais de uma LP com slug vazio por tenant
-- Campos: título (obrigatório), descrição, URL do CTA
+- Campos: título (obrigatório), descrição, URL do CTA, flag ativa/inativa
 - CRUD completo: criar, editar, deletar (mesmo padrão de link pages e ofertas)
+- LPs inativas retornam 404 na página pública
 - Se não existe LP com slug vazio, a raiz do tenant retorna 404
 - Rota pública: `tenant.quiwork.com/` (raiz) e `tenant.quiwork.com/[slug]` (demais)
 
@@ -66,6 +67,7 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 - Slug único por tenant (validado via try-catch no insert, sem constraint composta no schema)
 - Cada página contém lista de links (título + URL) ordenados por posição
 - Links são deletados em cascata ao remover a página
+- Flag ativa/inativa — páginas inativas retornam 404 na página pública
 - Rota pública: `tenant.quiwork.com/links/[slug]`
 
 ### Ofertas

@@ -20,8 +20,8 @@ export async function createLandingPageAction(
   const values = {
     title: formData.get("title") as string,
     slug: formData.get("slug") as string,
-    description: formData.get("description") as string,
-    url: formData.get("url") as string,
+    description: (formData.get("description") as string) || undefined,
+    url: (formData.get("url") as string) || undefined,
   }
 
   const result = createLandingPageSchema.safeParse({
@@ -71,8 +71,9 @@ export async function updateLandingPageAction(
   const values = {
     title: formData.get("title") as string,
     slug: formData.get("slug") as string,
-    description: formData.get("description") as string,
-    url: formData.get("url") as string,
+    description: (formData.get("description") as string) || undefined,
+    url: (formData.get("url") as string) || undefined,
+    active: formData.get("active") === "true",
   }
 
   const result = updateLandingPageSchema.safeParse({

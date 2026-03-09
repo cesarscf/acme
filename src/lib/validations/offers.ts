@@ -35,23 +35,20 @@ export const updateOfferSchema = z.object({
     .url("URL inválida")
     .optional()
     .transform((v) => v || null),
-  active: z
-    .string()
-    .optional()
-    .transform((v) => v === "on"),
+  active: z.boolean(),
 })
 
 export type CreateOfferFormState = FormState<{
   title: string
   slug: string
-  description: string
-  url: string
+  description?: string
+  url?: string
 }>
 
 export type UpdateOfferFormState = FormState<{
   title: string
   slug: string
-  description: string
-  url: string
-  active: string
+  description?: string
+  url?: string
+  active?: boolean
 }>

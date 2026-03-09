@@ -179,17 +179,22 @@ export function OffersSection({
                 </div>
                 <div className="flex items-center gap-1">
                   {tenantSlug && (
-                    <a
-                      href={`${protocol}://${tenantSlug}.${rootDomain}/ofertas/${offer.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       className="relative z-10"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        window.open(
+                          `${protocol}://${tenantSlug}.${rootDomain}/ofertas/${offer.slug}`,
+                          "_blank",
+                          "noopener,noreferrer"
+                        )
+                      }}
                     >
-                      <Button variant="ghost" size="icon-sm">
-                        <ExternalLink className="size-4" />
-                      </Button>
-                    </a>
+                      <ExternalLink className="size-4" />
+                    </Button>
                   )}
                   <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>

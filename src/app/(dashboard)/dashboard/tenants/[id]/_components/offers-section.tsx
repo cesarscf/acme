@@ -1,8 +1,7 @@
 "use client"
 
 import { useActionState, useCallback, useEffect, useState } from "react"
-import Link from "next/link"
-import { ChevronRight, ExternalLink, Gift, Plus } from "lucide-react"
+import { Gift, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -23,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { createOfferAction } from "@/lib/actions/offers"
 import type { CreateOfferFormState } from "@/lib/validations/offers"
-import { protocol, rootDomain } from "@/lib/utils"
+import { PageCard } from "./page-card"
 
 type Offer = {
   id: string
@@ -159,46 +158,14 @@ export function OffersSection({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {offers.map((offer) => (
-              <Link
+              <PageCard
                 key={offer.id}
                 href={`/dashboard/tenants/${tenantId}/ofertas/${offer.id}`}
-                className="group relative flex items-center justify-between rounded-xl border border-transparent bg-muted p-5 transition-all hover:border-border hover:bg-accent/40"
-              >
-                <div className="space-y-1">
-                  <span className="font-semibold">
-                    {offer.title}
-                  </span>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span>/ofertas/{offer.slug}</span>
-                    {!offer.active && (
-                      <span className="rounded bg-muted-foreground/10 px-1.5 py-0.5 text-xs">
-                        inativa
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {tenantSlug && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="relative z-10"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        window.open(
-                          `${protocol}://${tenantSlug}.${rootDomain}/ofertas/${offer.slug}`,
-                          "_blank",
-                          "noopener,noreferrer"
-                        )
-                      }}
-                    >
-                      <ExternalLink className="size-4" />
-                    </Button>
-                  )}
-                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </Link>
+                title={offer.title}
+                publicPath={`/ofertas/${offer.slug}`}
+                tenantSlug={tenantSlug}
+                active={offer.active}
+              />
             ))}
           </div>
         </>

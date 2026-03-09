@@ -1,8 +1,7 @@
 "use client"
 
 import { useActionState, useCallback, useEffect, useState } from "react"
-import Link from "next/link"
-import { ChevronRight, ExternalLink, FileText, Plus } from "lucide-react"
+import { FileText, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -23,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { createLinkPageAction } from "@/lib/actions/link-pages"
 import type { LinkPageFormState } from "@/lib/validations/link-pages"
-import { protocol, rootDomain } from "@/lib/utils"
+import { PageCard } from "./page-card"
 
 type LinkPage = {
   id: string
@@ -159,50 +158,20 @@ export function LinkPagesSection({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {linkPages.map((linkPage) => (
-              <Link
+              <PageCard
                 key={linkPage.id}
                 href={`/dashboard/tenants/${tenantId}/links/${linkPage.id}`}
-                className="group relative flex items-center justify-between rounded-xl border border-transparent bg-muted p-5 transition-all hover:border-border hover:bg-accent/40"
-              >
-                <div className="space-y-1">
-                  <span className="font-semibold">
-                    {linkPage.title}
+                title={linkPage.title}
+                publicPath={`/links/${linkPage.slug}`}
+                tenantSlug={tenantSlug}
+                active={linkPage.active}
+                extra={
+                  <span>
+                    {linkPage.links.length}{" "}
+                    {linkPage.links.length === 1 ? "link" : "links"}
                   </span>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span>/links/{linkPage.slug}</span>
-                    <span>
-                      {linkPage.links.length}{" "}
-                      {linkPage.links.length === 1 ? "link" : "links"}
-                    </span>
-                    {!linkPage.active && (
-                      <span className="rounded bg-muted-foreground/10 px-1.5 py-0.5 text-xs">
-                        inativa
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {tenantSlug && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="relative z-10"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        window.open(
-                          `${protocol}://${tenantSlug}.${rootDomain}/links/${linkPage.slug}`,
-                          "_blank",
-                          "noopener,noreferrer"
-                        )
-                      }}
-                    >
-                      <ExternalLink className="size-4" />
-                    </Button>
-                  )}
-                  <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </Link>
+                }
+              />
             ))}
           </div>
         </>

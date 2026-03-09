@@ -11,9 +11,13 @@ import { auth } from "@/lib/auth"
 import { getTenantById } from "@/lib/queries/tenants"
 import {
   createTenantSchema,
+  updateTenantSchema,
+  updateCustomDomainSchema,
   type CreateTenantFormState,
+  type UpdateTenantFormState,
+  type CustomDomainFormState,
 } from "@/lib/validations/tenants"
-import { removeDomainFromVercel } from "@/lib/vercel"
+import { addDomainToVercel, removeDomainFromVercel } from "@/lib/vercel"
 import { eq } from "drizzle-orm"
 
 export async function createTenantAction(
@@ -67,6 +71,129 @@ export async function createTenantAction(
   }
 
   redirect("/dashboard")
+}
+
+export async function updateTenantAction(
+  _prevState: UpdateTenantFormState,
+  formData: FormData
+): Promise<UpdateTenantFormState> {
+  const values = {
+    name: formData.get("name") as string,
+    slug: formData.get("slug") as string,
+  }
+
+  const result = updateTenantSchema.safeParse({
+    tenantId: formData.get("tenant_id"),
+    ...values,
+  })
+
+  if (!result.success) {
+    return {
+      values,
+      errors: z.flattenError(result.error).fieldErrors,
+      success: false,
+    }
+  }
+
+  const { tenantId, ...data } = result.data
+
+  try {
+    await db
+      .update(tenants)
+      .set(data)
+      .where(eq(tenants.id, tenantId))
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes("unique")) {
+      return {
+        values,
+        errors: { slug: ["Slug ja esta em uso"] },
+        success: false,
+      }
+    }
+    return {
+      values,
+      errors: { _root: ["Erro ao atualizar tenant"] },
+      success: false,
+    }
+  }
+
+  revalidatePath(`/dashboard/tenants/${tenantId}`)
+  revalidatePath(`/dashboard/tenants/${tenantId}/settings`)
+  revalidatePath("/dashboard")
+  return { errors: null, success: true }
+}
+
+export async function updateCustomDomainAction(
+  _prevState: CustomDomainFormState,
+  formData: FormData
+): Promise<CustomDomainFormState> {
+  const values = {
+    customDomain: formData.get("custom_domain") as string,
+  }
+
+  const result = updateCustomDomainSchema.safeParse({
+    tenantId: formData.get("tenant_id"),
+    ...values,
+  })
+
+  if (!result.success) {
+    return {
+      values,
+      errors: z.flattenError(result.error).fieldErrors,
+      success: false,
+    }
+  }
+
+  const { tenantId, customDomain } = result.data
+  const tenant = await getTenantById(tenantId)
+
+  if (!tenant) {
+    return {
+      values,
+      errors: { _root: ["Tenant nao encontrado"] },
+      success: false,
+    }
+  }
+
+  if (tenant.customDomain && tenant.customDomain !== customDomain) {
+    await removeDomainFromVercel(tenant.customDomain).catch(() => {})
+  }
+
+  if (customDomain && customDomain !== tenant.customDomain) {
+    try {
+      await addDomainToVercel(customDomain)
+    } catch {
+      return {
+        values,
+        errors: { customDomain: ["Erro ao registrar dominio na Vercel"] },
+        success: false,
+      }
+    }
+  }
+
+  try {
+    await db
+      .update(tenants)
+      .set({ customDomain, domainVerified: false })
+      .where(eq(tenants.id, tenantId))
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message.includes("unique")) {
+      return {
+        values,
+        errors: { customDomain: ["Dominio ja esta em uso"] },
+        success: false,
+      }
+    }
+    return {
+      values,
+      errors: { _root: ["Erro ao salvar dominio"] },
+      success: false,
+    }
+  }
+
+  revalidatePath(`/dashboard/tenants/${tenantId}`)
+  revalidatePath(`/dashboard/tenants/${tenantId}/settings`)
+  return { errors: null, success: true }
 }
 
 export async function deleteTenantAction(

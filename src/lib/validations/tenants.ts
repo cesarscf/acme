@@ -13,4 +13,27 @@ export const createTenantSchema = z.object({
     ),
 })
 
+export const updateTenantSchema = z.object({
+  tenantId: z.uuid(),
+  name: z.string().min(1, "Nome e obrigatorio"),
+  slug: z
+    .string()
+    .min(1, "Slug e obrigatorio")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug deve conter apenas letras minusculas, numeros e hifens"
+    ),
+})
+
+export const updateCustomDomainSchema = z.object({
+  tenantId: z.uuid(),
+  customDomain: z
+    .string()
+    .transform((v) => v.trim().toLowerCase() || null),
+})
+
 export type CreateTenantFormState = FormState<{ name: string; slug: string }>
+
+export type UpdateTenantFormState = FormState<{ name: string; slug: string }>
+
+export type CustomDomainFormState = FormState<{ customDomain: string }>

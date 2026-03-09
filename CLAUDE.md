@@ -75,12 +75,13 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 - Ofertas inativas retornam 404 na página pública
 - Rota pública: `tenant.quiwork.com/ofertas/[slug]`
 
-### Custom Domains — parcialmente implementado
-- Funções `addDomainToVercel()` e `removeDomainFromVercel()` existem em `vercel.ts`
-- `deleteTenantAction()` já chama `removeDomainFromVercel()` se o tenant tiver custom domain
-- Criação de tenant com custom domain ainda não implementada (form não tem o campo, action não chama `addDomainToVercel()`)
+### Custom Domains
+- Configurado na página de settings do tenant (`/dashboard/tenants/[id]/settings`)
+- Ao salvar, chama `addDomainToVercel()` para registrar na Vercel
+- Ao remover ou trocar, chama `removeDomainFromVercel()` para o domínio anterior
+- `deleteTenantAction()` também chama `removeDomainFromVercel()` se houver custom domain
 - Verificação DNS via API route `/api/domain-check` que consulta Vercel API
-- Status exibido no dashboard do tenant
+- Status e instruções DNS exibidos na página de settings abaixo do form
 
 ## Architecture
 

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeftIcon, ExternalLink } from "lucide-react"
+import { ArrowLeftIcon, ExternalLink, Settings } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -9,8 +9,7 @@ import { getTenantById } from "@/lib/queries/tenants"
 import { getLandingPagesByTenantId } from "@/lib/queries/landing-pages"
 import { getLinkPagesByTenantId } from "@/lib/queries/link-pages"
 import { getOffersByTenantId } from "@/lib/queries/offers"
-import { DeleteTenantButton } from "./_components/delete-tenant-button"
-import { DomainStatus } from "./_components/domain-status"
+import { Button } from "@/components/ui/button"
 import { LandingPagesSection } from "./_components/landing-pages-section"
 import { LinkPagesSection } from "./_components/link-pages-section"
 import { OffersSection } from "./_components/offers-section"
@@ -69,14 +68,13 @@ export default async function TenantDetailPage({
               )}
             </div>
           </div>
-          <DeleteTenantButton tenantId={tenant.id} />
+          <Link href={`/dashboard/tenants/${tenant.id}/settings`}>
+            <Button variant="outline" size="sm">
+              <Settings className="mr-1 size-4" />
+              Configuracoes
+            </Button>
+          </Link>
         </div>
-
-        {tenant.customDomain && (
-          <div className="mt-4">
-            <DomainStatus domain={tenant.customDomain} />
-          </div>
-        )}
 
         <Tabs defaultValue="landing-page" className="mt-6">
           <TabsList variant="line">

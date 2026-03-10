@@ -28,9 +28,7 @@ import { PageCard } from "./page-card"
 type LandingPage = {
   id: string
   slug: string
-  title: string
-  description: string | null
-  url: string | null
+  name: string
   active: boolean
 }
 
@@ -70,18 +68,18 @@ export function LandingPagesSection({
     <form action={createAction}>
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
-        <Field data-invalid={!!formState.errors?.title?.length}>
-          <FieldLabel htmlFor="lp-title">Título</FieldLabel>
+        <Field data-invalid={!!formState.errors?.name?.length}>
+          <FieldLabel htmlFor="lp-name">Nome</FieldLabel>
           <Input
-            id="lp-title"
-            name="title"
-            placeholder="Digite o título aqui"
-            defaultValue={formState.values?.title}
+            id="lp-name"
+            name="name"
+            placeholder="Digite o nome aqui"
+            defaultValue={formState.values?.name}
             disabled={pending}
-            aria-invalid={!!formState.errors?.title?.length}
+            aria-invalid={!!formState.errors?.name?.length}
           />
-          {formState.errors?.title && (
-            <FieldError>{formState.errors.title[0]}</FieldError>
+          {formState.errors?.name && (
+            <FieldError>{formState.errors.name[0]}</FieldError>
           )}
         </Field>
         <Field data-invalid={!!formState.errors?.slug?.length}>
@@ -165,7 +163,7 @@ export function LandingPagesSection({
               <PageCard
                 key={lp.id}
                 href={`/dashboard/tenants/${tenantId}/landing-pages/${lp.id}`}
-                title={lp.title}
+                name={lp.name}
                 publicPath={`/${lp.slug}`}
                 tenantSlug={tenantSlug}
                 active={lp.active}

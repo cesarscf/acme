@@ -3,20 +3,20 @@ import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { getLinkPageById } from "@/lib/queries/link-pages"
-import { LinkPageForm } from "./_components/link-page-form"
+import { getBioPageById } from "@/lib/queries/bio-pages"
+import { BioPageForm } from "./_components/bio-page-form"
 import { LinksSection } from "./_components/links-section"
 
-export default async function LinkPageDetailPage({
+export default async function BioPageDetailPage({
   params,
 }: {
-  params: Promise<{ id: string; linkPageId: string }>
+  params: Promise<{ id: string; bioPageId: string }>
 }) {
-  const { id: tenantId, linkPageId } = await params
+  const { id: tenantId, bioPageId } = await params
 
-  const linkPage = await getLinkPageById(linkPageId)
+  const bioPage = await getBioPageById(bioPageId)
 
-  if (!linkPage || linkPage.tenantId !== tenantId) notFound()
+  if (!bioPage || bioPage.tenantId !== tenantId) notFound()
 
   return (
     <div className="flex flex-1 flex-col">
@@ -30,15 +30,15 @@ export default async function LinkPageDetailPage({
         </Link>
 
         <div className="mt-6">
-          <h2 className="text-2xl font-semibold">{linkPage.title}</h2>
+          <h2 className="text-2xl font-semibold">{bioPage.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Edite a página de links e gerencie os links
+            Edite a bio page e gerencie os links
           </p>
         </div>
 
         <Card className="mt-6">
           <CardContent>
-            <LinkPageForm tenantId={tenantId} linkPage={linkPage} />
+            <BioPageForm tenantId={tenantId} bioPage={bioPage} />
           </CardContent>
         </Card>
 
@@ -52,8 +52,8 @@ export default async function LinkPageDetailPage({
         <div className="mt-4">
           <LinksSection
             tenantId={tenantId}
-            linkPageId={linkPageId}
-            links={linkPage.links}
+            bioPageId={bioPageId}
+            links={bioPage.links}
           />
         </div>
       </div>

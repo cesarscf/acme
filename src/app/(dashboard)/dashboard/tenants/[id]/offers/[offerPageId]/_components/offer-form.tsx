@@ -14,34 +14,32 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
-import { updateOfferAction, deleteOfferAction } from "@/lib/actions/offers"
-import type { UpdateOfferFormState } from "@/lib/validations/offers"
+import { updateOfferPageAction, deleteOfferPageAction } from "@/lib/actions/offer-pages"
+import type { UpdateOfferPageFormState } from "@/lib/validations/offer-pages"
 
-type Offer = {
+type OfferPage = {
   id: string
   slug: string
-  title: string
-  description: string | null
+  name: string
   url: string | null
   active: boolean
 }
 
-const initialState: UpdateOfferFormState = { errors: null, success: false }
+const initialState: UpdateOfferPageFormState = { errors: null, success: false }
 
 export function OfferForm({
   tenantId,
   offer,
 }: {
   tenantId: string
-  offer: Offer
+  offer: OfferPage
 }) {
   const [active, setActive] = useState(offer.active)
   const [formState, updateAction, pending] = useActionState(
-    updateOfferAction,
+    updateOfferPageAction,
     initialState
   )
-  const [, deleteAction, isDeleting] = useActionState(deleteOfferAction, null)
+  const [, deleteAction, isDeleting] = useActionState(deleteOfferPageAction, null)
 
   useEffect(() => {
     if (formState.success) toast.success("Oferta atualizada")
@@ -69,18 +67,18 @@ export function OfferForm({
       </div>
       <FieldGroup>
         <div className="grid grid-cols-2 gap-3">
-          <Field data-invalid={!!formState.errors?.title?.length}>
-            <FieldLabel htmlFor="title">Título</FieldLabel>
+          <Field data-invalid={!!formState.errors?.name?.length}>
+            <FieldLabel htmlFor="name">Nome</FieldLabel>
             <Input
-              id="title"
-              name="title"
-              defaultValue={formState.values?.title ?? offer.title}
+              id="name"
+              name="name"
+              defaultValue={formState.values?.name ?? offer.name}
               disabled={pending}
-              aria-invalid={!!formState.errors?.title?.length}
-              placeholder="Digite o título aqui"
+              aria-invalid={!!formState.errors?.name?.length}
+              placeholder="Digite o nome aqui"
             />
-            {formState.errors?.title && (
-              <FieldError>{formState.errors.title[0]}</FieldError>
+            {formState.errors?.name && (
+              <FieldError>{formState.errors.name[0]}</FieldError>
             )}
           </Field>
           <Field data-invalid={!!formState.errors?.slug?.length}>
@@ -99,23 +97,6 @@ export function OfferForm({
             )}
           </Field>
         </div>
-        <Field data-invalid={!!formState.errors?.description?.length}>
-          <FieldLabel htmlFor="description">Descrição (opcional)</FieldLabel>
-          <Textarea
-            id="description"
-            name="description"
-            defaultValue={
-              formState.values?.description ?? offer.description ?? ""
-            }
-            disabled={pending}
-            aria-invalid={!!formState.errors?.description?.length}
-            placeholder="Digite a descrição aqui"
-            rows={3}
-          />
-          {formState.errors?.description && (
-            <FieldError>{formState.errors.description[0]}</FieldError>
-          )}
-        </Field>
         <Field data-invalid={!!formState.errors?.url?.length}>
           <FieldLabel htmlFor="url">URL do CTA (opcional)</FieldLabel>
           <Input

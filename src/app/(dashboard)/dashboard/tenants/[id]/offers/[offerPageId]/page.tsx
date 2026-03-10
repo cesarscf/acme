@@ -3,17 +3,17 @@ import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { getOfferById } from "@/lib/queries/offers"
+import { getOfferPageById } from "@/lib/queries/offer-pages"
 import { OfferForm } from "./_components/offer-form"
 
 export default async function OfferDetailPage({
   params,
 }: {
-  params: Promise<{ id: string; offerId: string }>
+  params: Promise<{ id: string; offerPageId: string }>
 }) {
-  const { id: tenantId, offerId } = await params
+  const { id: tenantId, offerPageId } = await params
 
-  const offer = await getOfferById(offerId)
+  const offer = await getOfferPageById(offerPageId)
 
   if (!offer || offer.tenantId !== tenantId) notFound()
 
@@ -29,7 +29,7 @@ export default async function OfferDetailPage({
         </Link>
 
         <div className="mt-6">
-          <h2 className="text-2xl font-semibold">{offer.title}</h2>
+          <h2 className="text-2xl font-semibold">{offer.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Edite os dados da oferta
           </p>

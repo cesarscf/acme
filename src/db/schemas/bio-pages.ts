@@ -1,17 +1,16 @@
 import { relations } from "drizzle-orm"
 import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
 
+import { links } from "./links"
 import { tenants } from "./tenants"
 
-export const offers = pgTable("offers", {
+export const bioPages = pgTable("bio_pages", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
   slug: text("slug").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  url: text("url"),
+  name: text("name").notNull(),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -20,9 +19,10 @@ export const offers = pgTable("offers", {
     .notNull(),
 })
 
-export const offersRelations = relations(offers, ({ one }) => ({
+export const bioPagesRelations = relations(bioPages, ({ one, many }) => ({
   tenant: one(tenants, {
-    fields: [offers.tenantId],
+    fields: [bioPages.tenantId],
     references: [tenants.id],
   }),
+  links: many(links),
 }))

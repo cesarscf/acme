@@ -1,29 +1,30 @@
 "use server"
 
 import { db } from "@/db"
-import { linkPages } from "@/db/schema"
+import { offerPages } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod/v4"
 
 import {
-  createLinkPageSchema,
-  updateLinkPageSchema,
-  type LinkPageFormState,
-} from "@/lib/validations/link-pages"
+  createOfferPageSchema,
+  updateOfferPageSchema,
+  type CreateOfferPageFormState,
+  type UpdateOfferPageFormState,
+} from "@/lib/validations/offer-pages"
 
-export async function createLinkPageAction(
-  _prevState: LinkPageFormState,
+export async function createOfferPageAction(
+  _prevState: CreateOfferPageFormState,
   formData: FormData
-): Promise<LinkPageFormState> {
+): Promise<CreateOfferPageFormState> {
   const values = {
-    title: formData.get("title") as string,
+    name: formData.get("name") as string,
     slug: formData.get("slug") as string,
-    description: (formData.get("description") as string) || undefined,
+    url: (formData.get("url") as string) || undefined,
   }
 
-  const result = createLinkPageSchema.safeParse({
+  const result = createOfferPageSchema.safeParse({
     tenantId: formData.get("tenant_id"),
     ...values,
   })
@@ -39,41 +40,41 @@ export async function createLinkPageAction(
   let createdId: string
   try {
     const [created] = await db
-      .insert(linkPages)
+      .insert(offerPages)
       .values(result.data)
-      .returning({ id: linkPages.id })
+      .returning({ id: offerPages.id })
     createdId = created.id
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { slug: ["Slug já está em uso neste tenant"] },
+        errors: { slug: ["Slug ja esta em uso neste tenant"] },
         success: false,
       }
     }
     return {
       values,
-      errors: { _root: ["Erro ao criar página de links"] },
+      errors: { _root: ["Erro ao criar oferta"] },
       success: false,
     }
   }
 
   revalidatePath(`/dashboard/tenants/${result.data.tenantId}`)
-  redirect(`/dashboard/tenants/${result.data.tenantId}/links/${createdId}`)
+  redirect(`/dashboard/tenants/${result.data.tenantId}/offers/${createdId}`)
 }
 
-export async function updateLinkPageAction(
-  _prevState: LinkPageFormState,
+export async function updateOfferPageAction(
+  _prevState: UpdateOfferPageFormState,
   formData: FormData
-): Promise<LinkPageFormState> {
+): Promise<UpdateOfferPageFormState> {
   const values = {
-    title: formData.get("title") as string,
+    name: formData.get("name") as string,
     slug: formData.get("slug") as string,
-    description: (formData.get("description") as string) || undefined,
+    url: (formData.get("url") as string) || undefined,
     active: formData.get("active") === "true",
   }
 
-  const result = updateLinkPageSchema.safeParse({
+  const result = updateOfferPageSchema.safeParse({
     id: formData.get("id"),
     tenantId: formData.get("tenant_id"),
     ...values,
@@ -91,36 +92,36 @@ export async function updateLinkPageAction(
 
   try {
     await db
-      .update(linkPages)
+      .update(offerPages)
       .set(data)
-      .where(eq(linkPages.id, id))
+      .where(eq(offerPages.id, id))
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { slug: ["Slug já está em uso neste tenant"] },
+        errors: { slug: ["Slug ja esta em uso neste tenant"] },
         success: false,
       }
     }
     return {
       values,
-      errors: { _root: ["Erro ao atualizar página de links"] },
+      errors: { _root: ["Erro ao atualizar oferta"] },
       success: false,
     }
   }
 
-  revalidatePath(`/dashboard/tenants/${tenantId}/links/${id}`)
+  revalidatePath(`/dashboard/tenants/${tenantId}/offers/${id}`)
   revalidatePath(`/dashboard/tenants/${tenantId}`)
   return { errors: null, success: true }
 }
 
-export async function deleteLinkPageAction(
+export async function deleteOfferPageAction(
   _prevState: unknown,
   formData: FormData
 ) {
   const id = formData.get("id") as string
   const tenantId = formData.get("tenant_id") as string
-  await db.delete(linkPages).where(eq(linkPages.id, id))
+  await db.delete(offerPages).where(eq(offerPages.id, id))
   revalidatePath(`/dashboard/tenants/${tenantId}`)
   redirect(`/dashboard/tenants/${tenantId}`)
 }

@@ -29,7 +29,7 @@ export default async function LandingPageDetailPage({
         </Link>
 
         <div className="mt-6">
-          <h2 className="text-2xl font-semibold">{landingPage.title}</h2>
+          <h2 className="text-2xl font-semibold">{landingPage.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Edite os dados da landing page
           </p>

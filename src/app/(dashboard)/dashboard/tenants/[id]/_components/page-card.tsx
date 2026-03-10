@@ -7,14 +7,14 @@ import { protocol, rootDomain } from "@/lib/utils"
 
 export function PageCard({
   href,
-  title,
+  name,
   publicPath,
   tenantSlug,
   active = true,
   extra,
 }: {
   href: string
-  title: string
+  name: string
   publicPath: string
   tenantSlug?: string
   active?: boolean
@@ -27,7 +27,7 @@ export function PageCard({
     >
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="font-semibold">{title}</span>
+          <span className="font-semibold">{name}</span>
           {active ? (
             <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
               Ativa

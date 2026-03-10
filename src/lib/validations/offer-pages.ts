@@ -2,37 +2,43 @@ import { z } from "zod/v4"
 
 import type { FormState } from "@/lib/types"
 
-export const createLinkPageSchema = z.object({
+export const createOfferPageSchema = z.object({
   tenantId: z.uuid(),
   slug: z
     .string()
     .min(1, "Slug é obrigatório")
     .regex(/^[a-z0-9-]+$/, "Slug inválido"),
-  title: z.string().min(1, "Título é obrigatório"),
-  description: z
-    .string()
+  name: z.string().min(1, "Nome é obrigatório"),
+  url: z
+    .url("URL inválida")
     .optional()
     .transform((v) => v || null),
 })
 
-export const updateLinkPageSchema = z.object({
+export const updateOfferPageSchema = z.object({
   id: z.uuid(),
   tenantId: z.uuid(),
   slug: z
     .string()
     .min(1, "Slug é obrigatório")
     .regex(/^[a-z0-9-]+$/, "Slug inválido"),
-  title: z.string().min(1, "Título é obrigatório"),
-  description: z
-    .string()
+  name: z.string().min(1, "Nome é obrigatório"),
+  url: z
+    .url("URL inválida")
     .optional()
     .transform((v) => v || null),
   active: z.boolean(),
 })
 
-export type LinkPageFormState = FormState<{
-  title: string
+export type CreateOfferPageFormState = FormState<{
+  name: string
   slug: string
-  description?: string
+  url?: string
+}>
+
+export type UpdateOfferPageFormState = FormState<{
+  name: string
+  slug: string
+  url?: string
   active?: boolean
 }>

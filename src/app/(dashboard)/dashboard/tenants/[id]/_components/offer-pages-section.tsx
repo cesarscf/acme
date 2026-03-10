@@ -20,35 +20,34 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { createOfferAction } from "@/lib/actions/offers"
-import type { CreateOfferFormState } from "@/lib/validations/offers"
+import { createOfferPageAction } from "@/lib/actions/offer-pages"
+import type { CreateOfferPageFormState } from "@/lib/validations/offer-pages"
 import { PageCard } from "./page-card"
 
-type Offer = {
+type OfferPage = {
   id: string
   slug: string
-  title: string
-  description: string | null
+  name: string
   url: string | null
   active: boolean
 }
 
-const initialState: CreateOfferFormState = { errors: null, success: false }
+const initialState: CreateOfferPageFormState = { errors: null, success: false }
 
-export function OffersSection({
+export function OfferPagesSection({
   tenantId,
   tenantSlug,
-  offers,
+  offerPages,
 }: {
   tenantId: string
   tenantSlug?: string
-  offers: Offer[]
+  offerPages: OfferPage[]
 }) {
   const [open, setOpen] = useState(false)
 
   const wrappedAction = useCallback(
-    async (prev: CreateOfferFormState, formData: FormData) => {
-      const result = await createOfferAction(prev, formData)
+    async (prev: CreateOfferPageFormState, formData: FormData) => {
+      const result = await createOfferPageAction(prev, formData)
       if (result.success) setOpen(false)
       return result
     },
@@ -69,18 +68,18 @@ export function OffersSection({
     <form action={createAction}>
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
-        <Field data-invalid={!!formState.errors?.title?.length}>
-          <FieldLabel htmlFor="offer-title">Título</FieldLabel>
+        <Field data-invalid={!!formState.errors?.name?.length}>
+          <FieldLabel htmlFor="offer-name">Nome</FieldLabel>
           <Input
-            id="offer-title"
-            name="title"
-            placeholder="Digite o título aqui"
-            defaultValue={formState.values?.title}
+            id="offer-name"
+            name="name"
+            placeholder="Digite o nome aqui"
+            defaultValue={formState.values?.name}
             disabled={pending}
-            aria-invalid={!!formState.errors?.title?.length}
+            aria-invalid={!!formState.errors?.name?.length}
           />
-          {formState.errors?.title && (
-            <FieldError>{formState.errors.title[0]}</FieldError>
+          {formState.errors?.name && (
+            <FieldError>{formState.errors.name[0]}</FieldError>
           )}
         </Field>
         <Field data-invalid={!!formState.errors?.slug?.length}>
@@ -114,7 +113,7 @@ export function OffersSection({
 
   return (
     <div className="space-y-4">
-      {offers.length === 0 ? (
+      {offerPages.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl bg-muted py-12">
           <Gift className="h-10 w-10 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">
@@ -157,14 +156,14 @@ export function OffersSection({
             </Dialog>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            {offers.map((offer) => (
+            {offerPages.map((offerPage) => (
               <PageCard
-                key={offer.id}
-                href={`/dashboard/tenants/${tenantId}/ofertas/${offer.id}`}
-                title={offer.title}
-                publicPath={`/ofertas/${offer.slug}`}
+                key={offerPage.id}
+                href={`/dashboard/tenants/${tenantId}/offers/${offerPage.id}`}
+                name={offerPage.name}
+                publicPath={`/ofertas/${offerPage.slug}`}
                 tenantSlug={tenantSlug}
-                active={offer.active}
+                active={offerPage.active}
               />
             ))}
           </div>

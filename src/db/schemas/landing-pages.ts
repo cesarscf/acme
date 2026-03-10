@@ -9,9 +9,7 @@ export const landingPages = pgTable("landing_pages", {
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
   slug: text("slug").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  url: text("url"),
+  name: text("name").notNull(),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

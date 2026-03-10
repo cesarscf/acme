@@ -1,31 +1,28 @@
 "use server"
 
 import { db } from "@/db"
-import { offers } from "@/db/schema"
+import { bioPages } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod/v4"
 
 import {
-  createOfferSchema,
-  updateOfferSchema,
-  type CreateOfferFormState,
-  type UpdateOfferFormState,
-} from "@/lib/validations/offers"
+  createBioPageSchema,
+  updateBioPageSchema,
+  type BioPageFormState,
+} from "@/lib/validations/bio-pages"
 
-export async function createOfferAction(
-  _prevState: CreateOfferFormState,
+export async function createBioPageAction(
+  _prevState: BioPageFormState,
   formData: FormData
-): Promise<CreateOfferFormState> {
+): Promise<BioPageFormState> {
   const values = {
-    title: formData.get("title") as string,
+    name: formData.get("name") as string,
     slug: formData.get("slug") as string,
-    description: (formData.get("description") as string) || undefined,
-    url: (formData.get("url") as string) || undefined,
   }
 
-  const result = createOfferSchema.safeParse({
+  const result = createBioPageSchema.safeParse({
     tenantId: formData.get("tenant_id"),
     ...values,
   })
@@ -41,42 +38,40 @@ export async function createOfferAction(
   let createdId: string
   try {
     const [created] = await db
-      .insert(offers)
+      .insert(bioPages)
       .values(result.data)
-      .returning({ id: offers.id })
+      .returning({ id: bioPages.id })
     createdId = created.id
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { slug: ["Slug ja esta em uso neste tenant"] },
+        errors: { slug: ["Slug já está em uso neste tenant"] },
         success: false,
       }
     }
     return {
       values,
-      errors: { _root: ["Erro ao criar oferta"] },
+      errors: { _root: ["Erro ao criar bio page"] },
       success: false,
     }
   }
 
   revalidatePath(`/dashboard/tenants/${result.data.tenantId}`)
-  redirect(`/dashboard/tenants/${result.data.tenantId}/ofertas/${createdId}`)
+  redirect(`/dashboard/tenants/${result.data.tenantId}/bios/${createdId}`)
 }
 
-export async function updateOfferAction(
-  _prevState: UpdateOfferFormState,
+export async function updateBioPageAction(
+  _prevState: BioPageFormState,
   formData: FormData
-): Promise<UpdateOfferFormState> {
+): Promise<BioPageFormState> {
   const values = {
-    title: formData.get("title") as string,
+    name: formData.get("name") as string,
     slug: formData.get("slug") as string,
-    description: (formData.get("description") as string) || undefined,
-    url: (formData.get("url") as string) || undefined,
     active: formData.get("active") === "true",
   }
 
-  const result = updateOfferSchema.safeParse({
+  const result = updateBioPageSchema.safeParse({
     id: formData.get("id"),
     tenantId: formData.get("tenant_id"),
     ...values,
@@ -94,36 +89,36 @@ export async function updateOfferAction(
 
   try {
     await db
-      .update(offers)
+      .update(bioPages)
       .set(data)
-      .where(eq(offers.id, id))
+      .where(eq(bioPages.id, id))
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
       return {
         values,
-        errors: { slug: ["Slug ja esta em uso neste tenant"] },
+        errors: { slug: ["Slug já está em uso neste tenant"] },
         success: false,
       }
     }
     return {
       values,
-      errors: { _root: ["Erro ao atualizar oferta"] },
+      errors: { _root: ["Erro ao atualizar bio page"] },
       success: false,
     }
   }
 
-  revalidatePath(`/dashboard/tenants/${tenantId}/ofertas/${id}`)
+  revalidatePath(`/dashboard/tenants/${tenantId}/bios/${id}`)
   revalidatePath(`/dashboard/tenants/${tenantId}`)
   return { errors: null, success: true }
 }
 
-export async function deleteOfferAction(
+export async function deleteBioPageAction(
   _prevState: unknown,
   formData: FormData
 ) {
   const id = formData.get("id") as string
   const tenantId = formData.get("tenant_id") as string
-  await db.delete(offers).where(eq(offers.id, id))
+  await db.delete(bioPages).where(eq(bioPages.id, id))
   revalidatePath(`/dashboard/tenants/${tenantId}`)
   redirect(`/dashboard/tenants/${tenantId}`)
 }

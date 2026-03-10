@@ -21,7 +21,7 @@ export async function createLinkAction(
   }
 
   const result = createLinkSchema.safeParse({
-    linkPageId: formData.get("link_page_id"),
+    bioPageId: formData.get("bio_page_id"),
     position: formData.get("position"),
     ...values,
   })
@@ -37,7 +37,7 @@ export async function createLinkAction(
   await db.insert(links).values(result.data)
   const tenantId = formData.get("tenant_id") as string
   revalidatePath(
-    `/dashboard/tenants/${tenantId}/links/${result.data.linkPageId}`
+    `/dashboard/tenants/${tenantId}/bios/${result.data.bioPageId}`
   )
   return { errors: null, success: true }
 }
@@ -48,8 +48,8 @@ export async function deleteLinkAction(
 ) {
   const id = formData.get("id") as string
   const tenantId = formData.get("tenant_id") as string
-  const linkPageId = formData.get("link_page_id") as string
+  const bioPageId = formData.get("bio_page_id") as string
   await db.delete(links).where(eq(links.id, id))
-  revalidatePath(`/dashboard/tenants/${tenantId}/links/${linkPageId}`)
+  revalidatePath(`/dashboard/tenants/${tenantId}/bios/${bioPageId}`)
   return { success: true }
 }

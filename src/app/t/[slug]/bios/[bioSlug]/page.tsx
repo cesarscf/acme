@@ -1,34 +1,31 @@
 import { notFound } from "next/navigation"
 
 import { getTenantBySlug } from "@/lib/queries/tenants"
-import { getLinkPageBySlug, getLinksByPageId } from "@/lib/queries/link-pages"
+import { getBioPageBySlug, getLinksByPageId } from "@/lib/queries/bio-pages"
 
-export default async function TenantLinkPage({
+export default async function TenantBioPage({
   params,
 }: {
-  params: Promise<{ slug: string; linksSlug: string }>
+  params: Promise<{ slug: string; bioSlug: string }>
 }) {
-  const { slug, linksSlug } = await params
+  const { slug, bioSlug } = await params
 
   const tenant = await getTenantBySlug(slug)
 
   if (!tenant) notFound()
 
-  const page = await getLinkPageBySlug(tenant.id, linksSlug)
+  const page = await getBioPageBySlug(tenant.id, bioSlug)
 
-  if (!page) notFound()
+  if (!page || !page.active) notFound()
 
   const pageLinks = await getLinksByPageId(page.id)
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-4">
-        <h1 className="text-center text-2xl font-bold">{page.title}</h1>
-        {page.description && (
-          <p className="text-center text-muted-foreground">
-            {page.description}
-          </p>
-        )}
+        <p className="text-center text-muted-foreground">
+          Bio Page: {page.name} (vamos alterar no futuro)
+        </p>
 
         {pageLinks.length === 0 ? (
           <p className="text-center text-muted-foreground">

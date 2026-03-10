@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
 import {
   updateLandingPageAction,
   deleteLandingPageAction,
@@ -24,9 +23,7 @@ import type { LandingPageFormState } from "@/lib/validations/landing-pages"
 type LandingPage = {
   id: string
   slug: string
-  title: string
-  description: string | null
-  url: string | null
+  name: string
   active: boolean
 }
 
@@ -75,18 +72,18 @@ export function LandingPageForm({
       </div>
       <FieldGroup>
         <div className="grid grid-cols-2 gap-3">
-          <Field data-invalid={!!formState.errors?.title?.length}>
-            <FieldLabel htmlFor="title">Título</FieldLabel>
+          <Field data-invalid={!!formState.errors?.name?.length}>
+            <FieldLabel htmlFor="name">Nome</FieldLabel>
             <Input
-              id="title"
-              name="title"
-              defaultValue={formState.values?.title ?? landingPage.title}
+              id="name"
+              name="name"
+              defaultValue={formState.values?.name ?? landingPage.name}
               disabled={pending}
-              aria-invalid={!!formState.errors?.title?.length}
-              placeholder="Digite o título aqui"
+              aria-invalid={!!formState.errors?.name?.length}
+              placeholder="Digite o nome aqui"
             />
-            {formState.errors?.title && (
-              <FieldError>{formState.errors.title[0]}</FieldError>
+            {formState.errors?.name && (
+              <FieldError>{formState.errors.name[0]}</FieldError>
             )}
           </Field>
           <Field data-invalid={!!formState.errors?.slug?.length}>
@@ -105,38 +102,6 @@ export function LandingPageForm({
             )}
           </Field>
         </div>
-        <Field data-invalid={!!formState.errors?.description?.length}>
-          <FieldLabel htmlFor="description">Descrição (opcional)</FieldLabel>
-          <Textarea
-            id="description"
-            name="description"
-            defaultValue={
-              formState.values?.description ?? landingPage.description ?? ""
-            }
-            disabled={pending}
-            aria-invalid={!!formState.errors?.description?.length}
-            placeholder="Digite a descrição aqui"
-            rows={3}
-          />
-          {formState.errors?.description && (
-            <FieldError>{formState.errors.description[0]}</FieldError>
-          )}
-        </Field>
-        <Field data-invalid={!!formState.errors?.url?.length}>
-          <FieldLabel htmlFor="url">URL do CTA (opcional)</FieldLabel>
-          <Input
-            id="url"
-            name="url"
-            type="url"
-            defaultValue={formState.values?.url ?? landingPage.url ?? ""}
-            disabled={pending}
-            aria-invalid={!!formState.errors?.url?.length}
-            placeholder="https://exemplo.com"
-          />
-          {formState.errors?.url && (
-            <FieldError>{formState.errors.url[0]}</FieldError>
-          )}
-        </Field>
 
         <div className="flex items-center justify-between">
           <Button type="submit" size="sm" disabled={pending}>

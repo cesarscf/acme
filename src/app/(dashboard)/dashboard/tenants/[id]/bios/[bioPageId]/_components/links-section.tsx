@@ -34,11 +34,11 @@ const initialState: CreateLinkFormState = { errors: null, success: false }
 
 export function LinksSection({
   tenantId,
-  linkPageId,
+  bioPageId,
   links,
 }: {
   tenantId: string
-  linkPageId: string
+  bioPageId: string
   links: Link[]
 }) {
   const [open, setOpen] = useState(false)
@@ -65,7 +65,7 @@ export function LinksSection({
 
   const createForm = (
     <form action={createAction}>
-      <input type="hidden" name="link_page_id" value={linkPageId} />
+      <input type="hidden" name="bio_page_id" value={bioPageId} />
       <input type="hidden" name="tenant_id" value={tenantId} />
       <input type="hidden" name="position" value={links.length} />
       <FieldGroup>
@@ -160,7 +160,7 @@ export function LinksSection({
               <form action={deleteAction}>
                 <input type="hidden" name="id" value={link.id} />
                 <input type="hidden" name="tenant_id" value={tenantId} />
-                <input type="hidden" name="link_page_id" value={linkPageId} />
+                <input type="hidden" name="bio_page_id" value={bioPageId} />
                 <Button variant="destructive" size="icon" disabled={isDeleting}>
                   <Trash2 className="h-4 w-4" />
                 </Button>

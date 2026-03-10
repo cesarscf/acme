@@ -14,49 +14,47 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
 import {
-  updateLinkPageAction,
-  deleteLinkPageAction,
-} from "@/lib/actions/link-pages"
-import type { LinkPageFormState } from "@/lib/validations/link-pages"
+  updateBioPageAction,
+  deleteBioPageAction,
+} from "@/lib/actions/bio-pages"
+import type { BioPageFormState } from "@/lib/validations/bio-pages"
 
-type LinkPage = {
+type BioPage = {
   id: string
   slug: string
-  title: string
-  description: string | null
+  name: string
   active: boolean
 }
 
-const initialState: LinkPageFormState = { errors: null, success: false }
+const initialState: BioPageFormState = { errors: null, success: false }
 
-export function LinkPageForm({
+export function BioPageForm({
   tenantId,
-  linkPage,
+  bioPage,
 }: {
   tenantId: string
-  linkPage: LinkPage
+  bioPage: BioPage
 }) {
-  const [active, setActive] = useState(linkPage.active)
+  const [active, setActive] = useState(bioPage.active)
   const [formState, updateAction, pending] = useActionState(
-    updateLinkPageAction,
+    updateBioPageAction,
     initialState
   )
   const [, deleteAction, isDeleting] = useActionState(
-    deleteLinkPageAction,
+    deleteBioPageAction,
     null
   )
 
   useEffect(() => {
-    if (formState.success) toast.success("Página de links atualizada")
+    if (formState.success) toast.success("Bio page atualizada")
     if (formState.errors?._root) toast.error(formState.errors._root[0])
   }, [formState])
 
   return (
     <div>
       <form action={updateAction}>
-        <input type="hidden" name="id" value={linkPage.id} />
+        <input type="hidden" name="id" value={bioPage.id} />
         <input type="hidden" name="tenant_id" value={tenantId} />
         <input type="hidden" name="active" value={String(active)} />
         <div className="mb-6 flex items-center justify-between rounded-lg border bg-muted/50 p-4">
@@ -75,20 +73,20 @@ export function LinkPageForm({
         </div>
         <FieldGroup>
           <div className="grid grid-cols-2 gap-3">
-            <Field data-invalid={!!formState.errors?.title?.length}>
-              <FieldLabel htmlFor="title">Título</FieldLabel>
+            <Field data-invalid={!!formState.errors?.name?.length}>
+              <FieldLabel htmlFor="name">Nome</FieldLabel>
               <Input
-                id="title"
-                name="title"
+                id="name"
+                name="name"
                 defaultValue={
-                  formState.values?.title ?? linkPage.title
+                  formState.values?.name ?? bioPage.name
                 }
                 disabled={pending}
-                aria-invalid={!!formState.errors?.title?.length}
-                placeholder="Digite o título aqui"
+                aria-invalid={!!formState.errors?.name?.length}
+                placeholder="Digite o nome aqui"
               />
-              {formState.errors?.title && (
-                <FieldError>{formState.errors.title[0]}</FieldError>
+              {formState.errors?.name && (
+                <FieldError>{formState.errors.name[0]}</FieldError>
               )}
             </Field>
             <Field data-invalid={!!formState.errors?.slug?.length}>
@@ -97,7 +95,7 @@ export function LinkPageForm({
                 id="slug"
                 name="slug"
                 defaultValue={
-                  formState.values?.slug ?? linkPage.slug
+                  formState.values?.slug ?? bioPage.slug
                 }
                 disabled={pending}
                 aria-invalid={!!formState.errors?.slug?.length}
@@ -109,27 +107,6 @@ export function LinkPageForm({
               )}
             </Field>
           </div>
-          <Field data-invalid={!!formState.errors?.description?.length}>
-            <FieldLabel htmlFor="description">
-              Descrição (opcional)
-            </FieldLabel>
-            <Textarea
-              id="description"
-              name="description"
-              defaultValue={
-                formState.values?.description ??
-                linkPage.description ??
-                ""
-              }
-              disabled={pending}
-              aria-invalid={!!formState.errors?.description?.length}
-              placeholder="Digite a descrição aqui"
-              rows={3}
-            />
-            {formState.errors?.description && (
-              <FieldError>{formState.errors.description[0]}</FieldError>
-            )}
-          </Field>
 
           <div className="flex items-center justify-between">
             <Button type="submit" size="sm" disabled={pending}>
@@ -137,7 +114,7 @@ export function LinkPageForm({
               Salvar
             </Button>
             <form action={deleteAction}>
-              <input type="hidden" name="id" value={linkPage.id} />
+              <input type="hidden" name="id" value={bioPage.id} />
               <input type="hidden" name="tenant_id" value={tenantId} />
               <Button
                 type="submit"

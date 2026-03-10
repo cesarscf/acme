@@ -15,18 +15,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Plataforma multi-tenant para agência de marketing. A agência cadastra clientes (tenants), cada um com seu domínio ou subdomínio. Cada tenant possui:
 
 - **Landing pages** — múltiplas por tenant, segmentadas (ex: uma para cada cidade/loja). A LP com slug vazio é a raiz do tenant
-- **Páginas de links** — múltiplas por tenant, segmentadas (ex: uma para cada cidade/loja)
-- **Páginas de oferta** — múltiplas por tenant, também segmentadas (ex: ofertas específicas por região)
+- **Bio pages** — múltiplas por tenant, segmentadas (ex: uma para cada cidade/loja), estilo Linktree
+- **Offer pages** — múltiplas por tenant, também segmentadas (ex: ofertas específicas por região)
 
-Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pinheiros`), uma página de links para a loja de Vitória, outra para Vila Velha, e páginas de oferta separadas para cada cidade. A agência gerencia tudo via painel admin.
+Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pinheiros`), uma bio page para a loja de Vitória, outra para Vila Velha, e offer pages separadas para cada cidade. A agência gerencia tudo via painel admin.
 
 ## Features
 
 - **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via proxy com rewrite para `/t/[slug]/...` (proxy implementado mas middleware ainda não conectado)
 - **Auth** — Better Auth (email OTP), apenas agência, sem roles
-- **Landing pages** — Múltiplas por tenant. Cada uma com título, descrição, CTA (link) e slug único. Slug vazio = raiz do tenant
-- **Páginas de links** — Múltiplas por tenant. Cada uma com título, descrição e lista de links (título + URL), estilo Linktree
-- **Páginas de oferta** — Múltiplas por tenant. Cada uma com título, descrição e CTA (link)
+- **Landing pages** — Múltiplas por tenant. Cada uma com nome (interno), URL do CTA e slug único. Slug vazio = raiz do tenant
+- **Bio pages** — Múltiplas por tenant. Cada uma com nome (interno) e lista de links (título + URL), estilo Linktree
+- **Offer pages** — Múltiplas por tenant. Cada uma com nome (interno), URL do CTA e slug único
 - **Database** — Postgres (Neon) + Drizzle ORM
 - **Deploy** — Vercel + Vercel Domains API para custom domains
 - **Storage de imagens** — A definir em etapa futura
@@ -43,7 +43,7 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 - Slug é único e obrigatório (apenas letras minúsculas, números e hífens)
 - Se subdomínio não for informado, usa o slug como subdomínio
 - Custom domain é opcional (campo existe no schema, mas ainda não exposto no form de criação)
-- Ao deletar tenant, remove o custom domain da Vercel (se existir) e deleta em cascata (landing page, link pages, links, ofertas)
+- Ao deletar tenant, remove o custom domain da Vercel (se existir) e deleta em cascata (landing pages, bio pages, links, offer pages)
 
 ### Multi-tenancy (Proxy) — pendente
 - Lógica implementada em `proxy.ts` mas **middleware não conectado** (falta `middleware.ts` na raiz invocando `proxy()`)
@@ -56,25 +56,25 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 - Slug único por tenant (validado via query antes do insert/update)
 - Slug pode ser vazio (`""`) — representa a raiz do tenant (`tenant.quiwork.com/`)
 - Não pode haver mais de uma LP com slug vazio por tenant
-- Campos: título (obrigatório), descrição, URL do CTA, flag ativa/inativa
-- CRUD completo: criar, editar, deletar (mesmo padrão de link pages e ofertas). Ao criar, redireciona para a página de detalhes
+- Campos: nome (interno, obrigatório), URL do CTA, flag ativa/inativa
+- CRUD completo: criar, editar, deletar. Ao criar, redireciona para a página de detalhes
 - LPs inativas retornam 404 na página pública
 - Se não existe LP com slug vazio, a raiz do tenant retorna 404
 - Rota pública: `tenant.quiwork.com/` (raiz) e `tenant.quiwork.com/[slug]` (demais)
 
-### Páginas de Links
+### Bio Pages
 - Múltiplas por tenant (1:N)
 - Slug único por tenant (validado via try-catch no insert, sem constraint composta no schema)
 - Cada página contém lista de links (título + URL) ordenados por posição
 - Links são deletados em cascata ao remover a página
-- Flag ativa/inativa — páginas inativas retornam 404 na página pública
-- Rota pública: `tenant.quiwork.com/links/[slug]`
+- Campos: nome (interno, obrigatório), flag ativa/inativa
+- Rota pública: `tenant.quiwork.com/bios/[slug]`
 
-### Ofertas
+### Offer Pages
 - Múltiplas por tenant (1:N)
 - Slug único por tenant (validado via try-catch no insert, sem constraint composta no schema)
-- Campos: título, descrição, URL do CTA, flag ativa/inativa
-- Ofertas inativas retornam 404 na página pública
+- Campos: nome (interno, obrigatório), URL do CTA, flag ativa/inativa
+- Offer pages inativas retornam 404 na página pública
 - Rota pública: `tenant.quiwork.com/ofertas/[slug]`
 
 ### Custom Domains

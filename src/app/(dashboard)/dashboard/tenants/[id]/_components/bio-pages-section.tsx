@@ -20,35 +20,34 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { createLinkPageAction } from "@/lib/actions/link-pages"
-import type { LinkPageFormState } from "@/lib/validations/link-pages"
+import { createBioPageAction } from "@/lib/actions/bio-pages"
+import type { BioPageFormState } from "@/lib/validations/bio-pages"
 import { PageCard } from "./page-card"
 
-type LinkPage = {
+type BioPage = {
   id: string
   slug: string
-  title: string
-  description: string | null
+  name: string
   active: boolean
   links: { id: string }[]
 }
 
-const initialState: LinkPageFormState = { errors: null, success: false }
+const initialState: BioPageFormState = { errors: null, success: false }
 
-export function LinkPagesSection({
+export function BioPagesSection({
   tenantId,
   tenantSlug,
-  linkPages,
+  bioPages,
 }: {
   tenantId: string
   tenantSlug?: string
-  linkPages: LinkPage[]
+  bioPages: BioPage[]
 }) {
   const [open, setOpen] = useState(false)
 
   const wrappedAction = useCallback(
-    async (prev: LinkPageFormState, formData: FormData) => {
-      const result = await createLinkPageAction(prev, formData)
+    async (prev: BioPageFormState, formData: FormData) => {
+      const result = await createBioPageAction(prev, formData)
       if (result.success) setOpen(false)
       return result
     },
@@ -61,7 +60,7 @@ export function LinkPagesSection({
   )
 
   useEffect(() => {
-    if (formState.success) toast.success("Página de links criada")
+    if (formState.success) toast.success("Bio page criada")
     if (formState.errors?._root) toast.error(formState.errors._root[0])
   }, [formState])
 
@@ -69,28 +68,28 @@ export function LinkPagesSection({
     <form action={createAction}>
       <input type="hidden" name="tenant_id" value={tenantId} />
       <FieldGroup>
-        <Field data-invalid={!!formState.errors?.title?.length}>
-          <FieldLabel htmlFor="linkpage-title">Título</FieldLabel>
+        <Field data-invalid={!!formState.errors?.name?.length}>
+          <FieldLabel htmlFor="biopage-name">Nome</FieldLabel>
           <Input
-            id="linkpage-title"
-            name="title"
-            placeholder="Digite o título aqui"
-            defaultValue={formState.values?.title}
+            id="biopage-name"
+            name="name"
+            placeholder="Digite o nome aqui"
+            defaultValue={formState.values?.name}
             disabled={pending}
-            aria-invalid={!!formState.errors?.title?.length}
+            aria-invalid={!!formState.errors?.name?.length}
           />
-          {formState.errors?.title && (
-            <FieldError>{formState.errors.title[0]}</FieldError>
+          {formState.errors?.name && (
+            <FieldError>{formState.errors.name[0]}</FieldError>
           )}
         </Field>
         <Field data-invalid={!!formState.errors?.slug?.length}>
-          <FieldLabel htmlFor="linkpage-slug">Slug</FieldLabel>
+          <FieldLabel htmlFor="biopage-slug">Slug</FieldLabel>
           <div className="flex items-center">
             <span className="flex min-h-9 items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-              /links/
+              /bios/
             </span>
             <Input
-              id="linkpage-slug"
+              id="biopage-slug"
               name="slug"
               placeholder="vitoria"
               defaultValue={formState.values?.slug}
@@ -106,7 +105,7 @@ export function LinkPagesSection({
         </Field>
         <Button type="submit" className="w-full" disabled={pending}>
           {pending && <Spinner />}
-          Criar página de links
+          Criar bio page
         </Button>
       </FieldGroup>
     </form>
@@ -114,25 +113,25 @@ export function LinkPagesSection({
 
   return (
     <div className="space-y-4">
-      {linkPages.length === 0 ? (
+      {bioPages.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl bg-muted py-12">
           <FileText className="h-10 w-10 text-muted-foreground" />
           <p className="mt-4 text-sm font-medium">
-            Nenhuma página de links cadastrada
+            Nenhuma bio page cadastrada
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Crie uma página de links para o tenant
+            Crie uma bio page para o tenant
           </p>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="mt-4">
                 <Plus className="mr-1 h-4 w-4" />
-                Nova página de links
+                Nova bio page
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nova página de links</DialogTitle>
+                <DialogTitle>Nova bio page</DialogTitle>
               </DialogHeader>
               {createForm}
             </DialogContent>
@@ -145,30 +144,30 @@ export function LinkPagesSection({
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="mr-1 h-4 w-4" />
-                  Nova página de links
+                  Nova bio page
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Nova página de links</DialogTitle>
+                  <DialogTitle>Nova bio page</DialogTitle>
                 </DialogHeader>
                 {createForm}
               </DialogContent>
             </Dialog>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            {linkPages.map((linkPage) => (
+            {bioPages.map((bioPage) => (
               <PageCard
-                key={linkPage.id}
-                href={`/dashboard/tenants/${tenantId}/links/${linkPage.id}`}
-                title={linkPage.title}
-                publicPath={`/links/${linkPage.slug}`}
+                key={bioPage.id}
+                href={`/dashboard/tenants/${tenantId}/bios/${bioPage.id}`}
+                name={bioPage.name}
+                publicPath={`/bios/${bioPage.slug}`}
                 tenantSlug={tenantSlug}
-                active={linkPage.active}
+                active={bioPage.active}
                 extra={
                   <span>
-                    {linkPage.links.length}{" "}
-                    {linkPage.links.length === 1 ? "link" : "links"}
+                    {bioPage.links.length}{" "}
+                    {bioPage.links.length === 1 ? "link" : "links"}
                   </span>
                 }
               />

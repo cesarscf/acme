@@ -18,10 +18,8 @@ export async function createLandingPageAction(
   formData: FormData
 ): Promise<LandingPageFormState> {
   const values = {
-    title: formData.get("title") as string,
+    name: formData.get("name") as string,
     slug: formData.get("slug") as string,
-    description: (formData.get("description") as string) || undefined,
-    url: (formData.get("url") as string) || undefined,
   }
 
   const result = createLandingPageSchema.safeParse({
@@ -74,10 +72,8 @@ export async function updateLandingPageAction(
   formData: FormData
 ): Promise<LandingPageFormState> {
   const values = {
-    title: formData.get("title") as string,
+    name: formData.get("name") as string,
     slug: formData.get("slug") as string,
-    description: (formData.get("description") as string) || undefined,
-    url: (formData.get("url") as string) || undefined,
     active: formData.get("active") === "true",
   }
 

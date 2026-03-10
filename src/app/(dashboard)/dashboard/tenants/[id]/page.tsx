@@ -7,12 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { protocol, rootDomain } from "@/lib/utils"
 import { getTenantById } from "@/lib/queries/tenants"
 import { getLandingPagesByTenantId } from "@/lib/queries/landing-pages"
-import { getLinkPagesByTenantId } from "@/lib/queries/link-pages"
-import { getOffersByTenantId } from "@/lib/queries/offers"
+import { getBioPagesByTenantId } from "@/lib/queries/bio-pages"
+import { getOfferPagesByTenantId } from "@/lib/queries/offer-pages"
 import { Button } from "@/components/ui/button"
 import { LandingPagesSection } from "./_components/landing-pages-section"
-import { LinkPagesSection } from "./_components/link-pages-section"
-import { OffersSection } from "./_components/offers-section"
+import { BioPagesSection } from "./_components/bio-pages-section"
+import { OfferPagesSection } from "./_components/offer-pages-section"
 
 export default async function TenantDetailPage({
   params,
@@ -25,10 +25,10 @@ export default async function TenantDetailPage({
 
   if (!tenant) notFound()
 
-  const [tenantLandingPages, tenantLinkPages, tenantOffers] = await Promise.all([
+  const [tenantLandingPages, tenantBioPages, tenantOfferPages] = await Promise.all([
     getLandingPagesByTenantId(id),
-    getLinkPagesByTenantId(id),
-    getOffersByTenantId(id),
+    getBioPagesByTenantId(id),
+    getOfferPagesByTenantId(id),
   ])
 
   return (
@@ -79,7 +79,7 @@ export default async function TenantDetailPage({
         <Tabs defaultValue="landing-page" className="mt-6">
           <TabsList variant="line">
             <TabsTrigger value="landing-page">Landing Pages</TabsTrigger>
-            <TabsTrigger value="links">Links</TabsTrigger>
+            <TabsTrigger value="bio">Bio Pages</TabsTrigger>
             <TabsTrigger value="ofertas">Ofertas</TabsTrigger>
             <TabsTrigger value="metricas">Métricas</TabsTrigger>
           </TabsList>
@@ -92,16 +92,16 @@ export default async function TenantDetailPage({
             />
           </TabsContent>
 
-          <TabsContent value="links" className="mt-4">
-            <LinkPagesSection
+          <TabsContent value="bio" className="mt-4">
+            <BioPagesSection
               tenantId={tenant.id}
               tenantSlug={tenant.slug}
-              linkPages={tenantLinkPages}
+              bioPages={tenantBioPages}
             />
           </TabsContent>
 
           <TabsContent value="ofertas" className="mt-4">
-            <OffersSection tenantId={tenant.id} tenantSlug={tenant.slug} offers={tenantOffers} />
+            <OfferPagesSection tenantId={tenant.id} tenantSlug={tenant.slug} offerPages={tenantOfferPages} />
           </TabsContent>
 
           <TabsContent value="metricas" className="mt-4">

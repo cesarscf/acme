@@ -39,7 +39,7 @@ export default async function TenantBioPage({
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full rounded-lg border bg-white p-4 text-center font-medium transition-shadow hover:shadow-md"
+                className="block w-full rounded-lg border bg-card p-4 text-center font-medium transition-shadow hover:shadow-md"
               >
                 {link.title}
               </a>

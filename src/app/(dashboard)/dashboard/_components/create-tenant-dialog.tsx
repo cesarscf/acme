@@ -41,7 +41,7 @@ export function CreateTenantDialog({ className }: { className?: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" className={cn(className)}>
-          <Plus className="mr-1 h-4 w-4" />
+          <Plus data-icon="inline-start" />
           Novo tenant
         </Button>
       </DialogTrigger>

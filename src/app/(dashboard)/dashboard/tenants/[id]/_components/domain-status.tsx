@@ -2,6 +2,9 @@
 
 import { use, useState, useTransition } from "react"
 
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 type DomainStatusData = {
   configured: boolean
   config: {
@@ -30,98 +33,105 @@ function DomainStatusContent({
 
   if (status.configured) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-        <div className="flex items-center justify-between">
+      <Card size="sm">
+        <CardContent className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-green-500" />
-            <p className="text-sm font-medium text-green-700">
+            <Badge variant="secondary">Configurado</Badge>
+            <p className="text-sm font-medium">
               DNS configurado corretamente
             </p>
           </div>
           <button
             onClick={onRecheck}
-            className="text-xs text-green-600 hover:underline"
+            className="text-xs text-muted-foreground hover:text-foreground hover:underline"
           >
             Verificar novamente
           </button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-yellow-500" />
-          <p className="text-sm font-medium text-yellow-700">DNS pendente</p>
-        </div>
-        <button
-          onClick={onRecheck}
-          className="text-xs text-yellow-600 hover:underline"
-        >
-          Verificar novamente
-        </button>
-      </div>
-
-      <div className="space-y-2 text-sm text-yellow-800">
-        <div className="space-y-1 rounded border border-yellow-200 bg-white p-3">
-          <p className="text-xs font-medium text-yellow-600 uppercase">
-            Opção 1 — Registro A
-          </p>
-          <div className="font-mono text-xs">
-            <p>
-              Tipo: <strong>A</strong>
-            </p>
-            <p>
-              Nome: <strong>@</strong>
-            </p>
-            <p>
-              Valor: <strong>216.198.79.1</strong>
-            </p>
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">Pendente</Badge>
+            <span>DNS pendente</span>
           </div>
-        </div>
+          <button
+            onClick={onRecheck}
+            className="text-xs font-normal text-muted-foreground hover:text-foreground hover:underline"
+          >
+            Verificar novamente
+          </button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <Card size="sm">
+          <CardContent>
+            <p className="text-xs font-medium text-foreground uppercase">
+              Opção 1 — Registro A
+            </p>
+            <div className="mt-1 font-mono text-xs">
+              <p>
+                Tipo: <strong>A</strong>
+              </p>
+              <p>
+                Nome: <strong>@</strong>
+              </p>
+              <p>
+                Valor: <strong>216.198.79.1</strong>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="space-y-1 rounded border border-yellow-200 bg-white p-3">
-          <p className="text-xs font-medium text-yellow-600 uppercase">
-            Opção 2 — Registro CNAME
-          </p>
-          <div className="font-mono text-xs">
-            <p>
-              Tipo: <strong>CNAME</strong>
+        <Card size="sm">
+          <CardContent>
+            <p className="text-xs font-medium text-foreground uppercase">
+              Opção 2 — Registro CNAME
             </p>
-            <p>
-              Nome: <strong>@</strong>
-            </p>
-            <p>
-              Valor: <strong>cname.vercel-dns.com</strong>
-            </p>
-          </div>
-        </div>
+            <div className="mt-1 font-mono text-xs">
+              <p>
+                Tipo: <strong>CNAME</strong>
+              </p>
+              <p>
+                Nome: <strong>@</strong>
+              </p>
+              <p>
+                Valor: <strong>cname.vercel-dns.com</strong>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {status.verification?.verification &&
           status.verification.verification.length > 0 && (
-            <div className="space-y-1 rounded border border-yellow-200 bg-white p-3">
-              <p className="text-xs font-medium text-yellow-600 uppercase">
-                Verificação TXT (se necessário)
-              </p>
-              {status.verification.verification.map((v, i) => (
-                <div key={i} className="font-mono text-xs">
-                  <p>
-                    Tipo: <strong>{v.type}</strong>
-                  </p>
-                  <p>
-                    Nome: <strong>{v.domain}</strong>
-                  </p>
-                  <p>
-                    Valor: <strong>{v.value}</strong>
-                  </p>
-                </div>
-              ))}
-            </div>
+            <Card size="sm">
+              <CardContent>
+                <p className="text-xs font-medium text-foreground uppercase">
+                  Verificação TXT (se necessário)
+                </p>
+                {status.verification.verification.map((v, i) => (
+                  <div key={i} className="mt-1 font-mono text-xs">
+                    <p>
+                      Tipo: <strong>{v.type}</strong>
+                    </p>
+                    <p>
+                      Nome: <strong>{v.domain}</strong>
+                    </p>
+                    <p>
+                      Valor: <strong>{v.value}</strong>
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 

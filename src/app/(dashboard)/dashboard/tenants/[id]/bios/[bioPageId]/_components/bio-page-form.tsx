@@ -5,6 +5,13 @@ import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Item,
+  ItemContent,
+  ItemActions,
+  ItemTitle,
+  ItemDescription,
+} from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
 import {
   Field,
@@ -57,20 +64,22 @@ export function BioPageForm({
         <input type="hidden" name="id" value={bioPage.id} />
         <input type="hidden" name="tenant_id" value={tenantId} />
         <input type="hidden" name="active" value={String(active)} />
-        <div className="mb-6 flex items-center justify-between rounded-lg border bg-muted/50 p-4">
-          <div className="space-y-0.5">
-            <span className="text-sm font-medium">Status</span>
-            <p className="text-sm text-muted-foreground">
+        <Item variant="outline" className="mb-6">
+          <ItemContent>
+            <ItemTitle>Status</ItemTitle>
+            <ItemDescription>
               {active ? "Visível publicamente" : "Oculta para visitantes"}
-            </p>
-          </div>
-          <Switch
-            id="active"
-            checked={active}
-            onCheckedChange={setActive}
-            disabled={pending}
-          />
-        </div>
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <Switch
+              id="active"
+              checked={active}
+              onCheckedChange={setActive}
+              disabled={pending}
+            />
+          </ItemActions>
+        </Item>
         <FieldGroup>
           <div className="grid grid-cols-2 gap-3">
             <Field data-invalid={!!formState.errors?.name?.length}>
@@ -122,7 +131,7 @@ export function BioPageForm({
                 size="icon"
                 disabled={isDeleting}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 />
               </Button>
             </form>
           </div>

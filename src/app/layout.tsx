@@ -1,17 +1,14 @@
-import { Geist_Mono, Inter } from "next/font/google"
+import "@/styles/globals.css"
 
-import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { fontSans } from "@/lib/fonts"
+import { Inter } from "next/font/google";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
 
 export default function RootLayout({
   children,
@@ -20,19 +17,17 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      suppressHydrationWarning
-      className={cn(
-        "antialiased",
-        fontMono.variable,
-        "font-sans",
-        inter.variable
-      )}
+      lang="pt-BR"
+      suppressHydrationWarning className={cn("font-sans", inter.variable)}
+       
     >
-      <body>
+      <body  className={cn(
+          "isolate min-h-screen font-sans antialiased",
+          fontSans.variable,
+        )}>
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
-          <Toaster />
+          <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>
     </html>

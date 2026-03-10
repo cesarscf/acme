@@ -1,7 +1,20 @@
 import Link from "next/link"
-import { Building2 } from "lucide-react"
+import { Building2, ChevronRight } from "lucide-react"
 
-import { Separator } from "@/components/ui/separator"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { getTenants } from "@/lib/queries/tenants"
 import { CreateTenantDialog } from "./_components/create-tenant-dialog"
 
@@ -11,39 +24,46 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-1 flex-col">
       <div className="mx-auto w-full max-w-5xl px-4 py-8 lg:px-6">
-        <div className="flex justify-end">
-          <CreateTenantDialog />
-        </div>
-
         {allTenants.length === 0 ? (
-          <div className="mt-8 flex flex-col items-center justify-center rounded-xl bg-muted py-16">
-            <Building2 className="size-10 text-muted-foreground" />
-            <p className="mt-4 text-sm font-medium">
-              Nenhum tenant cadastrado
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cadastre o primeiro cliente da agencia
-            </p>
-          </div>
+          <Empty className="mt-8 rounded-lg bg-muted">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Building2 />
+              </EmptyMedia>
+              <EmptyTitle>Nenhum tenant cadastrado</EmptyTitle>
+              <EmptyDescription>
+                Cadastre o primeiro cliente da agência
+              </EmptyDescription>
+            </EmptyHeader>
+            <CreateTenantDialog />
+          </Empty>
         ) : (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {allTenants.map((tenant) => (
-              <Link
-                key={tenant.id}
-                href={`/dashboard/tenants/${tenant.id}`}
-                className="block rounded-xl bg-muted p-5 shadow-xs transition-shadow hover:shadow-md"
-              >
-                <div className="flex items-center gap-2">
-                  <Building2 className="size-4 text-muted-foreground" />
-                  <h3 className="font-semibold">{tenant.name}</h3>
-                </div>
-                <Separator className="my-4" />
-                <p className="text-sm text-muted-foreground">
-                  {tenant.customDomain || `${tenant.slug}.acme.com`}
-                </p>
-              </Link>
-            ))}
-          </div>
+          <>
+            <div className="flex justify-end">
+              <CreateTenantDialog />
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {allTenants.map((tenant) => (
+                <Link key={tenant.id} href={`/dashboard/tenants/${tenant.id}`}>
+                  <Item
+                    variant="muted"
+                    className="cursor-pointer transition-colors hover:bg-muted"
+                  >
+                    <ItemMedia variant="icon">
+                      <Building2 />
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle>{tenant.name}</ItemTitle>
+                      <ItemDescription>
+                        {tenant.customDomain || `${tenant.slug}.acme.com`}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </Item>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

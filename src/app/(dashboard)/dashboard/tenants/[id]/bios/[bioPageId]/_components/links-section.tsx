@@ -5,6 +5,14 @@ import { Link2, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
@@ -13,6 +21,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import {
   Field,
   FieldError,
@@ -109,16 +124,20 @@ export function LinksSection({
   return (
     <div className="space-y-3">
       {links.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl bg-muted py-12">
-          <Link2 className="h-10 w-10 text-muted-foreground" />
-          <p className="mt-4 text-sm font-medium">Nenhum link cadastrado</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Adicione o primeiro link a esta página
-          </p>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Link2 />
+            </EmptyMedia>
+            <EmptyTitle>Nenhum link cadastrado</EmptyTitle>
+            <EmptyDescription>
+              Adicione o primeiro link a esta página
+            </EmptyDescription>
+          </EmptyHeader>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="mt-4">
-                <Plus className="mr-1 h-4 w-4" />
+              <Button size="sm">
+                <Plus data-icon="inline-start" />
                 Novo link
               </Button>
             </DialogTrigger>
@@ -129,14 +148,14 @@ export function LinksSection({
               {createForm}
             </DialogContent>
           </Dialog>
-        </div>
+        </Empty>
       ) : (
         <>
           <div className="flex justify-end">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
-                  <Plus className="mr-1 h-4 w-4" />
+                  <Plus data-icon="inline-start" />
                   Novo link
                 </Button>
               </DialogTrigger>
@@ -148,25 +167,26 @@ export function LinksSection({
               </DialogContent>
             </Dialog>
           </div>
-          {links.map((link) => (
-            <div
-              key={link.id}
-              className="flex items-center justify-between rounded-xl bg-muted p-4"
-            >
-              <div>
-                <p className="text-sm font-medium">{link.title}</p>
-                <p className="text-xs text-muted-foreground">{link.url}</p>
-              </div>
-              <form action={deleteAction}>
-                <input type="hidden" name="id" value={link.id} />
-                <input type="hidden" name="tenant_id" value={tenantId} />
-                <input type="hidden" name="bio_page_id" value={bioPageId} />
-                <Button variant="destructive" size="icon" disabled={isDeleting}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </form>
-            </div>
-          ))}
+          <ItemGroup>
+            {links.map((link) => (
+              <Item key={link.id} variant="outline">
+                <ItemContent>
+                  <ItemTitle>{link.title}</ItemTitle>
+                  <ItemDescription>{link.url}</ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <form action={deleteAction}>
+                    <input type="hidden" name="id" value={link.id} />
+                    <input type="hidden" name="tenant_id" value={tenantId} />
+                    <input type="hidden" name="bio_page_id" value={bioPageId} />
+                    <Button variant="destructive" size="icon" disabled={isDeleting}>
+                      <Trash2 />
+                    </Button>
+                  </form>
+                </ItemActions>
+              </Item>
+            ))}
+          </ItemGroup>
         </>
       )}
     </div>

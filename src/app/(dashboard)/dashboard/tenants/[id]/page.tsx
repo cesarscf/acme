@@ -70,7 +70,7 @@ export default async function TenantDetailPage({
           </div>
           <Link href={`/dashboard/tenants/${tenant.id}/settings`}>
             <Button variant="outline" size="sm">
-              <Settings className="mr-1 size-4" />
+              <Settings data-icon="inline-start" />
               Configurações
             </Button>
           </Link>

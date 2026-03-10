@@ -38,8 +38,8 @@ export function SettingsContent({ tenant }: { tenant: Tenant }) {
                 className={cn(
                   "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   active === section.id
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <section.icon className="size-4" />

@@ -33,15 +33,15 @@ export function DashboardHeader() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem>
-                <UserIcon className="mr-2 size-4" />
+                <UserIcon />
                 Conta
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <CreditCardIcon className="mr-2 size-4" />
+                <CreditCardIcon />
                 Plano
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Settings2Icon className="mr-2 size-4" />
+                <Settings2Icon />
                 Configurações
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -50,11 +50,7 @@ export function DashboardHeader() {
                   setTheme(resolvedTheme === "dark" ? "light" : "dark")
                 }
               >
-                {resolvedTheme === "dark" ? (
-                  <Sun className="mr-2 size-4" />
-                ) : (
-                  <Moon className="mr-2 size-4" />
-                )}
+                {resolvedTheme === "dark" ? <Sun /> : <Moon />}
                 {resolvedTheme === "dark" ? "Tema claro" : "Tema escuro"}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -66,7 +62,7 @@ export function DashboardHeader() {
                   })
                 }
               >
-                <LogOut className="mr-2 size-4" />
+                <LogOut />
                 Sair
               </DropdownMenuItem>
             </DropdownMenuContent>

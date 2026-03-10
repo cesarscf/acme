@@ -14,6 +14,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import {
   Field,
   FieldError,
   FieldGroup,
@@ -114,18 +121,20 @@ export function BioPagesSection({
   return (
     <div className="space-y-4">
       {bioPages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl bg-muted py-12">
-          <FileText className="h-10 w-10 text-muted-foreground" />
-          <p className="mt-4 text-sm font-medium">
-            Nenhuma bio page cadastrada
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Crie uma bio page para o tenant
-          </p>
+        <Empty className="bg-muted rounded-lg">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileText />
+            </EmptyMedia>
+            <EmptyTitle>Nenhuma bio page cadastrada</EmptyTitle>
+            <EmptyDescription>
+              Crie uma bio page para o tenant
+            </EmptyDescription>
+          </EmptyHeader>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="mt-4">
-                <Plus className="mr-1 h-4 w-4" />
+              <Button >
+                <Plus data-icon="inline-start" />
                 Nova bio page
               </Button>
             </DialogTrigger>
@@ -136,14 +145,14 @@ export function BioPagesSection({
               {createForm}
             </DialogContent>
           </Dialog>
-        </div>
+        </Empty>
       ) : (
         <>
           <div className="flex justify-end">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
-                  <Plus className="mr-1 h-4 w-4" />
+                  <Plus data-icon="inline-start" />
                   Nova bio page
                 </Button>
               </DialogTrigger>

@@ -23,7 +23,7 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 ## Features
 
 - **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via proxy com rewrite para `/t/[slug]/...` (proxy implementado mas middleware ainda não conectado)
-- **Auth** — Better Auth (email OTP + Google OAuth), apenas agência, sem roles
+- **Auth** — Better Auth (email OTP), apenas agência, sem roles
 - **Landing pages** — Múltiplas por tenant. Cada uma com título, descrição, CTA (link) e slug único. Slug vazio = raiz do tenant
 - **Páginas de links** — Múltiplas por tenant. Cada uma com título, descrição e lista de links (título + URL), estilo Linktree
 - **Páginas de oferta** — Múltiplas por tenant. Cada uma com título, descrição e CTA (link)
@@ -35,7 +35,7 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 
 ### Auth
 - Apenas a agência acessa o dashboard (sem roles, sem multi-user por tenant)
-- Login via email OTP (4 dígitos) ou Google OAuth
+- Login via email OTP (4 dígitos)
 - OTP apenas logado no console em dev (integração com provedor de email pendente)
 
 ### Tenants

@@ -4,7 +4,7 @@ Módulos compartilhados da aplicação: auth, utilitários, server actions, quer
 
 ## Estrutura
 
-- `auth.ts` — Configuração server-side do Better Auth (email OTP, Google OAuth, Drizzle adapter, nextCookies)
+- `auth.ts` — Configuração server-side do Better Auth (email OTP, Drizzle adapter, nextCookies)
 - `auth-client.ts` — Cliente Better Auth para uso em componentes React
 - `types.ts` — Tipos compartilhados (`FormState<T>` usado nos server actions)
 - `utils.ts` — `cn()` para classes Tailwind, `rootDomain` e `protocol` para URLs multi-tenant

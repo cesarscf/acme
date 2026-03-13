@@ -12,21 +12,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Plataforma multi-tenant para agência de marketing. A agência cadastra clientes (tenants), cada um com seu domínio ou subdomínio. Cada tenant possui:
+Plataforma multi-tenant para agência de marketing. A agência cadastra clientes (tenants), cada um com seu domínio ou subdomínio. Cada tenant possui múltiplas **páginas** — criadas a partir de templates — cada uma com um path customizado escolhido pela agência.
 
-- **Landing pages** — múltiplas por tenant, segmentadas (ex: uma para cada cidade/loja). A LP com slug vazio é a raiz do tenant
-- **Bio pages** — múltiplas por tenant, segmentadas (ex: uma para cada cidade/loja), estilo Linktree
-- **Offer pages** — múltiplas por tenant, também segmentadas (ex: ofertas específicas por região)
+Exemplo: "Farmácia X" tem uma página de links na raiz, outra em `/pinheiros`, uma página de ofertas em `/ofertas/verao`, etc. A agência gerencia tudo via painel admin.
 
-Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pinheiros`), uma bio page para a loja de Vitória, outra para Vila Velha, e offer pages separadas para cada cidade. A agência gerencia tudo via painel admin.
+Ver `ARCHITECTURE.md` para detalhes completos da arquitetura.
 
 ## Features
 
-- **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via proxy com rewrite para `/t/[slug]/...` (proxy implementado mas middleware ainda não conectado)
+- **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via `src/proxy.ts` com rewrite para `/t/[slug]/...`
 - **Auth** — Better Auth (email OTP), apenas agência, sem roles
-- **Landing pages** — Múltiplas por tenant. Cada uma com nome (interno), URL do CTA e slug único. Slug vazio = raiz do tenant
-- **Bio pages** — Múltiplas por tenant. Cada uma com nome (interno) e lista de links (título + URL), estilo Linktree
-- **Offer pages** — Múltiplas por tenant. Cada uma com nome (interno), URL do CTA e slug único
+- **Pages** — Múltiplas por tenant. Cada página criada a partir de um template (hardcoded), com path customizado e conteúdo em JSON
 - **Database** — Postgres (Neon) + Drizzle ORM
 - **Deploy** — Vercel + Vercel Domains API para custom domains
 - **Storage de imagens** — A definir em etapa futura
@@ -45,37 +41,26 @@ Exemplo: "Farmácia X" tem uma landing page na raiz, outra para Pinheiros (`/pin
 - Custom domain é opcional (campo existe no schema, mas ainda não exposto no form de criação)
 - Ao deletar tenant, remove o custom domain da Vercel (se existir) e deleta em cascata (landing pages, bio pages, links, offer pages)
 
-### Multi-tenancy (Proxy) — pendente
-- Lógica implementada em `proxy.ts` mas **middleware não conectado** (falta `middleware.ts` na raiz invocando `proxy()`)
-- Quando conectado: subdomínio (`tenant.quiwork.com`), custom domain (`tenant.com`), localhost (`tenant.localhost:3000`), Vercel preview (`tenant---project.vercel.app`)
-- Rotas `/dashboard` e `/login` serão bloqueadas em domínios de tenant (redireciona para `/`)
+### Multi-tenancy (Proxy)
+
+Next.js 16 renomeou `middleware.ts` para `proxy.ts` (o antigo `middleware` foi descontinuado). O arquivo `src/proxy.ts` já segue essa convenção — exporta uma função `proxy` e um `config`, e é reconhecido automaticamente pelo Next.js como o proxy da aplicação. Não é necessário criar nenhum arquivo wrapper.
+
+- Subdomínio (`tenant.quiwork.com`), custom domain (`tenant.com`), localhost (`tenant.localhost:3000`), Vercel preview (`tenant---project.vercel.app`)
+- Rotas `/dashboard` e `/login` são bloqueadas em domínios de tenant (redireciona para `/`)
 - O proxy reescreve internamente para `/t/[slug]/...` — visitante nunca vê `/t/`
 
-### Landing Pages
-- Múltiplas por tenant (1:N)
-- Slug único por tenant (validado via query antes do insert/update)
-- Slug pode ser vazio (`""`) — representa a raiz do tenant (`tenant.quiwork.com/`)
-- Não pode haver mais de uma LP com slug vazio por tenant
-- Campos: nome (interno, obrigatório), URL do CTA, flag ativa/inativa
-- CRUD completo: criar, editar, deletar. Ao criar, redireciona para a página de detalhes
-- LPs inativas retornam 404 na página pública
-- Se não existe LP com slug vazio, a raiz do tenant retorna 404
-- Rota pública: `tenant.quiwork.com/` (raiz) e `tenant.quiwork.com/[slug]` (demais)
+### Pages
 
-### Bio Pages
-- Múltiplas por tenant (1:N)
-- Slug único por tenant (validado via try-catch no insert, sem constraint composta no schema)
-- Cada página contém lista de links (título + URL) ordenados por posição
-- Links são deletados em cascata ao remover a página
-- Campos: nome (interno, obrigatório), flag ativa/inativa
-- Rota pública: `tenant.quiwork.com/bios/[slug]`
+Substitui o sistema anterior de landing pages, bio pages e offer pages.
 
-### Offer Pages
 - Múltiplas por tenant (1:N)
-- Slug único por tenant (validado via try-catch no insert, sem constraint composta no schema)
-- Campos: nome (interno, obrigatório), URL do CTA, flag ativa/inativa
-- Offer pages inativas retornam 404 na página pública
-- Rota pública: `tenant.quiwork.com/ofertas/[slug]`
+- Cada página tem um `path` customizado único por tenant (ex: `meus-links/pinheiros`)
+- `path` vazio (`""`) representa a raiz do tenant
+- Não pode haver mais de uma página com path vazio por tenant
+- Cada página referencia um `templateSlug` (template hardcoded no código)
+- Conteúdo editável armazenado em JSON no campo `content`
+- Páginas inativas retornam 404 na rota pública
+- Rota pública: `tenant.quiwork.com/` (raiz) e `tenant.quiwork.com/[...path]` (demais)
 
 ### Custom Domains
 - Configurado na página de settings do tenant (`/dashboard/tenants/[id]/settings`)

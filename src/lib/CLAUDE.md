@@ -33,6 +33,37 @@ export async function createThing(input: CreateThingSchema) {
 - Usam `revalidatePath` para invalidar cache
 - Usam `getErrorMessage(err)` de `handle-error.ts` para normalizar erros
 
+### Forms
+
+Formulários usam `@tanstack/react-form` com schemas Zod de `validations/` como validadores. Seguem o padrão:
+
+```tsx
+const form = useForm({
+  defaultValues: { name: "" },
+  validators: {
+    onSubmit: mySchema,
+  },
+  onSubmit: ({ value }) => {
+    startTransition(async () => {
+      const { data, error } = await myAction(value)
+
+      if (error) {
+        toast.error(error)
+        return
+      }
+
+      // sucesso
+    })
+  },
+})
+```
+
+- Validação via schema Zod passado em `validators.onSubmit`
+- Submit chama server action dentro de `useTransition` para loading state
+- Erros da action exibidos via `toast.error`
+- Erros de validação exibidos inline via `FieldError` com `field.state.meta.errors`
+- Cada field usa o padrão `form.Field` → `Field` → `FieldLabel` + `Input` + `FieldError`
+
 ### Queries
 
 Funções de leitura no banco organizadas por domínio em `queries/`, reutilizáveis em qualquer parte do projeto. Nunca fazer queries inline em pages ou actions.

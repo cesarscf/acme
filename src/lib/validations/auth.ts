@@ -1,4 +1,4 @@
-import { z } from "zod/v4"
+import * as z from "zod"
 
 export const emailSchema = z.object({
   email: z.email("Email inválido"),
@@ -9,9 +9,6 @@ export const otpSchema = z.object({
   otp: z.string().length(4, "O código deve ter 4 dígitos"),
 })
 
-export type AuthState = {
-  step: "email" | "otp"
-  email?: string
-  errors: null | Partial<Record<"email" | "otp", string[]>>
-  success?: boolean
-}
+
+export type EmailSchema = z.infer<typeof emailSchema>
+export type OtpSchema = z.infer<typeof otpSchema>

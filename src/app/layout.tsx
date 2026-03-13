@@ -5,9 +5,6 @@ import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { fontSans } from "@/lib/fonts"
-import { Inter } from "next/font/google";
-
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 
 export default function RootLayout({
@@ -21,7 +18,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body  className={cn(
-          "isolate min-h-screen font-sans antialiased",
+          "isolate min-h-screen font-sans antialiased bg-background",
           fontSans.variable,
         )}>
         <ThemeProvider>

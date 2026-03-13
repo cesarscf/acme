@@ -18,7 +18,7 @@ Exemplo: "Farmácia X" tem uma página de links na raiz, outra em `/pinheiros`, 
 
 ## Features
 
-- **Multi-tenancy** — Cada organização = um tenant. Subdomínio (org.quiwork.com) + custom domain (org.com), resolvido via `src/proxy.ts` com rewrite para `/t/[slug]/...`
+- **Multi-tenancy** — Cada organização = um tenant. Subdomínio (org.quiwork.com) + custom domain (org.com), resolvido via `src/proxy.ts` com rewrite para `/o/[slug]/...`
 - **Auth** — Better Auth (email OTP + organization plugin), apenas agência
 - **Organizations** — Better Auth organization plugin como sistema de tenants. Campos customizados: `customDomain` e `domainVerified` via `additionalFields`. Criação de org adiciona o usuário como owner automaticamente.
 - **Pages** — Múltiplas por organização. Cada página criada a partir de um template (hardcoded), com path customizado e conteúdo em JSON
@@ -42,14 +42,14 @@ Next.js 16 renomeou `middleware.ts` para `proxy.ts`. O arquivo `src/proxy.ts` ex
 ```
 lojax.acme.com/meus-links/pinheiros
   → proxy detecta subdomínio "lojax"
-  → reescreve para /t/lojax/meus-links/pinheiros
+  → reescreve para /o/lojax/meus-links/pinheiros
 
 lojax.com/meus-links/pinheiros  (custom domain)
   → proxy detecta custom domain "lojax.com"
-  → reescreve para /t/lojax.com/meus-links/pinheiros
+  → reescreve para /o/lojax.com/meus-links/pinheiros
 ```
 
-O proxy passa `_tenantType` (`"subdomain"` | `"customDomain"`) como query param para a rota interna resolver o tenant corretamente.
+O proxy passa `_orgType` (`"subdomain"` | `"customDomain"`) como query param para a rota interna resolver a organização corretamente.
 
 **Host patterns suportados:**
 
@@ -71,7 +71,7 @@ Public:
   org.com/qualquer/path               → same, via custom domain
 
 Internal (never visible to visitors):
-  /t/[slug]/[[...path]]               → optional catch-all handler (path="" for root, path="a/b" for others)
+  /o/[slug]/[[...path]]               → optional catch-all handler (path="" for root, path="a/b" for others)
 
 Dashboard:
   /dashboard                          → organizations list

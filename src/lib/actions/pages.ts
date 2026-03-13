@@ -39,7 +39,7 @@ export async function createPage(input: {
       .returning({ id: pages.id })
       .then((res) => res[0])
 
-    revalidatePath(`/dashboard/tenants/${input.organizationId}`)
+    revalidatePath(`/dashboard/organizations/${input.organizationId}`)
 
     return { data: result, error: null }
   } catch (err) {
@@ -78,8 +78,8 @@ export async function updatePage(input: {
 
     await db.update(pages).set(data).where(eq(pages.id, id))
 
-    revalidatePath(`/dashboard/tenants/${organizationId}/pages/${id}`)
-    revalidatePath(`/dashboard/tenants/${organizationId}`)
+    revalidatePath(`/dashboard/organizations/${organizationId}/pages/${id}`)
+    revalidatePath(`/dashboard/organizations/${organizationId}`)
 
     return { data: null, error: null }
   } catch (err) {
@@ -95,7 +95,7 @@ export async function deletePage(input: {
   try {
     await db.delete(pages).where(eq(pages.id, input.id))
 
-    revalidatePath(`/dashboard/tenants/${input.organizationId}`)
+    revalidatePath(`/dashboard/organizations/${input.organizationId}`)
 
     return { data: null, error: null }
   } catch (err) {

@@ -6,19 +6,19 @@ import {
 } from "@/lib/queries/organizations"
 import { getPageByPath } from "@/lib/queries/pages"
 
-export default async function TenantPage({
+export default async function OrgPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string; path?: string[] }>
-  searchParams: Promise<{ _tenantType?: string }>
+  searchParams: Promise<{ _orgType?: string }>
 }) {
   const { slug, path } = await params
-  const { _tenantType } = await searchParams
+  const { _orgType } = await searchParams
   const resolvedPath = path ? path.join("/") : ""
 
   const org =
-    _tenantType === "customDomain"
+    _orgType === "customDomain"
       ? await getOrganizationByCustomDomain(slug)
       : await getOrganizationBySlug(slug)
 

@@ -46,8 +46,8 @@ export async function updateOrganization(input: {
       headers: await headers(),
     })
 
-    revalidatePath(`/dashboard/tenants/${input.organizationId}`)
-    revalidatePath(`/dashboard/tenants/${input.organizationId}/settings`)
+    revalidatePath(`/dashboard/organizations/${input.organizationId}`)
+    revalidatePath(`/dashboard/organizations/${input.organizationId}/settings`)
     revalidatePath("/dashboard")
 
     return { data: null, error: null }
@@ -81,8 +81,8 @@ export async function updateCustomDomain(input: {
       .set({ customDomain: input.customDomain, domainVerified: false })
       .where(eq(organizations.id, input.organizationId))
 
-    revalidatePath(`/dashboard/tenants/${input.organizationId}`)
-    revalidatePath(`/dashboard/tenants/${input.organizationId}/settings`)
+    revalidatePath(`/dashboard/organizations/${input.organizationId}`)
+    revalidatePath(`/dashboard/organizations/${input.organizationId}/settings`)
 
     return { data: null, error: null }
   } catch (err) {

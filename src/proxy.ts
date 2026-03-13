@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { rootDomain } from "@/lib/utils"
 
-type TenantMatch =
+type OrgMatch =
   | { type: "subdomain"; value: string }
   | { type: "customDomain"; value: string }
   | null
 
-function matchTenant(request: NextRequest): TenantMatch {
+function matchOrg(request: NextRequest): OrgMatch {
   const url = request.url
   const host = request.headers.get("host") || ""
   const hostname = host.split(":")[0]
@@ -51,15 +51,15 @@ function matchTenant(request: NextRequest): TenantMatch {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const tenant = matchTenant(request)
+  const org = matchOrg(request)
 
-  if (tenant) {
+  if (org) {
     if (pathname.startsWith("/dashboard") || pathname.startsWith("/login")) {
       return NextResponse.redirect(new URL("/", request.url))
     }
 
-    const rewriteUrl = new URL(`/t/${tenant.value}${pathname}`, request.url)
-    rewriteUrl.searchParams.set("_tenantType", tenant.type)
+    const rewriteUrl = new URL(`/o/${org.value}${pathname}`, request.url)
+    rewriteUrl.searchParams.set("_orgType", org.type)
     return NextResponse.rewrite(rewriteUrl)
   }
 

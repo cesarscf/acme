@@ -153,4 +153,29 @@ Dashboard:
 - **Env** — t3-env para validação e tipagem de variáveis de ambiente
 - **Queries:** Funções de leitura no banco ficam em `src/lib/queries/`, separadas por contexto. Nunca fazer queries inline em pages ou actions.
 - **Validations:** Schemas Zod ficam em `src/lib/validations/`, separados por contexto. Actions importam daqui.
-- **Actions:** Server actions ficam em `src/lib/actions/`, separados por contexto.
+- **Actions:** Server actions ficam em `src/lib/actions/`, separados por contexto. Seguem o padrão abaixo:
+
+```ts
+export async function createThing(input: CreateThingSchema & { userId: string }) {
+  noStore()
+  try {
+    const result = await db
+      .insert(things)
+      .values({ ... })
+      .returning({ id: things.id })
+      .then((res) => res[0])
+
+    revalidatePath("/dashboard")
+
+    return { data: result, error: null }
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) }
+  }
+}
+```
+
+  - Recebem input tipado (não `FormData`)
+  - Retornam `{ data: T | null, error: string | null }`
+  - Chamam `noStore()` no início
+  - Usam `revalidatePath` para invalidar cache
+  - Usam `getErrorMessage(err)` de `@/lib/handle-error` para normalizar erros

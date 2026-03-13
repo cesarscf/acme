@@ -8,6 +8,7 @@ Módulos compartilhados da aplicação: auth, utilitários, server actions, quer
 - `auth-client.ts` — Cliente Better Auth para uso em componentes React
 - `types.ts` — Tipos compartilhados (`FormState<T>` usado nos server actions)
 - `utils.ts` — `cn()` para classes Tailwind, `rootDomain` e `protocol` para URLs multi-tenant
+- `handle-error.ts` — `getErrorMessage(err)` normaliza erros para string; `showErrorToast(err)` exibe via sonner
 - `vercel.ts` — Integração com Vercel Domains API (adicionar/remover domínios custom)
 - `actions/` — Server actions organizados por domínio (tenants, pages, auth)
 - `queries/` — Funções de leitura no banco organizadas por domínio (tenants, pages), reutilizáveis em qualquer parte do projeto
@@ -15,10 +16,10 @@ Módulos compartilhados da aplicação: auth, utilitários, server actions, quer
 
 ## Padrões
 
-- Server actions usam `useActionState` no client e recebem `(_prevState, formData)` como assinatura
+- Actions recebem input tipado (não `FormData`), retornam `{ data: T | null, error: string | null }`
+- Chamar `noStore()` no início de toda action
+- Erros normalizados via `getErrorMessage(err)` de `handle-error.ts`
+- Invalidação de cache via `revalidatePath`
 - Validação sempre via schemas Zod importados de `validations/`
 - Leitura de dados sempre via funções de `queries/`, nunca queries inline nos actions ou pages
-- Actions de criação usam `.returning()` para obter o ID e fazem `redirect()` para a página de detalhes
-- Campos opcionais de `formData.get()` devem usar `|| undefined` (não `as string` direto), pois `null` não é aceito por `z.string().optional()`
-- Campos booleanos são enviados via hidden input (`"true"`/`"false"`) e convertidos com `=== "true"` na action
 - Novos domínios devem seguir a mesma separação: um arquivo por contexto em cada subpasta

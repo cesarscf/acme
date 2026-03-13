@@ -16,8 +16,6 @@ Plataforma multi-tenant para agência de marketing. A agência cadastra clientes
 
 Exemplo: "Farmácia X" tem uma página de links na raiz, outra em `/pinheiros`, uma página de ofertas em `/ofertas/verao`, etc. A agência gerencia tudo via painel admin.
 
-Ver `ARCHITECTURE.md` para detalhes completos da arquitetura.
-
 ## Features
 
 - **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via `src/proxy.ts` com rewrite para `/t/[slug]/...`
@@ -26,6 +24,73 @@ Ver `ARCHITECTURE.md` para detalhes completos da arquitetura.
 - **Database** — Postgres (Neon) + Drizzle ORM
 - **Deploy** — Vercel + Vercel Domains API para custom domains
 - **Storage de imagens** — A definir em etapa futura
+
+## Architecture
+
+Next.js 16 app with React 19, using the App Router and `src/` directory layout. UI components come from shadcn/ui (radix-nova style). Styling is done with Tailwind CSS v4 and CSS variables for theming. Dark mode is handled via next-themes with class strategy.
+
+### Pages System
+
+Templates são hardcoded no código. Cada template define um layout e quais campos de conteúdo são editáveis. Páginas são instâncias de um template, armazenadas no banco com path customizado e `content` em JSON.
+
+**Schema da tabela `pages`:**
+
+| Coluna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | primary key |
+| `tenantId` | uuid | FK → tenants (cascade) |
+| `name` | text | label interno, não exibido publicamente |
+| `path` | text | path customizado, único por tenant. Vazio = raiz |
+| `templateSlug` | text | referencia um template hardcoded (ex: `links-1`) |
+| `content` | jsonb | campos editáveis do template |
+| `active` | boolean | páginas inativas retornam 404 |
+
+Templates exportam: `slug`, `label`, `contentSchema` (Zod) e `Component` (React).
+
+### Multi-tenancy & Proxy
+
+Next.js 16 renomeou `middleware.ts` para `proxy.ts`. O arquivo `src/proxy.ts` exporta uma função `proxy` e um `config`, reconhecido automaticamente pelo Next.js.
+
+**Rewrite flow:**
+```
+lojax.acme.com/meus-links/pinheiros
+  → proxy detecta subdomínio "lojax"
+  → reescreve para /t/lojax/meus-links/pinheiros
+
+lojax.com/meus-links/pinheiros  (custom domain)
+  → proxy detecta custom domain "lojax.com"
+  → reescreve para /t/lojax.com/meus-links/pinheiros
+```
+
+O proxy passa `_tenantType` (`"subdomain"` | `"customDomain"`) como query param para a rota interna resolver o tenant corretamente.
+
+**Host patterns suportados:**
+
+| Pattern | Exemplo | Detectado como |
+|---|---|---|
+| Subdomínio | `lojax.acme.com` | subdomain `lojax` |
+| Custom domain | `lojax.com` | custom domain `lojax.com` |
+| Localhost | `lojax.localhost:3000` | subdomain `lojax` |
+| Vercel preview | `lojax---project.vercel.app` | subdomain `lojax` |
+
+Rotas `/dashboard` e `/login` em domínios de tenant são redirecionadas para `/`.
+
+### Routing Summary
+
+```
+Public:
+  tenant.acme.com/                    → page with path ""
+  tenant.acme.com/qualquer/path       → page with path "qualquer/path"
+  tenant.com/qualquer/path            → same, via custom domain
+
+Internal (never visible to visitors):
+  /t/[tenantSlug]/[[...path]]         → optional catch-all handler (path="" for root, path="a/b" for others)
+
+Dashboard:
+  /dashboard/tenants/[id]             → tenant detail + pages list
+  /dashboard/tenants/[id]/pages/[id]  → edit page
+  /dashboard/tenants/[id]/settings    → settings (custom domain, etc.)
+```
 
 ## Business Rules
 
@@ -38,29 +103,16 @@ Ver `ARCHITECTURE.md` para detalhes completos da arquitetura.
 - Cada tenant pertence a um usuário (agência)
 - Slug é único e obrigatório (apenas letras minúsculas, números e hífens)
 - Se subdomínio não for informado, usa o slug como subdomínio
-- Custom domain é opcional (campo existe no schema, mas ainda não exposto no form de criação)
-- Ao deletar tenant, remove o custom domain da Vercel (se existir) e deleta em cascata (landing pages, bio pages, links, offer pages)
-
-### Multi-tenancy (Proxy)
-
-Next.js 16 renomeou `middleware.ts` para `proxy.ts` (o antigo `middleware` foi descontinuado). O arquivo `src/proxy.ts` já segue essa convenção — exporta uma função `proxy` e um `config`, e é reconhecido automaticamente pelo Next.js como o proxy da aplicação. Não é necessário criar nenhum arquivo wrapper.
-
-- Subdomínio (`tenant.quiwork.com`), custom domain (`tenant.com`), localhost (`tenant.localhost:3000`), Vercel preview (`tenant---project.vercel.app`)
-- Rotas `/dashboard` e `/login` são bloqueadas em domínios de tenant (redireciona para `/`)
-- O proxy reescreve internamente para `/t/[slug]/...` — visitante nunca vê `/t/`
+- Custom domain é opcional
+- Ao deletar tenant, remove o custom domain da Vercel (se existir) e deleta em cascata (pages)
 
 ### Pages
-
-Substitui o sistema anterior de landing pages, bio pages e offer pages.
-
 - Múltiplas por tenant (1:N)
-- Cada página tem um `path` customizado único por tenant (ex: `meus-links/pinheiros`)
-- `path` vazio (`""`) representa a raiz do tenant
-- Não pode haver mais de uma página com path vazio por tenant
-- Cada página referencia um `templateSlug` (template hardcoded no código)
-- Conteúdo editável armazenado em JSON no campo `content`
+- `path` único por tenant (ex: `meus-links/pinheiros`)
+- `path` vazio (`""`) representa a raiz do tenant — no máximo um por tenant
+- `templateSlug` referencia um template hardcoded no código
+- Conteúdo editável em JSON no campo `content`
 - Páginas inativas retornam 404 na rota pública
-- Rota pública: `tenant.quiwork.com/` (raiz) e `tenant.quiwork.com/[...path]` (demais)
 
 ### Custom Domains
 - Configurado na página de settings do tenant (`/dashboard/tenants/[id]/settings`)
@@ -69,10 +121,6 @@ Substitui o sistema anterior de landing pages, bio pages e offer pages.
 - `deleteTenantAction()` também chama `removeDomainFromVercel()` se houver custom domain
 - Verificação DNS via API route `/api/domain-check` que consulta Vercel API
 - Status e instruções DNS exibidos na página de settings abaixo do form
-
-## Architecture
-
-Next.js 16 app with React 19, using the App Router and `src/` directory layout. UI components come from shadcn/ui (radix-nova style). Styling is done with Tailwind CSS v4 and CSS variables for theming. Dark mode is handled via next-themes with class strategy.
 
 ## Commits
 
@@ -96,7 +144,6 @@ Next.js 16 app with React 19, using the App Router and `src/` directory layout. 
 
 - **File naming:** Always use kebab-case (e.g., `mode-toggle.tsx`, not `ModeToggle.tsx`).
 - **Code clarity:** Avoid comments — prefer descriptive variable and function names that make the code self-explanatory.
-
 - **Component placement:** Components specific to a single page/route go in `_components/` inside that route folder. Shared components used across multiple routes go in `src/components/`.
 - **shadcn/ui** — Add components via `npx shadcn@latest add <name>`.
 - **Path alias:** `@/*` maps to `src/*`

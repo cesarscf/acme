@@ -2,17 +2,11 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeftIcon, ExternalLink, Settings } from "lucide-react"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { protocol, rootDomain } from "@/lib/utils"
 import { getTenantById } from "@/lib/queries/tenants"
-import { getLandingPagesByTenantId } from "@/lib/queries/landing-pages"
-import { getBioPagesByTenantId } from "@/lib/queries/bio-pages"
-import { getOfferPagesByTenantId } from "@/lib/queries/offer-pages"
+import { getPagesByTenantId } from "@/lib/queries/pages"
 import { Button } from "@/components/ui/button"
-import { LandingPagesSection } from "./_components/landing-pages-section"
-import { BioPagesSection } from "./_components/bio-pages-section"
-import { OfferPagesSection } from "./_components/offer-pages-section"
+import { PagesSection } from "./_components/pages-section"
 
 export default async function TenantDetailPage({
   params,
@@ -25,11 +19,7 @@ export default async function TenantDetailPage({
 
   if (!tenant) notFound()
 
-  const [tenantLandingPages, tenantBioPages, tenantOfferPages] = await Promise.all([
-    getLandingPagesByTenantId(id),
-    getBioPagesByTenantId(id),
-    getOfferPagesByTenantId(id),
-  ])
+  const tenantPages = await getPagesByTenantId(id)
 
   return (
     <div className="flex flex-1 flex-col">
@@ -76,44 +66,13 @@ export default async function TenantDetailPage({
           </Link>
         </div>
 
-        <Tabs defaultValue="landing-page" className="mt-6">
-          <TabsList variant="line">
-            <TabsTrigger value="landing-page">Landing Pages</TabsTrigger>
-            <TabsTrigger value="bio">Bio Pages</TabsTrigger>
-            <TabsTrigger value="ofertas">Ofertas</TabsTrigger>
-            <TabsTrigger value="metricas">Métricas</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="landing-page" className="mt-4">
-            <LandingPagesSection
-              tenantId={tenant.id}
-              tenantSlug={tenant.slug}
-              landingPages={tenantLandingPages}
-            />
-          </TabsContent>
-
-          <TabsContent value="bio" className="mt-4">
-            <BioPagesSection
-              tenantId={tenant.id}
-              tenantSlug={tenant.slug}
-              bioPages={tenantBioPages}
-            />
-          </TabsContent>
-
-          <TabsContent value="ofertas" className="mt-4">
-            <OfferPagesSection tenantId={tenant.id} tenantSlug={tenant.slug} offerPages={tenantOfferPages} />
-          </TabsContent>
-
-          <TabsContent value="metricas" className="mt-4">
-            <Card>
-              <CardContent >
-                <p className="text-sm text-muted-foreground">
-                  Métricas estarão disponíveis em breve.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <div className="mt-6">
+          <PagesSection
+            tenantId={tenant.id}
+            tenantSlug={tenant.slug}
+            pages={tenantPages}
+          />
+        </div>
       </div>
     </div>
   )

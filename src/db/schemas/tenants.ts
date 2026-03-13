@@ -2,9 +2,7 @@ import { relations } from "drizzle-orm"
 import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
 
 import { users } from "./auth"
-import { bioPages } from "./bio-pages"
-import { landingPages } from "./landing-pages"
-import { offerPages } from "./offer-pages"
+import { pages } from "./pages"
 
 export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -27,7 +25,5 @@ export const tenantsRelations = relations(tenants, ({ one, many }) => ({
     fields: [tenants.userId],
     references: [users.id],
   }),
-  landingPages: many(landingPages),
-  bioPages: many(bioPages),
-  offerPages: many(offerPages),
+  pages: many(pages),
 }))

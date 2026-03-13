@@ -3,19 +3,19 @@ import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { getOfferPageById } from "@/lib/queries/offer-pages"
-import { OfferForm } from "./_components/offer-form"
+import { getPageById } from "@/lib/queries/pages"
+import { PageForm } from "./_components/page-form"
 
-export default async function OfferDetailPage({
+export default async function PageDetailPage({
   params,
 }: {
-  params: Promise<{ id: string; offerPageId: string }>
+  params: Promise<{ id: string; pageId: string }>
 }) {
-  const { id: tenantId, offerPageId } = await params
+  const { id: tenantId, pageId } = await params
 
-  const offer = await getOfferPageById(offerPageId)
+  const page = await getPageById(pageId)
 
-  if (!offer || offer.tenantId !== tenantId) notFound()
+  if (!page || page.tenantId !== tenantId) notFound()
 
   return (
     <div className="flex flex-1 flex-col">
@@ -29,15 +29,15 @@ export default async function OfferDetailPage({
         </Link>
 
         <div className="mt-6">
-          <h2 className="text-2xl font-semibold">{offer.name}</h2>
+          <h2 className="text-2xl font-semibold">{page.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Edite os dados da oferta
+            Edite os dados da página
           </p>
         </div>
 
         <Card className="mt-6">
           <CardContent>
-            <OfferForm tenantId={tenantId} offer={offer} />
+            <PageForm tenantId={tenantId} page={page} />
           </CardContent>
         </Card>
       </div>

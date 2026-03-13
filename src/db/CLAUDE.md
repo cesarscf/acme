@@ -4,7 +4,7 @@ Camada de banco de dados usando Drizzle ORM com Neon Postgres (driver HTTP serve
 
 ## Padrões
 
-- Tabelas: plural, snake_case (ex: `users`, `sessions`)
+- Tabelas: plural, snake_case (ex: `users`, `sessions`, `pages`)
 - IDs: `text` para tabelas do Better Auth, `uuid` para tabelas da aplicação
 - Timestamps: `created_at` e `updated_at` em todas as tabelas, com `$onUpdate` para atualizar automaticamente
 - Todas as tabelas da aplicação usam `onDelete: "cascade"` nas foreign keys

@@ -21,46 +21,37 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import {
-  updateLandingPageAction,
-  deleteLandingPageAction,
-} from "@/lib/actions/landing-pages"
-import type { LandingPageFormState } from "@/lib/validations/landing-pages"
+import { updatePageAction, deletePageAction } from "@/lib/actions/pages"
+import type { PageFormState } from "@/lib/validations/pages"
 
-type LandingPage = {
+type Page = {
   id: string
-  slug: string
+  path: string
   name: string
   active: boolean
 }
 
-const initialState: LandingPageFormState = { errors: null, success: false }
+const initialState: PageFormState = { errors: null, success: false }
 
-export function LandingPageForm({
+export function PageForm({
   tenantId,
-  landingPage,
+  page,
 }: {
   tenantId: string
-  landingPage: LandingPage
+  page: Page
 }) {
-  const [active, setActive] = useState(landingPage.active)
-  const [formState, updateAction, pending] = useActionState(
-    updateLandingPageAction,
-    initialState
-  )
-  const [, deleteAction, isDeleting] = useActionState(
-    deleteLandingPageAction,
-    null
-  )
+  const [active, setActive] = useState(page.active)
+  const [formState, updateAction, pending] = useActionState(updatePageAction, initialState)
+  const [, deleteAction, isDeleting] = useActionState(deletePageAction, null)
 
   useEffect(() => {
-    if (formState.success) toast.success("Landing page atualizada")
+    if (formState.success) toast.success("Página atualizada")
     if (formState.errors?._root) toast.error(formState.errors._root[0])
   }, [formState])
 
   return (
     <form action={updateAction}>
-      <input type="hidden" name="id" value={landingPage.id} />
+      <input type="hidden" name="id" value={page.id} />
       <input type="hidden" name="tenant_id" value={tenantId} />
       <input type="hidden" name="active" value={String(active)} />
       <Item variant="outline" className="mb-6">
@@ -86,7 +77,7 @@ export function LandingPageForm({
             <Input
               id="name"
               name="name"
-              defaultValue={formState.values?.name ?? landingPage.name}
+              defaultValue={formState.values?.name ?? page.name}
               disabled={pending}
               aria-invalid={!!formState.errors?.name?.length}
               placeholder="Digite o nome aqui"
@@ -95,19 +86,19 @@ export function LandingPageForm({
               <FieldError>{formState.errors.name[0]}</FieldError>
             )}
           </Field>
-          <Field data-invalid={!!formState.errors?.slug?.length}>
-            <FieldLabel htmlFor="slug">Slug (vazio = raiz)</FieldLabel>
+          <Field data-invalid={!!formState.errors?.path?.length}>
+            <FieldLabel htmlFor="path">Path (vazio = raiz)</FieldLabel>
             <Input
-              id="slug"
-              name="slug"
-              defaultValue={formState.values?.slug ?? landingPage.slug}
+              id="path"
+              name="path"
+              defaultValue={formState.values?.path ?? page.path}
               disabled={pending}
-              aria-invalid={!!formState.errors?.slug?.length}
-              placeholder="pinheiros"
-              pattern="^[a-z0-9-]*$"
+              aria-invalid={!!formState.errors?.path?.length}
+              placeholder="meus-links/pinheiros"
+              pattern="^[a-z0-9/-]*$"
             />
-            {formState.errors?.slug && (
-              <FieldError>{formState.errors.slug[0]}</FieldError>
+            {formState.errors?.path && (
+              <FieldError>{formState.errors.path[0]}</FieldError>
             )}
           </Field>
         </div>
@@ -118,7 +109,7 @@ export function LandingPageForm({
             Salvar
           </Button>
           <form action={deleteAction}>
-            <input type="hidden" name="id" value={landingPage.id} />
+            <input type="hidden" name="id" value={page.id} />
             <input type="hidden" name="tenant_id" value={tenantId} />
             <Button
               type="submit"

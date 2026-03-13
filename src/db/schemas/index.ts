@@ -1,6 +1,3 @@
 export * from "./auth"
 export * from "./tenants"
-export * from "./landing-pages"
-export * from "./bio-pages"
-export * from "./links"
-export * from "./offer-pages"
+export * from "./pages"

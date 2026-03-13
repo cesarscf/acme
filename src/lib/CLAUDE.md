@@ -2,24 +2,45 @@
 
 Módulos compartilhados da aplicação: auth, utilitários, server actions, queries e validações.
 
-## Estrutura
-
-- `auth.ts` — Configuração server-side do Better Auth (email OTP, organization plugin, Drizzle adapter, nextCookies)
-- `auth-client.ts` — Cliente Better Auth para uso em componentes React (emailOTPClient, organizationClient)
-- `types.ts` — Tipos compartilhados (`FormState<T>` usado nos server actions)
-- `utils.ts` — `cn()` para classes Tailwind, `rootDomain` e `protocol` para URLs multi-tenant
-- `handle-error.ts` — `getErrorMessage(err)` normaliza erros para string; `showErrorToast(err)` exibe via sonner
-- `vercel.ts` — Integração com Vercel Domains API (adicionar/remover domínios custom)
-- `actions/` — Server actions organizados por domínio (organizations, pages, auth)
-- `queries/` — Funções de leitura no banco organizadas por domínio (organizations, pages), reutilizáveis em qualquer parte do projeto
-- `validations/` — Schemas Zod v4 organizados por domínio, usados nos server actions e formulários. Usar APIs top-level (`z.uuid()`, `z.url()`, `z.email()`) em vez de `z.string().uuid()` etc.
-
 ## Padrões
 
-- Actions recebem input tipado (não `FormData`), retornam `{ data: T | null, error: string | null }`
-- Chamar `noStore()` no início de toda action
-- Erros normalizados via `getErrorMessage(err)` de `handle-error.ts`
-- Invalidação de cache via `revalidatePath`
-- Validação sempre via schemas Zod importados de `validations/`
-- Leitura de dados sempre via funções de `queries/`, nunca queries inline nos actions ou pages
+### Actions
+
+Server actions organizados por domínio em `actions/`. Seguem o padrão:
+
+```ts
+export async function createThing(input: CreateThingSchema) {
+  noStore()
+  try {
+    const result = await db
+      .insert(things)
+      .values({ ... })
+      .returning({ id: things.id })
+      .then((res) => res[0])
+
+    revalidatePath("/dashboard")
+
+    return { data: result, error: null }
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) }
+  }
+}
+```
+
+- Recebem input tipado (não `FormData`)
+- Retornam `{ data: T | null, error: string | null }`
+- Chamam `noStore()` no início
+- Usam `revalidatePath` para invalidar cache
+- Usam `getErrorMessage(err)` de `handle-error.ts` para normalizar erros
+
+### Queries
+
+Funções de leitura no banco organizadas por domínio em `queries/`, reutilizáveis em qualquer parte do projeto. Nunca fazer queries inline em pages ou actions.
+
+### Validations
+
+Schemas Zod v4 organizados por domínio em `validations/`, usados nos server actions e formulários. Usar APIs top-level (`z.uuid()`, `z.url()`, `z.email()`) em vez de `z.string().uuid()` etc.
+
+### Geral
+
 - Novos domínios devem seguir a mesma separação: um arquivo por contexto em cada subpasta

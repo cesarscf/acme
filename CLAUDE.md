@@ -32,21 +32,7 @@ Next.js 16 app with React 19, using the App Router and `src/` directory layout. 
 
 ### Pages System
 
-Templates são hardcoded no código. Cada template define um layout e quais campos de conteúdo são editáveis. Páginas são instâncias de um template, armazenadas no banco com path customizado e `content` em JSON.
-
-**Schema da tabela `pages`:**
-
-| Coluna | Tipo | Notas |
-|---|---|---|
-| `id` | uuid | primary key |
-| `organizationId` | text | FK → organizations (cascade) |
-| `name` | text | label interno, não exibido publicamente |
-| `path` | text | path customizado, único por organização. Vazio = raiz |
-| `templateSlug` | text | referencia um template hardcoded (ex: `links-1`) |
-| `content` | jsonb | campos editáveis do template |
-| `active` | boolean | páginas inativas retornam 404 |
-
-Templates exportam: `slug`, `label`, `contentSchema` (Zod) e `Component` (React).
+Templates são hardcoded no código. Cada template define um layout e quais campos de conteúdo são editáveis. Páginas são instâncias de um template, armazenadas no banco com path customizado e `content` em JSON. Templates exportam: `slug`, `label`, `contentSchema` (Zod) e `Component` (React).
 
 ### Multi-tenancy & Proxy
 
@@ -74,29 +60,27 @@ O proxy passa `_tenantType` (`"subdomain"` | `"customDomain"`) como query param 
 | Localhost | `lojax.localhost:3000` | subdomain `lojax` |
 | Vercel preview | `lojax---project.vercel.app` | subdomain `lojax` |
 
-Rotas `/dashboard` e `/login` em domínios de tenant são redirecionadas para `/`.
+Rotas `/dashboard` e `/login` em domínios de organização são redirecionadas para `/`.
 
 ### Routing Summary
 
 ```
 Public:
-  tenant.acme.com/                    → page with path ""
-  tenant.acme.com/qualquer/path       → page with path "qualquer/path"
-  tenant.com/qualquer/path            → same, via custom domain
+  org.acme.com/                       → page with path ""
+  org.acme.com/qualquer/path          → page with path "qualquer/path"
+  org.com/qualquer/path               → same, via custom domain
 
 Internal (never visible to visitors):
-  /t/[tenantSlug]/[[...path]]         → optional catch-all handler (path="" for root, path="a/b" for others)
+  /t/[slug]/[[...path]]               → optional catch-all handler (path="" for root, path="a/b" for others)
 
 Dashboard:
-  /dashboard/tenants/[id]             → tenant detail + pages list
-  /dashboard/tenants/[id]/pages/[id]  → edit page
-  /dashboard/tenants/[id]/settings    → settings (custom domain, etc.)
+  /dashboard                          → organizations list
 ```
 
 ## Business Rules
 
 ### Auth
-- Apenas a agência acessa o dashboard (sem roles, sem multi-user por tenant)
+- Apenas a agência acessa o dashboard
 - Login via email OTP (4 dígitos)
 - OTP apenas logado no console em dev (integração com provedor de email pendente)
 
@@ -152,31 +136,4 @@ Dashboard:
 - **Formatting:** Prettier — no semicolons, double quotes, 2-space indent, trailing commas (es5). Tailwind plugin sorts classes automatically.
 - **Icons:** lucide-react
 - **Env** — t3-env para validação e tipagem de variáveis de ambiente
-- **Queries:** Funções de leitura no banco ficam em `src/lib/queries/`, separadas por contexto. Nunca fazer queries inline em pages ou actions.
-- **Validations:** Schemas Zod ficam em `src/lib/validations/`, separados por contexto. Actions importam daqui.
-- **Actions:** Server actions ficam em `src/lib/actions/`, separados por contexto. Seguem o padrão abaixo:
-
-```ts
-export async function createThing(input: CreateThingSchema & { userId: string }) {
-  noStore()
-  try {
-    const result = await db
-      .insert(things)
-      .values({ ... })
-      .returning({ id: things.id })
-      .then((res) => res[0])
-
-    revalidatePath("/dashboard")
-
-    return { data: result, error: null }
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) }
-  }
-}
-```
-
-  - Recebem input tipado (não `FormData`)
-  - Retornam `{ data: T | null, error: string | null }`
-  - Chamam `noStore()` no início
-  - Usam `revalidatePath` para invalidar cache
-  - Usam `getErrorMessage(err)` de `@/lib/handle-error` para normalizar erros
+- **Queries, Validations, Actions:** Organizados por domínio em subpastas de `src/lib/`. Padrões documentados no CLAUDE.md local.

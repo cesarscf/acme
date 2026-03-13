@@ -12,7 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { sendOtp, verifyOtp } from "@/lib/actions/auth"
 import type { AuthState } from "@/lib/validations/auth"
@@ -83,31 +88,31 @@ export default function LoginPage() {
           </form>
         ) : (
           <>
-          <form action={emailAction}>
-            <FieldGroup>
-              <Field data-invalid={!!state.errors?.email?.length}>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  defaultValue={emailState.email}
-                  autoFocus
-                  autoComplete="email"
-                  disabled={emailPending}
-                  aria-invalid={!!state.errors?.email?.length}
-                />
-                {state.errors?.email && (
-                  <FieldError>{state.errors.email[0]}</FieldError>
-                )}
-              </Field>
-              <Button type="submit" disabled={emailPending}>
-                {emailPending && <Spinner />}
-                Continuar
-              </Button>
-            </FieldGroup>
-          </form>
+            <form action={emailAction}>
+              <FieldGroup>
+                <Field data-invalid={!!state.errors?.email?.length}>
+                  <FieldLabel htmlFor="email">Email</FieldLabel>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    defaultValue={emailState.email}
+                    autoFocus
+                    autoComplete="email"
+                    disabled={emailPending}
+                    aria-invalid={!!state.errors?.email?.length}
+                  />
+                  {state.errors?.email && (
+                    <FieldError>{state.errors.email[0]}</FieldError>
+                  )}
+                </Field>
+                <Button type="submit" disabled={emailPending}>
+                  {emailPending && <Spinner />}
+                  Continuar
+                </Button>
+              </FieldGroup>
+            </form>
           </>
         )}
       </CardContent>

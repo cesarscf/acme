@@ -27,9 +27,7 @@ export const updateTenantSchema = z.object({
 
 export const updateCustomDomainSchema = z.object({
   tenantId: z.uuid(),
-  customDomain: z
-    .string()
-    .transform((v) => v.trim().toLowerCase() || null),
+  customDomain: z.string().transform((v) => v.trim().toLowerCase() || null),
 })
 
 export type CreateTenantFormState = FormState<{ name: string; slug: string }>

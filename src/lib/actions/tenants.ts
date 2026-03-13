@@ -98,10 +98,7 @@ export async function updateTenantAction(
   const { tenantId, ...data } = result.data
 
   try {
-    await db
-      .update(tenants)
-      .set(data)
-      .where(eq(tenants.id, tenantId))
+    await db.update(tenants).set(data).where(eq(tenants.id, tenantId))
   } catch (e: unknown) {
     if (e instanceof Error && e.message.includes("unique")) {
       return {

@@ -57,7 +57,10 @@ export async function createPageAction(
     }
   }
 
-  const [created] = await db.insert(pages).values(result.data).returning({ id: pages.id })
+  const [created] = await db
+    .insert(pages)
+    .values(result.data)
+    .returning({ id: pages.id })
 
   revalidatePath(`/dashboard/tenants/${result.data.tenantId}`)
   redirect(`/dashboard/tenants/${result.data.tenantId}/pages/${created.id}`)
@@ -118,7 +121,10 @@ export async function updatePageAction(
   return { errors: null, success: true }
 }
 
-export async function deletePageAction(_prevState: unknown, formData: FormData) {
+export async function deletePageAction(
+  _prevState: unknown,
+  formData: FormData
+) {
   const id = formData.get("id") as string
   const tenantId = formData.get("tenant_id") as string
   await db.delete(pages).where(eq(pages.id, id))

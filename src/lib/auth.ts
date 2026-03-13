@@ -30,7 +30,11 @@ export const auth = betterAuth({
         organization: {
           additionalFields: {
             customDomain: { type: "string", required: false, unique: true },
-            domainVerified: { type: "boolean", required: false, defaultValue: false },
+            domainVerified: {
+              type: "boolean",
+              required: false,
+              defaultValue: false,
+            },
           },
         },
       },

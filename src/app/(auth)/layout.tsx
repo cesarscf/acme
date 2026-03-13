@@ -8,15 +8,13 @@ export default async function AuthLayout({
 }: {
   children: React.ReactNode
 }) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
 
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    })
-  
-    if (session) {
-      redirect("/dashboard")
-    }
-  
+  if (session) {
+    redirect("/dashboard")
+  }
 
   return (
     <div className="flex min-h-svh items-center justify-center p-4">

@@ -13,9 +13,7 @@ import { getOrganizationById } from "@/lib/queries/organizations"
 import type { CreateOrganizationSchema } from "@/lib/validations/organizations"
 import { addDomainToVercel, removeDomainFromVercel } from "@/lib/vercel"
 
-export async function createOrganization(
-  input: CreateOrganizationSchema
-) {
+export async function createOrganization(input: CreateOrganizationSchema) {
   noStore()
   try {
     const org = await auth.api.createOrganization({

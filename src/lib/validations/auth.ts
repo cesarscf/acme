@@ -9,6 +9,5 @@ export const otpSchema = z.object({
   otp: z.string().length(4, "O código deve ter 4 dígitos"),
 })
 
-
 export type EmailSchema = z.infer<typeof emailSchema>
 export type OtpSchema = z.infer<typeof otpSchema>

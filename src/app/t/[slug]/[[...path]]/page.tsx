@@ -1,21 +1,30 @@
 import { notFound } from "next/navigation"
 
-import { getTenantBySlug } from "@/lib/queries/tenants"
+import {
+  getOrganizationBySlug,
+  getOrganizationByCustomDomain,
+} from "@/lib/queries/organizations"
 import { getPageByPath } from "@/lib/queries/pages"
 
 export default async function TenantPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; path?: string[] }>
+  searchParams: Promise<{ _tenantType?: string }>
 }) {
   const { slug, path } = await params
+  const { _tenantType } = await searchParams
   const resolvedPath = path ? path.join("/") : ""
 
-  const tenant = await getTenantBySlug(slug)
+  const org =
+    _tenantType === "customDomain"
+      ? await getOrganizationByCustomDomain(slug)
+      : await getOrganizationBySlug(slug)
 
-  if (!tenant) notFound()
+  if (!org) notFound()
 
-  const page = await getPageByPath(tenant.id, resolvedPath)
+  const page = await getPageByPath(org.id, resolvedPath)
 
   if (!page || !page.active) notFound()
 

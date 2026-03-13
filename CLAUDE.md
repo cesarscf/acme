@@ -12,15 +12,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Plataforma multi-tenant para agência de marketing. A agência cadastra clientes (tenants), cada um com seu domínio ou subdomínio. Cada tenant possui múltiplas **páginas** — criadas a partir de templates — cada uma com um path customizado escolhido pela agência.
+Plataforma multi-tenant para agência de marketing. A agência cadastra organizações (via Better Auth organization plugin), cada uma com seu domínio ou subdomínio. Cada organização possui múltiplas **páginas** — criadas a partir de templates — cada uma com um path customizado escolhido pela agência.
 
 Exemplo: "Farmácia X" tem uma página de links na raiz, outra em `/pinheiros`, uma página de ofertas em `/ofertas/verao`, etc. A agência gerencia tudo via painel admin.
 
 ## Features
 
-- **Multi-tenancy** — Subdomínio (tenant.quiwork.com) + custom domain (tenant.com), resolvido via `src/proxy.ts` com rewrite para `/t/[slug]/...`
-- **Auth** — Better Auth (email OTP), apenas agência, sem roles
-- **Pages** — Múltiplas por tenant. Cada página criada a partir de um template (hardcoded), com path customizado e conteúdo em JSON
+- **Multi-tenancy** — Cada organização = um tenant. Subdomínio (org.quiwork.com) + custom domain (org.com), resolvido via `src/proxy.ts` com rewrite para `/t/[slug]/...`
+- **Auth** — Better Auth (email OTP + organization plugin), apenas agência
+- **Organizations** — Better Auth organization plugin como sistema de tenants. Campos customizados: `customDomain` e `domainVerified` via `additionalFields`. Criação de org adiciona o usuário como owner automaticamente.
+- **Pages** — Múltiplas por organização. Cada página criada a partir de um template (hardcoded), com path customizado e conteúdo em JSON
 - **Database** — Postgres (Neon) + Drizzle ORM
 - **Deploy** — Vercel + Vercel Domains API para custom domains
 - **Storage de imagens** — A definir em etapa futura
@@ -38,9 +39,9 @@ Templates são hardcoded no código. Cada template define um layout e quais camp
 | Coluna | Tipo | Notas |
 |---|---|---|
 | `id` | uuid | primary key |
-| `tenantId` | uuid | FK → tenants (cascade) |
+| `organizationId` | text | FK → organizations (cascade) |
 | `name` | text | label interno, não exibido publicamente |
-| `path` | text | path customizado, único por tenant. Vazio = raiz |
+| `path` | text | path customizado, único por organização. Vazio = raiz |
 | `templateSlug` | text | referencia um template hardcoded (ex: `links-1`) |
 | `content` | jsonb | campos editáveis do template |
 | `active` | boolean | páginas inativas retornam 404 |
@@ -99,26 +100,26 @@ Dashboard:
 - Login via email OTP (4 dígitos)
 - OTP apenas logado no console em dev (integração com provedor de email pendente)
 
-### Tenants
-- Cada tenant pertence a um usuário (agência)
+### Organizations
+- Cada organização é gerenciada pelo Better Auth organization plugin
+- O criador da org é automaticamente adicionado como `owner` (BA gerencia membership)
 - Slug é único e obrigatório (apenas letras minúsculas, números e hífens)
-- Se subdomínio não for informado, usa o slug como subdomínio
-- Custom domain é opcional
-- Ao deletar tenant, remove o custom domain da Vercel (se existir) e deleta em cascata (pages)
+- Custom domain é opcional (campo customizado via `additionalFields`, não gerenciado pelo BA)
+- Ao deletar org, remove o custom domain da Vercel (se existir) e BA faz cascade de members/invitations. Pages deletadas via FK cascade no banco.
 
 ### Pages
-- Múltiplas por tenant (1:N)
-- `path` único por tenant (ex: `meus-links/pinheiros`)
-- `path` vazio (`""`) representa a raiz do tenant — no máximo um por tenant
+- Múltiplas por organização (1:N)
+- `path` único por organização (ex: `meus-links/pinheiros`)
+- `path` vazio (`""`) representa a raiz da organização — no máximo um por org
 - `templateSlug` referencia um template hardcoded no código
 - Conteúdo editável em JSON no campo `content`
 - Páginas inativas retornam 404 na rota pública
 
 ### Custom Domains
-- Configurado na página de settings do tenant (`/dashboard/tenants/[id]/settings`)
+- Configurado na página de settings da organização
 - Ao salvar, chama `addDomainToVercel()` para registrar na Vercel
 - Ao remover ou trocar, chama `removeDomainFromVercel()` para o domínio anterior
-- `deleteTenantAction()` também chama `removeDomainFromVercel()` se houver custom domain
+- `deleteOrganization()` também chama `removeDomainFromVercel()` se houver custom domain
 - Verificação DNS via API route `/api/domain-check` que consulta Vercel API
 - Status e instruções DNS exibidos na página de settings abaixo do form
 

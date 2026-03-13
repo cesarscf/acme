@@ -8,13 +8,13 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 
-import { tenants } from "./tenants"
+import { organizations } from "./auth"
 
 export const pages = pgTable("pages", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id")
+  organizationId: text("organization_id")
     .notNull()
-    .references(() => tenants.id, { onDelete: "cascade" }),
+    .references(() => organizations.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   path: text("path").notNull(),
   templateSlug: text("template_slug").notNull(),
@@ -28,8 +28,8 @@ export const pages = pgTable("pages", {
 })
 
 export const pagesRelations = relations(pages, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [pages.tenantId],
-    references: [tenants.id],
+  organization: one(organizations, {
+    fields: [pages.organizationId],
+    references: [organizations.id],
   }),
 }))

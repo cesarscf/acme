@@ -1,9 +1,10 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { emailOTP } from "better-auth/plugins"
+import { organization } from "better-auth/plugins/organization"
 
 import { db } from "@/db"
-import * as schema from "@/db/schemas/auth"
+import * as schema from "@/db/schema"
 import { env } from "@/env"
 import { nextCookies } from "better-auth/next-js"
 
@@ -22,6 +23,17 @@ export const auth = betterAuth({
       },
       otpLength: 4,
       disableSignUp: false,
+    }),
+    organization({
+      allowUserToCreateOrganization: true,
+      schema: {
+        organization: {
+          additionalFields: {
+            customDomain: { type: "string", required: false, unique: true },
+            domainVerified: { type: "boolean", required: false, defaultValue: false },
+          },
+        },
+      },
     }),
     nextCookies(),
   ],

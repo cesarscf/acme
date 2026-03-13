@@ -3,7 +3,7 @@ import { z } from "zod/v4"
 import type { FormState } from "@/lib/types"
 
 export const createPageSchema = z.object({
-  tenantId: z.uuid(),
+  organizationId: z.string().min(1),
   name: z.string().min(1, "Nome é obrigatório"),
   path: z
     .string()
@@ -17,7 +17,7 @@ export const createPageSchema = z.object({
 
 export const updatePageSchema = z.object({
   id: z.uuid(),
-  tenantId: z.uuid(),
+  organizationId: z.string().min(1),
   name: z.string().min(1, "Nome é obrigatório"),
   path: z
     .string()

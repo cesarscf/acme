@@ -2,9 +2,9 @@ import { db } from "@/db"
 import { pages } from "@/db/schema"
 import { and, asc, eq } from "drizzle-orm"
 
-export async function getPagesByTenantId(tenantId: string) {
+export async function getPagesByOrganizationId(organizationId: string) {
   return db.query.pages.findMany({
-    where: eq(pages.tenantId, tenantId),
+    where: eq(pages.organizationId, organizationId),
     orderBy: [asc(pages.createdAt)],
   })
 }
@@ -15,8 +15,8 @@ export async function getPageById(id: string) {
   })
 }
 
-export async function getPageByPath(tenantId: string, path: string) {
+export async function getPageByPath(organizationId: string, path: string) {
   return db.query.pages.findFirst({
-    where: and(eq(pages.tenantId, tenantId), eq(pages.path, path)),
+    where: and(eq(pages.organizationId, organizationId), eq(pages.path, path)),
   })
 }

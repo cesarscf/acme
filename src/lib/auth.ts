@@ -42,3 +42,6 @@ export const auth = betterAuth({
     nextCookies(),
   ],
 })
+
+export type User = typeof auth.$Infer.Session.user
+export type Organization = typeof auth.$Infer.Organization

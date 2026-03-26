@@ -5,8 +5,17 @@
 - `(auth)/` — rotas publicas de autenticacao (sign-in, sign-up)
 - `(onboarding)/` — fluxo de onboarding pos-cadastro (criar primeira org)
 - `(app)/` — rotas protegidas com sidebar (requer autenticacao + org ativa)
+- `t/[slug]/` — storefront da loja (acessada via subdomain rewrite, nao diretamente)
 - `api/auth/[...all]/` — handler do Better Auth
 - `api/trpc/[...trpc]/` — handler do tRPC
+
+## Multi-tenancy (subdomains)
+
+O `proxy.ts` (Next.js 16) detecta subdomains e faz rewrite para `/t/[slug]`:
+- `loja.localhost:3000/` → `/t/loja`
+- `loja.localhost:3000/products` → `/t/loja/products`
+- Rotas da plataforma (`/sign-in`, `/sign-up`, `/onboarding`, `/api`) sao bloqueadas via subdomain
+- A env `NEXT_PUBLIC_ROOT_DOMAIN` define o dominio raiz (default: `localhost:3000`)
 
 ## Fluxo de autenticacao
 

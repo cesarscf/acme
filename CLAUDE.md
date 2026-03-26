@@ -16,6 +16,12 @@ Next.js 16 (App Router, Turbopack), Tailwind CSS v4, Biome (lint/format), pnpm, 
 - **Zod v4 syntax** — use `z.email()` not `z.string().email()` (top-level validators)
 - Server errors go to `setError("root", { message })`, displayed separately from field errors
 
+## Multi-tenancy
+
+- `proxy.ts` na raiz do projeto (Next.js 16 usa `proxy` ao inves de `middleware`) — detecta subdomain e faz rewrite para `/t/[slug]`
+- O slug da organization e o subdomain da loja
+- Env `NEXT_PUBLIC_ROOT_DOMAIN` define o dominio raiz (default: `localhost:3000`)
+
 ## Documentação por pasta
 
 - Cada pasta do projeto deve ter seu próprio `CLAUDE.md` com a documentação específica daquela pasta (responsabilidades, estrutura, convenções locais)

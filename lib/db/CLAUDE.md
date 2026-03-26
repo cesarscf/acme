@@ -3,22 +3,36 @@
 ## Estrutura
 
 - `index.ts` — cliente do banco (singleton em dev, pool max 10)
-- `schema/` — definicoes de tabelas, uma por arquivo
-- `schema/index.ts` — barrel export de todas as tabelas + objeto `schema`
+- `schema/index.ts` — todas as tabelas, relations e objeto `schema` em um unico arquivo
 
-## Convencoes
+## Schema
 
-- **Casing** — usar `casing: "snake_case"` no Drizzle (campos camelCase no TS, snake_case no banco)
-- **IDs** — `text().primaryKey()` (gerado pelo Better Auth)
-- **Timestamps** — sempre incluir `createdAt` e `updatedAt` com `defaultNow()`
-- **Foreign keys** — definir com `references()` e `onDelete: "cascade"` quando apropriado
-- **Nova tabela** — criar arquivo em `schema/`, exportar no `schema/index.ts` e adicionar ao objeto `schema`
+Gerado pelo CLI do Better Auth (`pnpm dlx @better-auth/cli generate`). Nao editar manualmente as tabelas de auth.
+
+### Tabelas
+
+- `users` — usuarios da plataforma
+- `sessions` — sessoes ativas (inclui `activeOrganizationId`)
+- `accounts` — contas vinculadas (email/password)
+- `verifications` — tokens de verificacao
+- `organizations` — organizacoes (clientes da agencia), com `customDomain`
+- `members` — membros de organizacoes (userId + organizationId + role)
+- `invitations` — convites para organizacoes
+
+### Convencoes
+
+- **Nomes de coluna explicitos** — usar `text("column_name")` (sem `casing` automatico)
+- **IDs** — `text("id").primaryKey()` (gerado pelo Better Auth)
+- **Timestamps** — `$onUpdate(() => new Date())` para `updatedAt`
+- **Indexes** — definidos no terceiro argumento do `pgTable`
+- **Relations** — definidas com `relations()` do Drizzle para queries relacionais
 
 ## Comandos
 
 ```bash
-pnpm db:generate  # gerar migrations
-pnpm db:migrate   # rodar migrations
-pnpm db:push      # push direto (dev)
-pnpm db:studio    # abrir Drizzle Studio
+pnpm dlx @better-auth/cli generate  # gerar schema do Better Auth
+pnpm db:push                        # push direto (dev)
+pnpm db:generate                    # gerar migrations
+pnpm db:migrate                     # rodar migrations
+pnpm db:studio                      # abrir Drizzle Studio
 ```

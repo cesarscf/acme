@@ -11,9 +11,10 @@
 ## Fluxo de autenticacao
 
 1. Usuario faz sign-up/sign-in em `(auth)/`
-2. Se nao tem nenhuma org, redireciona para `(onboarding)/onboarding`
-3. Cria primeira org, Better Auth seta como ativa na sessao
-4. Redireciona para `(app)/` com sidebar e org switcher
+2. `(app)/layout.tsx` lista orgs via `auth.api.listOrganizations`
+3. Se nao tem nenhuma org, redireciona para `/onboarding`
+4. Se tem org mas nenhuma ativa, auto-ativa a primeira via `auth.api.setActiveOrganization`
+5. Renderiza sidebar com org switcher
 
 ## Convencoes
 

@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { organizationMembers } from "@/lib/db/schema/organization-members";
-import { organizations } from "@/lib/db/schema/organizations";
+import { members, organizations } from "@/lib/db/schema";
 import { baseProcedure, createTRPCRouter } from "@/lib/trpc/init";
 
 export const organizationsRouter = createTRPCRouter({
@@ -19,12 +18,9 @@ export const organizationsRouter = createTRPCRouter({
 				logo: organizations.logo,
 				customDomain: organizations.customDomain,
 			})
-			.from(organizationMembers)
-			.innerJoin(
-				organizations,
-				eq(organizationMembers.organizationId, organizations.id),
-			)
-			.where(eq(organizationMembers.userId, ctx.user.id));
+			.from(members)
+			.innerJoin(organizations, eq(members.organizationId, organizations.id))
+			.where(eq(members.userId, ctx.user.id));
 
 		return memberships;
 	}),

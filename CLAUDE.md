@@ -1,43 +1,28 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Comandos
-
-```bash
-pnpm dev              # Dev server com Turbopack
-pnpm build            # Build de produção
-pnpm start            # Servir build de produção
-pnpm lint             # ESLint (flat config)
-pnpm format           # Prettier em todos os .ts/.tsx
-pnpm typecheck        # tsc --noEmit
-```
+# Project Rules
 
 ## Stack
 
-- **Next.js 16** (App Router) + **React 19** + **TypeScript 5.9** (strict)
-- **Tailwind CSS v4** (via `@tailwindcss/postcss`, sintaxe `@import`/`@theme`)
-- **shadcn/ui** (Radix Vega, Lucide icons, CSS variables com OKLCH)
-- **next-themes** para dark/light mode (atalho: tecla `D`)
-- Gerenciador de pacotes: **pnpm**
+Next.js 16 (App Router, Turbopack), Tailwind CSS v4, Biome (lint/format), pnpm, TypeScript, better-auth, Drizzle ORM, postgres-js, React Hook Form, Zod v4
 
-## Arquitetura
+## Naming
 
-Aplicação single-repo usando App Router do Next.js. Não é monorepo.
+- **Booleans** — always prefix with `is`, `has`, `should`, `can`, `was`, `will` (e.g. `isLoading`, `isPasswordVisible`, `hasError`)
+- **Named exports only** — use `export const` / `export type`, no default exports (exception: Next.js page/layout files which require `export default`)
+- **Conventional commits** — `feat:`, `fix:`, `chore:`, `docs:`, `style:`, `refactor:`
 
-- `app/` — rotas, layouts e páginas (RSC por padrão)
-- `components/` — componentes reutilizáveis; `components/ui/` contém os componentes shadcn
-- `lib/` — utilitários (`cn()` com clsx + tailwind-merge)
-- `hooks/` — hooks customizados
+## Forms
 
-Path alias: `@/*` aponta para a raiz do projeto.
+- **React Hook Form + Zod** for all forms — define a Zod schema, infer the TS type, use `zodResolver`
+- **Zod v4 syntax** — use `z.email()` not `z.string().email()` (top-level validators)
+- Server errors go to `setError("root", { message })`, displayed separately from field errors
 
-## Convenções
+## Documentação por pasta
 
-- **Componentes shadcn:** adicionar via CLI (`npx shadcn@latest add <component>`). Config em `components.json`.
-- **Estilização:** usar classes Tailwind. Para merge de classes, usar `cn()` de `@/lib/utils`.
-- **Variantes de componente:** usar `cva` (class-variance-authority).
-- **Variáveis de tema:** definidas em `app/globals.css` usando OKLCH no `@theme`.
-- **Prettier:** 80 colunas, 2 espaços, trailing comma ES5, plugin Tailwind habilitado.
-- **ESLint:** flat config com presets Next.js core-web-vitals + TypeScript.
-- **Commits:** usar conventional commits (`feat:`, `fix:`, `chore:`, etc.).
+- Cada pasta do projeto deve ter seu próprio `CLAUDE.md` com a documentação específica daquela pasta (responsabilidades, estrutura, convenções locais)
+- Isso evita misturar contextos e mantém a documentação próxima do código relevante
+- Ao criar ou modificar uma pasta significativa, crie/atualize o `CLAUDE.md` correspondente
+
+## Git
+
+- Sempre fazer commit e push sem incluir `Co-Authored-By` nas mensagens de commit
+- Usar conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `style:`, `refactor:`

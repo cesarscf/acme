@@ -39,32 +39,75 @@ function extractSubdomain(request: NextRequest): string | null {
 	return isSubdomain ? hostname.replace(`.${rootDomainHost}`, "") : null;
 }
 
-export async function proxy(request: NextRequest) {
+function isRootDomain(request: NextRequest): boolean {
+	const host = request.headers.get("host") || "";
+	const hostname = host.split(":")[0];
+	const rootDomainHost = ROOT_DOMAIN.split(":")[0];
+
+	return (
+		hostname === rootDomainHost ||
+		hostname === `www.${rootDomainHost}` ||
+		hostname === "localhost"
+	);
+}
+
+async function resolveCustomDomain(
+	request: NextRequest,
+): Promise<string | null> {
+	const host = request.headers.get("host") || "";
+	const hostname = host.split(":")[0];
+
+	const protocol = request.url.startsWith("https") ? "https" : "http";
+	const apiUrl = `${protocol}://${ROOT_DOMAIN}/api/domain?domain=${encodeURIComponent(hostname)}`;
+
+	try {
+		const res = await fetch(apiUrl);
+		if (!res.ok) return null;
+		const data = (await res.json()) as { slug: string | null };
+		return data.slug;
+	} catch {
+		return null;
+	}
+}
+
+function rewriteToStore(
+	request: NextRequest,
+	slug: string,
+): NextResponse {
 	const { pathname } = request.nextUrl;
+
+	// Rotas da plataforma não devem ser acessadas via subdomain/custom domain
+	if (
+		pathname.startsWith("/sign-in") ||
+		pathname.startsWith("/sign-up") ||
+		pathname.startsWith("/onboarding") ||
+		pathname.startsWith("/api")
+	) {
+		return NextResponse.redirect(new URL("/", request.url));
+	}
+
+	const target =
+		pathname === "/" ? `/t/${slug}` : `/t/${slug}${pathname}`;
+
+	return NextResponse.rewrite(new URL(target, request.url));
+}
+
+export async function proxy(request: NextRequest) {
+	// 1. Tenta resolver por subdomain
 	const subdomain = extractSubdomain(request);
-
 	if (subdomain) {
-		// Rotas da plataforma (auth, api, app) não devem ser acessadas via subdomain
-		if (
-			pathname.startsWith("/sign-in") ||
-			pathname.startsWith("/sign-up") ||
-			pathname.startsWith("/onboarding") ||
-			pathname.startsWith("/api")
-		) {
-			return NextResponse.redirect(new URL("/", request.url));
-		}
+		return rewriteToStore(request, subdomain);
+	}
 
-		// Rewrite da raiz do subdomain para a rota interna da loja
-		if (pathname === "/") {
-			return NextResponse.rewrite(
-				new URL(`/t/${subdomain}`, request.url),
-			);
-		}
+	// 2. Se é o domínio raiz, segue normalmente
+	if (isRootDomain(request)) {
+		return NextResponse.next();
+	}
 
-		// Rewrite de sub-rotas do subdomain (ex: loja.localhost:3000/products -> /t/loja/products)
-		return NextResponse.rewrite(
-			new URL(`/t/${subdomain}${pathname}`, request.url),
-		);
+	// 3. Tenta resolver por custom domain
+	const slug = await resolveCustomDomain(request);
+	if (slug) {
+		return rewriteToStore(request, slug);
 	}
 
 	return NextResponse.next();

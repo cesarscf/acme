@@ -8,14 +8,27 @@
 - `t/[slug]/` — storefront da loja (acessada via subdomain rewrite, nao diretamente)
 - `api/auth/[...all]/` — handler do Better Auth
 - `api/trpc/[...trpc]/` — handler do tRPC
+- `api/domain/` — resolve custom domain para slug da organization
 
-## Multi-tenancy (subdomains)
+## Multi-tenancy (subdomains + custom domains)
 
-O `proxy.ts` (Next.js 16) detecta subdomains e faz rewrite para `/t/[slug]`:
+O `proxy.ts` (Next.js 16) resolve tenants em 3 etapas:
+1. Tenta extrair subdomain do host (ex: `loja.localhost:3000`)
+2. Se é o dominio raiz, segue normalmente (rotas da plataforma)
+3. Se nao é subdomain nem dominio raiz, consulta `GET /api/domain?domain=` para resolver custom domain
+
+Rewrites:
 - `loja.localhost:3000/` → `/t/loja`
 - `loja.localhost:3000/products` → `/t/loja/products`
-- Rotas da plataforma (`/sign-in`, `/sign-up`, `/onboarding`, `/api`) sao bloqueadas via subdomain
+- `meudominio.com/` → `/t/{slug}` (via custom domain)
+- Rotas da plataforma (`/sign-in`, `/sign-up`, `/onboarding`, `/api`) sao bloqueadas via subdomain/custom domain
 - A env `NEXT_PUBLIC_ROOT_DOMAIN` define o dominio raiz (default: `localhost:3000`)
+
+### API de custom domains
+
+- `GET /api/domain?domain=` — resolve custom domain para slug (com cache de 60s)
+- `organizations.setCustomDomain` — mutation tRPC para configurar custom domain
+- `organizations.removeCustomDomain` — mutation tRPC para remover custom domain
 
 ## Fluxo de autenticacao
 

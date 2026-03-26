@@ -5,6 +5,7 @@
 - `(auth)/` — rotas publicas de autenticacao (sign-in, sign-up)
 - `(onboarding)/` — fluxo de onboarding pos-cadastro (criar primeira org)
 - `(app)/` — rotas protegidas com sidebar (requer autenticacao + org ativa)
+  - `settings/` — configuracoes da org (subdominio e custom domain)
 - `t/[slug]/` — storefront da loja (acessada via subdomain rewrite, nao diretamente)
 - `api/auth/[...all]/` — handler do Better Auth
 - `api/trpc/[...trpc]/` — handler do tRPC

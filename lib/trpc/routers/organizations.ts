@@ -30,6 +30,26 @@ export const organizationsRouter = createTRPCRouter({
 		return memberships;
 	}),
 
+	active: protectedProcedure.query(async ({ ctx }) => {
+		const org = await db
+			.select({
+				id: organizations.id,
+				name: organizations.name,
+				slug: organizations.slug,
+				logo: organizations.logo,
+				customDomain: organizations.customDomain,
+			})
+			.from(organizations)
+			.where(eq(organizations.id, ctx.organizationId))
+			.limit(1);
+
+		if (org.length === 0) {
+			throw new TRPCError({ code: "NOT_FOUND" });
+		}
+
+		return org[0];
+	}),
+
 	setCustomDomain: protectedProcedure
 		.input(
 			z.object({

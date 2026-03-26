@@ -10,6 +10,27 @@ import {
 } from "@/lib/trpc/init";
 
 export const organizationsRouter = createTRPCRouter({
+	bySlug: baseProcedure
+		.input(z.object({ slug: z.string().min(1) }))
+		.query(async ({ input }) => {
+			const org = await db
+				.select({
+					id: organizations.id,
+					name: organizations.name,
+					slug: organizations.slug,
+					logo: organizations.logo,
+				})
+				.from(organizations)
+				.where(eq(organizations.slug, input.slug))
+				.limit(1);
+
+			if (org.length === 0) {
+				throw new TRPCError({ code: "NOT_FOUND" });
+			}
+
+			return org[0];
+		}),
+
 	list: baseProcedure.query(async ({ ctx }) => {
 		if (!ctx.session || !ctx.user) {
 			throw new TRPCError({ code: "UNAUTHORIZED" });

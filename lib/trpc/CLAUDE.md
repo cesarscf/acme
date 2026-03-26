@@ -7,6 +7,7 @@
 - `client.tsx` — provider client-side (`TRPCProvider`, hook `trpc`)
 - `server.ts` — utilitarios server-side (`trpc`, `HydrateClient`, `getQueryClient`)
 - `routers/_app.ts` — router raiz que agrega todos os sub-routers
+- `routers/organizations.ts` — CRUD de organizations (bySlug, list, active, setCustomDomain, removeCustomDomain)
 
 ## Convencoes
 

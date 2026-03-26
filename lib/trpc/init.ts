@@ -8,6 +8,7 @@ export const createTRPCContext = cache(async (opts: { headers: Headers }) => {
 	return {
 		session: session?.session ?? null,
 		user: session?.user ?? null,
+		organizationId: session?.session?.activeOrganizationId ?? null,
 	};
 });
 
@@ -20,7 +21,7 @@ export const createCallerFactory = t.createCallerFactory;
 export const baseProcedure = t.procedure;
 
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-	if (!ctx.session || !ctx.user) {
+	if (!ctx.session || !ctx.user || !ctx.organizationId) {
 		throw new TRPCError({ code: "UNAUTHORIZED" });
 	}
 
@@ -28,6 +29,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 		ctx: {
 			session: ctx.session,
 			user: ctx.user,
+			organizationId: ctx.organizationId,
 		},
 	});
 });

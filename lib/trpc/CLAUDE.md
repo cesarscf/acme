@@ -18,7 +18,7 @@
 
 ```tsx
 // routers/example.ts
-import { z } from "zod/v4";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/init";
 
@@ -26,11 +26,18 @@ export const exampleRouter = createTRPCRouter({
   list: protectedProcedure
     .input(z.object({ page: z.number().int().min(1).optional() }).optional())
     .query(async ({ ctx, input }) => {
-      // ctx.user e ctx.session garantidos pelo protectedProcedure
+      // ctx.user, ctx.session e ctx.organizationId garantidos pelo protectedProcedure
       return db.select()...
     }),
 });
 ```
+
+### Contexto do protectedProcedure
+
+O `protectedProcedure` garante que `ctx` contem:
+- `session` — sessao ativa
+- `user` — usuario autenticado
+- `organizationId` — ID da org ativa (via Better Auth organization plugin)
 
 ### Usar no cliente
 

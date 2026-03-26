@@ -3,9 +3,17 @@
 ## Estrutura de rotas
 
 - `(auth)/` — rotas publicas de autenticacao (sign-in, sign-up)
-- `(app)/` — rotas protegidas (dashboard, futuro)
+- `(onboarding)/` — fluxo de onboarding pos-cadastro (criar primeira org)
+- `(app)/` — rotas protegidas com sidebar (requer autenticacao + org ativa)
 - `api/auth/[...all]/` — handler do Better Auth
 - `api/trpc/[...trpc]/` — handler do tRPC
+
+## Fluxo de autenticacao
+
+1. Usuario faz sign-up/sign-in em `(auth)/`
+2. Se nao tem nenhuma org, redireciona para `(onboarding)/onboarding`
+3. Cria primeira org, Better Auth seta como ativa na sessao
+4. Redireciona para `(app)/` com sidebar e org switcher
 
 ## Convencoes
 

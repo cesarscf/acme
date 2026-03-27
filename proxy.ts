@@ -65,6 +65,9 @@ function rewriteToTenant(
 
 export function proxy(request: NextRequest) {
 	const { pathname } = request.nextUrl;
+	const host = request.headers.get("host") || "";
+
+	console.log("[proxy]", { host, pathname, url: request.url, ROOT_DOMAIN });
 
 	// Ignora assets internos do Next.js, API routes e arquivos estáticos
 	if (
@@ -78,18 +81,23 @@ export function proxy(request: NextRequest) {
 
 	// 1. Tenta resolver por subdomain
 	const subdomain = extractSubdomain(request);
+	console.log("[proxy] subdomain:", subdomain);
+
 	if (subdomain) {
-		return rewriteToTenant(request, subdomain);
+		const response = rewriteToTenant(request, subdomain);
+		console.log("[proxy] rewriting to tenant:", subdomain);
+		return response;
 	}
 
 	// 2. Se é o domínio raiz, segue normalmente
 	if (isRootDomain(request)) {
+		console.log("[proxy] root domain, passing through");
 		return NextResponse.next();
 	}
 
 	// 3. Custom domain — passa o hostname como domain
-	const host = request.headers.get("host") || "";
 	const hostname = host.split(":")[0];
+	console.log("[proxy] custom domain:", hostname);
 	return rewriteToTenant(request, hostname);
 }
 

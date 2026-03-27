@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -89,7 +90,7 @@ export function SignInForm() {
 			</div>
 
 			<Button type="submit" disabled={isLoading} className="w-full">
-				{isLoading ? "Entrando..." : "Entrar"}
+				{isLoading ? <LoaderCircle className="animate-spin" /> : "Entrar"}
 			</Button>
 		</form>
 	);

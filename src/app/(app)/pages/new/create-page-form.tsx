@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -128,7 +129,11 @@ export function CreatePageForm() {
 						Cancelar
 					</Button>
 					<Button type="submit" size="sm" disabled={isSubmitting}>
-						{isSubmitting ? "Criando..." : "Criar pagina"}
+						{isSubmitting ? (
+							<LoaderCircle className="animate-spin" />
+						) : (
+							"Criar pagina"
+						)}
 					</Button>
 				</CardFooter>
 			</form>

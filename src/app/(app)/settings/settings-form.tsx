@@ -6,6 +6,7 @@ import {
 	CheckCircle2,
 	Clock,
 	Copy,
+	LoaderCircle,
 	RefreshCw,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -168,7 +169,9 @@ function DnsRecordsTable({
 
 function DnsTable({
 	records,
-}: { records: { type: string; name: string; value: string }[] }) {
+}: {
+	records: { type: string; name: string; value: string }[];
+}) {
 	return (
 		<div className="overflow-hidden rounded-md border">
 			<table className="w-full text-sm">
@@ -181,7 +184,10 @@ function DnsTable({
 				</thead>
 				<tbody>
 					{records.map((record) => (
-						<tr key={`${record.type}-${record.name}`} className="border-b last:border-0">
+						<tr
+							key={`${record.type}-${record.name}`}
+							className="border-b last:border-0"
+						>
 							<td className="px-3 py-2">
 								<Badge variant="outline" className="font-mono text-xs">
 									{record.type}
@@ -357,13 +363,21 @@ export function SettingsForm() {
 								disabled={isRemovingDomain}
 								onClick={onRemoveDomain}
 							>
-								{isRemovingDomain ? "Removendo..." : "Remover dominio"}
+								{isRemovingDomain ? (
+									<LoaderCircle className="animate-spin" />
+								) : (
+									"Remover dominio"
+								)}
 							</Button>
 						) : (
 							<div />
 						)}
 						<Button type="submit" size="sm" disabled={isSettingDomain}>
-							{isSettingDomain ? "Salvando..." : "Salvar dominio"}
+							{isSettingDomain ? (
+								<LoaderCircle className="animate-spin" />
+							) : (
+								"Salvar dominio"
+							)}
 						</Button>
 					</CardFooter>
 				</form>

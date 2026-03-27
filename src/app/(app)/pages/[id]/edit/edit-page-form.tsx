@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -257,7 +257,7 @@ function LinksEditor({ page }: { page: PageData }) {
 					Voltar
 				</Button>
 				<Button type="submit" size="sm" disabled={isSubmitting}>
-					{isSubmitting ? "Salvando..." : "Salvar"}
+					{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Salvar"}
 				</Button>
 			</div>
 		</form>
@@ -465,7 +465,7 @@ function BioEditor({ page }: { page: PageData }) {
 					Voltar
 				</Button>
 				<Button type="submit" size="sm" disabled={isSubmitting}>
-					{isSubmitting ? "Salvando..." : "Salvar"}
+					{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Salvar"}
 				</Button>
 			</div>
 		</form>

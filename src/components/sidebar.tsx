@@ -33,10 +33,7 @@ export function Sidebar({
 			</div>
 
 			{/* Org switcher */}
-			<div className="flex flex-col gap-1 px-4 pb-4">
-				<span className="text-xs font-medium text-muted-foreground">
-					Organizacao
-				</span>
+			<div className="px-2 pb-2">
 				<OrganizationSwitcher
 					organizations={organizations}
 					activeOrganizationId={activeOrganizationId}

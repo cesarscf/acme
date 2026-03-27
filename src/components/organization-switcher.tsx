@@ -1,10 +1,18 @@
 "use client";
 
-import { ChevronDown, Plus } from "lucide-react";
+import { Building2, ChevronsUpDown, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CreateOrganizationForm } from "@/components/create-organization-form";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc/client";
 
@@ -25,72 +33,78 @@ export function OrganizationSwitcher({
 }: OrganizationSwitcherProps) {
 	const router = useRouter();
 	const utils = trpc.useUtils();
-	const [isOpen, setIsOpen] = useState(false);
 	const [isCreating, setIsCreating] = useState(false);
 
 	const activeOrg = organizations.find((o) => o.id === activeOrganizationId);
 
 	async function handleSwitchOrg(orgId: string) {
-		if (orgId === activeOrganizationId) {
-			setIsOpen(false);
-			return;
-		}
+		if (orgId === activeOrganizationId) return;
 
 		await authClient.organization.setActive({
 			organizationId: orgId,
 		});
 
-		setIsOpen(false);
 		void utils.invalidate();
 		router.push("/");
 		router.refresh();
 	}
 
 	return (
-		<div className="relative">
-			<button
-				type="button"
-				onClick={() => setIsOpen(!isOpen)}
-				className="flex w-full items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
-			>
-				<span className="flex-1 truncate text-left">
-					{activeOrg?.name ?? "Selecionar organizacao"}
-				</span>
-				<ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-			</button>
-
-			{isOpen && (
-				<div className="absolute top-full left-0 z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
-					{organizations.map((org) => (
-						<button
-							key={org.id}
-							type="button"
-							onClick={() => handleSwitchOrg(org.id)}
-							className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
-								org.id === activeOrganizationId
-									? "font-medium text-primary"
-									: "text-muted-foreground"
-							}`}
-						>
-							{org.name}
-						</button>
-					))}
-
-					<div className="mx-2 my-1 h-px bg-border" />
-
+		<>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
 					<button
 						type="button"
-						onClick={() => {
-							setIsOpen(false);
-							setIsCreating(true);
-						}}
-						className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-primary transition-colors hover:bg-accent"
+						className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium transition-colors hover:bg-accent data-[state=open]:bg-accent"
 					>
-						<Plus className="size-3.5" />
-						Nova organizacao
+						<div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+							<Building2 className="size-4" />
+						</div>
+						<div className="grid flex-1 text-left text-sm leading-tight">
+							<span className="truncate font-medium">
+								{activeOrg?.name ?? "Selecionar organizacao"}
+							</span>
+							<span className="truncate text-xs text-muted-foreground">
+								{activeOrg?.slug ?? ""}
+							</span>
+						</div>
+						<ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
 					</button>
-				</div>
-			)}
+				</DropdownMenuTrigger>
+				<DropdownMenuContent
+					className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+					align="start"
+					sideOffset={4}
+				>
+					<DropdownMenuLabel className="text-xs text-muted-foreground">
+						Organizacoes
+					</DropdownMenuLabel>
+					{organizations.map((org) => (
+						<DropdownMenuItem
+							key={org.id}
+							onClick={() => handleSwitchOrg(org.id)}
+							className="gap-2 p-2"
+						>
+							<div className="flex size-6 items-center justify-center rounded-md border">
+								<Building2 className="size-3.5 shrink-0" />
+							</div>
+							{org.name}
+						</DropdownMenuItem>
+					))}
+					<DropdownMenuSeparator />
+					<DropdownMenuItem
+						onClick={() => setIsCreating(true)}
+						className="gap-2 p-2"
+					>
+						<div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+							<Plus className="size-4" />
+						</div>
+						<span className="font-medium text-muted-foreground">
+							Nova organizacao
+						</span>
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
 
 			{isCreating && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -109,6 +123,6 @@ export function OrganizationSwitcher({
 					</div>
 				</div>
 			)}
-		</div>
+		</>
 	);
 }

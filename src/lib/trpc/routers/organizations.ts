@@ -8,12 +8,10 @@ import {
 	createTRPCRouter,
 	protectedProcedure,
 } from "@/lib/trpc/init";
-import {
-	addDomain,
-	getDomainConfig,
-	removeDomain,
-	verifyDomain,
-} from "@/lib/vercel-domains";
+
+async function getVercelDomains() {
+	return import("@/lib/vercel-domains");
+}
 
 export const organizationsRouter = createTRPCRouter({
 	bySlug: baseProcedure
@@ -115,6 +113,7 @@ export const organizationsRouter = createTRPCRouter({
 				.limit(1);
 
 			const oldDomain = currentOrg[0]?.customDomain;
+			const { addDomain, removeDomain } = await getVercelDomains();
 
 			if (oldDomain && oldDomain !== domain) {
 				await removeDomain(oldDomain).catch(() => {});
@@ -125,7 +124,9 @@ export const organizationsRouter = createTRPCRouter({
 				await addDomain(domain);
 			} catch (err) {
 				const message =
-					err instanceof Error ? err.message : "Falha ao adicionar domínio na Vercel";
+					err instanceof Error
+						? err.message
+						: "Falha ao adicionar domínio na Vercel";
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message,
@@ -151,6 +152,7 @@ export const organizationsRouter = createTRPCRouter({
 		const domain = currentOrg[0]?.customDomain;
 
 		if (domain) {
+			const { removeDomain } = await getVercelDomains();
 			await removeDomain(domain).catch(() => {});
 		}
 
@@ -165,6 +167,7 @@ export const organizationsRouter = createTRPCRouter({
 	domainStatus: protectedProcedure
 		.input(z.object({ domain: z.string().min(1) }))
 		.query(async ({ input }) => {
+			const { getDomainConfig } = await getVercelDomains();
 			return getDomainConfig(input.domain);
 		}),
 
@@ -172,7 +175,8 @@ export const organizationsRouter = createTRPCRouter({
 		.input(z.object({ domain: z.string().min(1) }))
 		.mutation(async ({ input }) => {
 			try {
-				const result = await verifyDomain(input.domain);
+				const { verifyDomain: verify } = await getVercelDomains();
+				const result = await verify(input.domain);
 				return { verified: result.verified ?? false };
 			} catch {
 				return { verified: false };

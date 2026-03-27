@@ -5,14 +5,14 @@ import { LinksTemplate } from "@/components/templates/links-template";
 import { trpc } from "@/lib/trpc/client";
 
 export function StorefrontContent({
-	slug,
+	domain,
 	path,
 }: {
-	slug: string;
+	domain: string;
 	path: string;
 }) {
-	const { data: page, isLoading } = trpc.pages.byOrgSlugAndPath.useQuery({
-		slug,
+	const { data: page, isLoading } = trpc.pages.byDomainAndPath.useQuery({
+		domain,
 		path,
 	});
 

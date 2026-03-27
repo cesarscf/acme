@@ -11,31 +11,32 @@ function resolvePath(path?: string[]): string {
 export async function generateMetadata({
 	params,
 }: {
-	params: Promise<{ slug: string; path?: string[] }>;
+	params: Promise<{ domain: string; path?: string[] }>;
 }): Promise<Metadata> {
-	const { slug, path } = await params;
+	const { domain, path } = await params;
 	const pagePath = resolvePath(path);
 	await connection();
-	void trpc.pages.byOrgSlugAndPath.prefetch({ slug, path: pagePath });
+	void trpc.pages.byDomainAndPath.prefetch({ domain, path: pagePath });
 
 	return {
-		title: slug,
+		title: domain,
 	};
 }
 
 export default async function StorefrontPage({
 	params,
 }: {
-	params: Promise<{ slug: string; path?: string[] }>;
+	params: Promise<{ domain: string; path?: string[] }>;
 }) {
-	const { slug, path } = await params;
+	const { domain, path } = await params;
 	const pagePath = resolvePath(path);
+
 	await connection();
-	void trpc.pages.byOrgSlugAndPath.prefetch({ slug, path: pagePath });
+	void trpc.pages.byDomainAndPath.prefetch({ domain, path: pagePath });
 
 	return (
 		<HydrateClient>
-			<StorefrontContent slug={slug} path={pagePath} />
+			<StorefrontContent domain={domain} path={pagePath} />
 		</HydrateClient>
 	);
 }

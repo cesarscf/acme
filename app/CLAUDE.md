@@ -9,28 +9,26 @@
   - `pages/new/` — formulario de criacao de pagina
   - `pages/[id]/edit/` — formulario de edicao de pagina (conteudo por template)
   - `settings/` — configuracoes da org (subdominio e custom domain)
-- `t/[slug]/[[...path]]/` — storefront com catch-all route (resolve paginas por org slug + path)
+- `t/[domain]/[[...path]]/` — storefront com catch-all route (domain pode ser slug da org ou custom domain, resolve pelo banco)
 - `api/auth/[...all]/` — handler do Better Auth
 - `api/trpc/[...trpc]/` — handler do tRPC
-- `api/domain/` — resolve custom domain para slug da organization
 
 ## Multi-tenancy (subdomains + custom domains)
 
 O `proxy.ts` (Next.js 16) resolve tenants em 3 etapas:
-1. Tenta extrair subdomain do host (ex: `loja.localhost:3000`)
+1. Tenta extrair subdomain do host (ex: `loja.localhost:3000`) → rewrite para `/t/{slug}`
 2. Se é o dominio raiz, segue normalmente (rotas da plataforma)
-3. Se nao é subdomain nem dominio raiz, consulta `GET /api/domain?domain=` para resolver custom domain
+3. Se nao é subdomain nem dominio raiz (custom domain), rewrite para `/t/{hostname}` — a page resolve por `customDomain` no banco
 
 Rewrites:
 - `loja.localhost:3000/` → `/t/loja`
 - `loja.localhost:3000/products` → `/t/loja/products`
-- `meudominio.com/` → `/t/{slug}` (via custom domain)
-- Rotas da plataforma (`/sign-in`, `/sign-up`, `/onboarding`, `/api`) sao bloqueadas via subdomain/custom domain
+- `meudominio.com/` → `/t/meudominio.com` (resolve por `customDomain` no banco)
+- Rotas `/api`, `/_next` e `/favicon` passam direto pelo proxy
 - A env `NEXT_PUBLIC_ROOT_DOMAIN` define o dominio raiz (default: `localhost:3000`)
 
-### API de custom domains
+### Custom domains
 
-- `GET /api/domain?domain=` — resolve custom domain para slug (com cache de 60s)
 - `organizations.setCustomDomain` — mutation tRPC para configurar custom domain
 - `organizations.removeCustomDomain` — mutation tRPC para remover custom domain
 

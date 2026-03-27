@@ -50,9 +50,11 @@ export const pagesRouter = createTRPCRouter({
 			return result[0];
 		}),
 
-	byOrgSlugAndPath: baseProcedure
-		.input(z.object({ slug: z.string().min(1), path: z.string() }))
+	byDomainAndPath: baseProcedure
+		.input(z.object({ domain: z.string().min(1), path: z.string() }))
 		.query(async ({ input }) => {
+			const isDomain = input.domain.includes(".");
+
 			const result = await db
 				.select({
 					id: pages.id,
@@ -70,7 +72,9 @@ export const pagesRouter = createTRPCRouter({
 				.innerJoin(organizations, eq(pages.organizationId, organizations.id))
 				.where(
 					and(
-						eq(organizations.slug, input.slug),
+						isDomain
+							? eq(organizations.customDomain, input.domain)
+							: eq(organizations.slug, input.domain),
 						eq(pages.path, input.path),
 						eq(pages.published, true),
 					),

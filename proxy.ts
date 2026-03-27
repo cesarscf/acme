@@ -51,52 +51,34 @@ function isRootDomain(request: NextRequest): boolean {
 	);
 }
 
-async function resolveCustomDomain(
+function rewriteToStorefront(
 	request: NextRequest,
-): Promise<string | null> {
-	const host = request.headers.get("host") || "";
-	const hostname = host.split(":")[0];
-
-	const protocol = request.url.startsWith("https") ? "https" : "http";
-	const apiUrl = `${protocol}://${ROOT_DOMAIN}/api/domain?domain=${encodeURIComponent(hostname)}`;
-
-	try {
-		const res = await fetch(apiUrl);
-		if (!res.ok) return null;
-		const data = (await res.json()) as { slug: string | null };
-		return data.slug;
-	} catch {
-		return null;
-	}
-}
-
-function rewriteToStore(
-	request: NextRequest,
-	slug: string,
+	domain: string,
 ): NextResponse {
 	const { pathname } = request.nextUrl;
 
-	// Rotas da plataforma não devem ser acessadas via subdomain/custom domain
-	if (
-		pathname.startsWith("/sign-in") ||
-		pathname.startsWith("/sign-up") ||
-		pathname.startsWith("/onboarding") ||
-		pathname.startsWith("/api")
-	) {
-		return NextResponse.redirect(new URL("/", request.url));
-	}
-
 	const target =
-		pathname === "/" ? `/t/${slug}` : `/t/${slug}${pathname}`;
+		pathname === "/" ? `/t/${domain}` : `/t/${domain}${pathname}`;
 
 	return NextResponse.rewrite(new URL(target, request.url));
 }
 
-export async function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
+	const { pathname } = request.nextUrl;
+
+	// Ignora assets internos do Next.js, API routes e arquivos estáticos
+	if (
+		pathname.startsWith("/_next") ||
+		pathname.startsWith("/api") ||
+		pathname.startsWith("/favicon")
+	) {
+		return NextResponse.next();
+	}
+
 	// 1. Tenta resolver por subdomain
 	const subdomain = extractSubdomain(request);
 	if (subdomain) {
-		return rewriteToStore(request, subdomain);
+		return rewriteToStorefront(request, subdomain);
 	}
 
 	// 2. Se é o domínio raiz, segue normalmente
@@ -104,13 +86,10 @@ export async function proxy(request: NextRequest) {
 		return NextResponse.next();
 	}
 
-	// 3. Tenta resolver por custom domain
-	const slug = await resolveCustomDomain(request);
-	if (slug) {
-		return rewriteToStore(request, slug);
-	}
-
-	return NextResponse.next();
+	// 3. Custom domain — passa o hostname como domain
+	const host = request.headers.get("host") || "";
+	const hostname = host.split(":")[0];
+	return rewriteToStorefront(request, hostname);
 }
 
 export const proxyConfig = {

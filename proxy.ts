@@ -70,7 +70,8 @@ export function proxy(request: NextRequest) {
 	if (
 		pathname.startsWith("/_next") ||
 		pathname.startsWith("/api") ||
-		pathname.startsWith("/favicon")
+		pathname.startsWith("/favicon") ||
+		pathname.startsWith("/.well-known")
 	) {
 		return NextResponse.next();
 	}

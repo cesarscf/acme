@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, ChevronsUpDown, Plus } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CreateOrganizationForm } from "@/components/create-organization-form";
@@ -89,6 +89,9 @@ export function OrganizationSwitcher({
 								<Building2 className="size-3.5 shrink-0" />
 							</div>
 							{org.name}
+							{org.id === activeOrganizationId && (
+								<Check className="ml-auto size-4" />
+							)}
 						</DropdownMenuItem>
 					))}
 					<DropdownMenuSeparator />

@@ -4,7 +4,7 @@ import { HydrateClient, trpc } from "@/lib/trpc/server";
 import { EditPageForm } from "./edit-page-form";
 
 export const metadata: Metadata = {
-	title: "Editar pagina",
+	title: "Editar página",
 };
 
 export default async function EditPagePage({
@@ -18,9 +18,9 @@ export default async function EditPagePage({
 
 	return (
 		<div className="p-8">
-			<h1 className="text-2xl font-semibold">Editar pagina</h1>
+			<h1 className="text-2xl font-semibold">Editar página</h1>
 			<p className="mt-2 text-muted-foreground">
-				Edite o conteudo da sua pagina.
+				Edite o conteúdo da sua página.
 			</p>
 
 			<div className="mt-8 max-w-2xl">

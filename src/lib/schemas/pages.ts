@@ -6,8 +6,8 @@ export type Template = z.infer<typeof templateEnum>;
 export const linksContentSchema = z.object({
 	links: z.array(
 		z.object({
-			title: z.string().min(1, "Titulo obrigatorio"),
-			url: z.url("URL invalida"),
+			title: z.string().min(1, "Título obrigatório"),
+			url: z.url("URL inválida"),
 		}),
 	),
 });
@@ -15,12 +15,12 @@ export const linksContentSchema = z.object({
 export type LinksContent = z.infer<typeof linksContentSchema>;
 
 export const bioContentSchema = z.object({
-	bio: z.string().min(1, "Bio obrigatoria"),
+	bio: z.string().min(1, "Bio obrigatória"),
 	avatar: z.string().optional(),
 	socialLinks: z.array(
 		z.object({
-			platform: z.string().min(1, "Plataforma obrigatoria"),
-			url: z.url("URL invalida"),
+			platform: z.string().min(1, "Plataforma obrigatória"),
+			url: z.url("URL inválida"),
 		}),
 	),
 });
@@ -33,13 +33,13 @@ export const defaultContent: Record<Template, string> = {
 };
 
 export const createPageSchema = z.object({
-	title: z.string().min(1, "Titulo obrigatorio").max(200),
+	title: z.string().min(1, "Título obrigatório").max(200),
 	path: z
 		.string()
-		.min(1, "Path obrigatorio")
+		.min(1, "Path obrigatório")
 		.regex(
 			/^\/[a-z0-9-]*$/,
-			"Path deve comecar com / e conter apenas letras minusculas, numeros e hifens",
+			"Path deve começar com / e conter apenas letras minúsculas, números e hífens",
 		)
 		.or(z.literal("/")),
 	template: templateEnum,

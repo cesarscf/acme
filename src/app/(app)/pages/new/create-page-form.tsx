@@ -62,7 +62,7 @@ export function CreatePageForm() {
 			router.push(`/pages/${result.id}/edit`);
 		} catch (err) {
 			const message =
-				err instanceof Error ? err.message : "Falha ao criar pagina";
+				err instanceof Error ? err.message : "Falha ao criar página";
 			setError("root", { message });
 		} finally {
 			setIsSubmitting(false);
@@ -72,7 +72,7 @@ export function CreatePageForm() {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Detalhes da pagina</CardTitle>
+				<CardTitle>Detalhes da página</CardTitle>
 			</CardHeader>
 			<form onSubmit={handleSubmit(onSubmit)}>
 				<CardContent>
@@ -84,10 +84,10 @@ export function CreatePageForm() {
 						)}
 
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="title">Titulo</Label>
+							<Label htmlFor="title">Título</Label>
 							<Input
 								id="title"
-								placeholder="Minha pagina"
+								placeholder="Minha página"
 								{...register("title")}
 							/>
 						</div>
@@ -96,7 +96,7 @@ export function CreatePageForm() {
 							<Label htmlFor="path">Path</Label>
 							<Input id="path" placeholder="/" {...register("path")} />
 							<p className="text-xs text-muted-foreground">
-								Use / para a pagina inicial ou /nome-da-pagina para subpaginas.
+								Use / para a página inicial ou /nome-da-página para subpáginas.
 							</p>
 						</div>
 
@@ -132,7 +132,7 @@ export function CreatePageForm() {
 						{isSubmitting ? (
 							<LoaderCircle className="animate-spin" />
 						) : (
-							"Criar pagina"
+							"Criar página"
 						)}
 					</Button>
 				</CardFooter>

@@ -29,11 +29,11 @@ import { trpc } from "@/lib/trpc/client";
 const customDomainSchema = z.object({
 	domain: z
 		.string()
-		.min(1, "Dominio e obrigatorio")
-		.max(253, "Dominio muito longo")
+		.min(1, "Domínio é obrigatório")
+		.max(253, "Domínio muito longo")
 		.regex(
 			/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/,
-			"Dominio invalido (ex: loja.exemplo.com.br)",
+			"Domínio inválido (ex: loja.exemplo.com.br)",
 		),
 });
 
@@ -52,14 +52,14 @@ function DomainStatusBadge({ status }: { status: string }) {
 			return (
 				<Badge variant="secondary" className="gap-1">
 					<Clock className="size-3" />
-					Verificacao pendente
+					Verificação pendente
 				</Badge>
 			);
 		case "invalid":
 			return (
 				<Badge variant="destructive" className="gap-1">
 					<AlertCircle className="size-3" />
-					DNS invalido
+					DNS inválido
 				</Badge>
 			);
 		default:
@@ -110,7 +110,7 @@ function DnsRecordsTable({
 	if (isLoading) {
 		return (
 			<p className="text-sm text-muted-foreground">
-				Verificando configuracao DNS...
+				Verificando configuração DNS...
 			</p>
 		);
 	}
@@ -138,7 +138,7 @@ function DnsRecordsTable({
 
 			{domainConfig.status === "valid" && (
 				<p className="text-sm text-green-700 dark:text-green-400">
-					O dominio esta configurado corretamente e o certificado SSL sera
+					O domínio está configurado corretamente e o certificado SSL será
 					emitido automaticamente.
 				</p>
 			)}
@@ -147,7 +147,7 @@ function DnsRecordsTable({
 				domainConfig.dnsRecords.length > 0 && (
 					<div className="flex flex-col gap-2">
 						<p className="text-sm text-muted-foreground">
-							Para verificar a propriedade do dominio, adicione o seguinte
+							Para verificar a propriedade do domínio, adicione o seguinte
 							registro DNS:
 						</p>
 						<DnsTable records={domainConfig.dnsRecords} />
@@ -251,7 +251,7 @@ export function SettingsForm() {
 			await utils.organizations.domainStatus.invalidate();
 		} catch (err) {
 			const message =
-				err instanceof Error ? err.message : "Falha ao salvar dominio";
+				err instanceof Error ? err.message : "Falha ao salvar domínio";
 			setError("root", { message });
 		} finally {
 			setIsSettingDomain(false);
@@ -267,7 +267,7 @@ export function SettingsForm() {
 			await utils.organizations.active.invalidate();
 		} catch (err) {
 			const message =
-				err instanceof Error ? err.message : "Falha ao remover dominio";
+				err instanceof Error ? err.message : "Falha ao remover domínio";
 			setError("root", { message });
 		} finally {
 			setIsRemovingDomain(false);
@@ -293,17 +293,17 @@ export function SettingsForm() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			{/* Subdominio */}
+			{/* Subdomínio */}
 			<Card>
 				<CardHeader>
-					<CardTitle>Subdominio</CardTitle>
+					<CardTitle>Subdomínio</CardTitle>
 					<CardDescription>
-						O subdominio da sua loja e baseado no slug da organizacao.
+						O subdomínio da sua loja é baseado no slug da organização.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<div className="flex flex-col gap-2">
-						<Label>Endereco da loja</Label>
+						<Label>Endereço da loja</Label>
 						<div className="flex items-center gap-2">
 							<Input value={org.slug} disabled />
 							<span className="shrink-0 text-sm text-muted-foreground">
@@ -311,19 +311,19 @@ export function SettingsForm() {
 							</span>
 						</div>
 						<p className="text-xs text-muted-foreground">
-							O subdominio e definido automaticamente pelo slug da organizacao e
-							nao pode ser alterado diretamente.
+							O subdomínio é definido automaticamente pelo slug da organização e
+							não pode ser alterado diretamente.
 						</p>
 					</div>
 				</CardContent>
 			</Card>
 
-			{/* Dominio personalizado */}
+			{/* Domínio personalizado */}
 			<Card>
 				<CardHeader>
-					<CardTitle>Dominio personalizado</CardTitle>
+					<CardTitle>Domínio personalizado</CardTitle>
 					<CardDescription>
-						Configure um dominio proprio para a sua loja. Apos salvar, configure
+						Configure um domínio próprio para a sua loja. Após salvar, configure
 						os registros DNS no seu provedor.
 					</CardDescription>
 				</CardHeader>
@@ -336,7 +336,7 @@ export function SettingsForm() {
 								</p>
 							)}
 							<div className="flex flex-col gap-2">
-								<Label htmlFor="domain">Dominio</Label>
+								<Label htmlFor="domain">Domínio</Label>
 								<Input
 									id="domain"
 									type="text"
@@ -366,7 +366,7 @@ export function SettingsForm() {
 								{isRemovingDomain ? (
 									<LoaderCircle className="animate-spin" />
 								) : (
-									"Remover dominio"
+									"Remover domínio"
 								)}
 							</Button>
 						) : (
@@ -376,7 +376,7 @@ export function SettingsForm() {
 							{isSettingDomain ? (
 								<LoaderCircle className="animate-spin" />
 							) : (
-								"Salvar dominio"
+								"Salvar domínio"
 							)}
 						</Button>
 					</CardFooter>

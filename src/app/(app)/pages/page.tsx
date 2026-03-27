@@ -4,7 +4,7 @@ import { HydrateClient, trpc } from "@/lib/trpc/server";
 import { PagesContent } from "./pages-content";
 
 export const metadata: Metadata = {
-	title: "Paginas",
+	title: "Páginas",
 };
 
 export default async function PagesPage() {
@@ -15,9 +15,9 @@ export default async function PagesPage() {
 		<div className="p-8">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold">Paginas</h1>
+					<h1 className="text-2xl font-semibold">Páginas</h1>
 					<p className="mt-2 text-muted-foreground">
-						Gerencie as paginas da sua organizacao.
+						Gerencie as páginas da sua organização.
 					</p>
 				</div>
 			</div>

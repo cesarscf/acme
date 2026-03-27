@@ -18,9 +18,9 @@ Next.js 16 (App Router, Turbopack), Tailwind CSS v4, Biome (lint/format), pnpm, 
 
 ## Multi-tenancy
 
-- `proxy.ts` na raiz do projeto (Next.js 16 usa `proxy` ao inves de `middleware`) — detecta subdomain e faz rewrite para `/t/[slug]`
-- O slug da organization e o subdomain da loja
-- Env `NEXT_PUBLIC_ROOT_DOMAIN` define o dominio raiz (default: `localhost:3000`)
+- `proxy.ts` na raiz do projeto (Next.js 16 usa `proxy` ao invés de `middleware`) — detecta subdomain e faz rewrite para `/t/[slug]`
+- O slug da organization é o subdomain da loja
+- Env `NEXT_PUBLIC_ROOT_DOMAIN` define o domínio raiz (default: `localhost:3000`)
 
 ## Documentação por pasta
 

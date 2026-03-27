@@ -25,7 +25,7 @@ export default function SignUpPage() {
 			<CardContent>
 				<SignUpForm />
 				<p className="mt-4 text-center text-sm text-muted-foreground">
-					Ja tem uma conta?{" "}
+					Já tem uma conta?{" "}
 					<Link href="/sign-in" className="text-primary underline">
 						Entrar
 					</Link>

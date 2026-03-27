@@ -48,7 +48,7 @@ export function PagesContent() {
 		<>
 			<div className="mb-4 flex justify-end">
 				<Button size="sm" onClick={() => router.push("/pages/new")}>
-					Nova pagina
+					Nova página
 				</Button>
 			</div>
 
@@ -56,11 +56,11 @@ export function PagesContent() {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Titulo</TableHead>
+							<TableHead>Título</TableHead>
 							<TableHead>Path</TableHead>
 							<TableHead>Template</TableHead>
 							<TableHead>Status</TableHead>
-							<TableHead className="text-right">Acoes</TableHead>
+							<TableHead className="text-right">Ações</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -102,7 +102,7 @@ export function PagesContent() {
 			) : (
 				<div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
 					<p className="text-sm text-muted-foreground">
-						Nenhuma pagina criada ainda.
+						Nenhuma página criada ainda.
 					</p>
 					<Button
 						variant="outline"
@@ -110,7 +110,7 @@ export function PagesContent() {
 						className="mt-4"
 						onClick={() => router.push("/pages/new")}
 					>
-						Criar primeira pagina
+						Criar primeira página
 					</Button>
 				</div>
 			)}
@@ -121,9 +121,9 @@ export function PagesContent() {
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Excluir pagina</AlertDialogTitle>
+						<AlertDialogTitle>Excluir página</AlertDialogTitle>
 						<AlertDialogDescription>
-							Tem certeza que deseja excluir esta pagina? Esta acao nao pode ser
+							Tem certeza que deseja excluir esta página? Esta ação não pode ser
 							desfeita.
 						</AlertDialogDescription>
 					</AlertDialogHeader>

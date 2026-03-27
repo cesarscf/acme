@@ -3,18 +3,19 @@
 ## Estrutura
 
 - `init.ts` — contexto, procedures base (`baseProcedure`, `protectedProcedure`)
-- `query-client.ts` — configuracao do React Query (staleTime: 5min, gcTime: 30min)
+- `query-client.ts` — configuração do React Query (staleTime: 5min, gcTime: 30min)
 - `client.tsx` — provider client-side (`TRPCProvider`, hook `trpc`)
-- `server.ts` — utilitarios server-side (`trpc`, `HydrateClient`, `getQueryClient`)
+- `server.ts` — utilitários server-side (`trpc`, `HydrateClient`, `getQueryClient`)
 - `routers/_app.ts` — router raiz que agrega todos os sub-routers
-- `routers/organizations.ts` — CRUD de organizations (bySlug, list, active, setCustomDomain, removeCustomDomain, domainStatus, verifyDomain)
+- `routers/organizations.ts` — CRUD de organizations (bySlug, list, active, create, update, setCustomDomain, removeCustomDomain, domainStatus, verifyDomain)
+- `routers/pages.ts` — CRUD de pages (list, byId, byDomainAndPath, create, update, delete)
 
-## Convencoes
+## Convenções
 
 ### Criar novo router
 
-1. Criar arquivo em `routers/` (ex: `routers/organizations.ts`)
-2. Usar `createTRPCRouter` e `protectedProcedure` (ou `baseProcedure` para rotas publicas)
+1. Criar arquivo em `routers/` (ex: `routers/example.ts`)
+2. Usar `createTRPCRouter` e `protectedProcedure` (ou `baseProcedure` para rotas públicas)
 3. Registrar no `routers/_app.ts`
 
 ```tsx
@@ -35,9 +36,9 @@ export const exampleRouter = createTRPCRouter({
 
 ### Contexto do protectedProcedure
 
-O `protectedProcedure` garante que `ctx` contem:
-- `session` — sessao ativa
-- `user` — usuario autenticado
+O `protectedProcedure` garante que `ctx` contém:
+- `session` — sessão ativa
+- `user` — usuário autenticado
 - `organizationId` — ID da org ativa (via Better Auth organization plugin)
 
 ### Usar no cliente

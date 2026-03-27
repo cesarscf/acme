@@ -62,7 +62,7 @@ export function OrganizationSwitcher({
 						</div>
 						<div className="grid flex-1 text-left text-sm leading-tight">
 							<span className="truncate font-medium">
-								{activeOrg?.name ?? "Selecionar organizacao"}
+								{activeOrg?.name ?? "Selecionar organização"}
 							</span>
 							<span className="truncate text-xs text-muted-foreground">
 								{activeOrg?.slug ?? ""}
@@ -77,7 +77,7 @@ export function OrganizationSwitcher({
 					sideOffset={4}
 				>
 					<DropdownMenuLabel className="text-xs text-muted-foreground">
-						Organizacoes
+						Organizações
 					</DropdownMenuLabel>
 					{organizations.map((org) => (
 						<DropdownMenuItem
@@ -103,7 +103,7 @@ export function OrganizationSwitcher({
 							<Plus className="size-4" />
 						</div>
 						<span className="font-medium text-muted-foreground">
-							Nova organizacao
+							Nova organização
 						</span>
 					</DropdownMenuItem>
 				</DropdownMenuContent>
@@ -112,7 +112,7 @@ export function OrganizationSwitcher({
 			{isCreating && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 					<div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-lg">
-						<h2 className="mb-4 text-lg font-semibold">Nova organizacao</h2>
+						<h2 className="mb-4 text-lg font-semibold">Nova organização</h2>
 						<CreateOrganizationForm
 							onSuccessAction={() => setIsCreating(false)}
 						/>

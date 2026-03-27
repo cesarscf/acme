@@ -9,7 +9,7 @@ export default function DashboardPage() {
 		<div className="p-8">
 			<h1 className="text-2xl font-semibold">Dashboard</h1>
 			<p className="mt-2 text-muted-foreground">
-				Selecione uma organizacao no menu lateral para comecar.
+				Selecione uma organização no menu lateral para começar.
 			</p>
 		</div>
 	);

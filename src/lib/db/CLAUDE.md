@@ -3,25 +3,26 @@
 ## Estrutura
 
 - `index.ts` — cliente do banco (singleton em dev, pool max 10)
-- `schema/index.ts` — todas as tabelas, relations e objeto `schema` em um unico arquivo
+- `schema/index.ts` — todas as tabelas, relations e objeto `schema` em um único arquivo
 
 ## Schema
 
-Gerado pelo CLI do Better Auth (`pnpm dlx @better-auth/cli generate`). Nao editar manualmente as tabelas de auth.
+Gerado pelo CLI do Better Auth (`pnpm dlx @better-auth/cli generate`). Não editar manualmente as tabelas de auth.
 
 ### Tabelas
 
-- `users` — usuarios da plataforma
-- `sessions` — sessoes ativas (inclui `activeOrganizationId`)
+- `users` — usuários da plataforma
+- `sessions` — sessões ativas (inclui `activeOrganizationId`)
 - `accounts` — contas vinculadas (email/password)
-- `verifications` — tokens de verificacao
-- `organizations` — organizacoes (clientes da agencia), com `customDomain`
-- `members` — membros de organizacoes (userId + organizationId + role)
-- `invitations` — convites para organizacoes
+- `verifications` — tokens de verificação
+- `organizations` — organizações (clientes da agência), com `customDomain`
+- `members` — membros de organizações (userId + organizationId + role)
+- `invitations` — convites para organizações
+- `pages` — páginas públicas (organizationId + path + template + content JSON)
 
-### Convencoes
+### Convenções
 
-- **Nomes de coluna explicitos** — usar `text("column_name")` (sem `casing` automatico)
+- **Nomes de coluna explícitos** — usar `text("column_name")` (sem `casing` automático)
 - **IDs** — `text("id").primaryKey()` (gerado pelo Better Auth)
 - **Timestamps** — `$onUpdate(() => new Date())` para `updatedAt`
 - **Indexes** — definidos no terceiro argumento do `pgTable`

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
-	{ href: "/pages", label: "Paginas", icon: FileText },
-	{ href: "/settings", label: "Configuracoes", icon: Settings },
+	{ href: "/pages", label: "Páginas", icon: FileText },
+	{ href: "/settings", label: "Configurações", icon: Settings },
 ];
 
 export function SidebarNav() {

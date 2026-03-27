@@ -27,10 +27,10 @@ export default async function OnboardingPage() {
 	return (
 		<Card className="w-full max-w-sm">
 			<CardHeader>
-				<CardTitle>Criar sua primeira organizacao</CardTitle>
+				<CardTitle>Criar sua primeira organização</CardTitle>
 				<CardDescription>
-					Uma organizacao representa um cliente da sua agencia. Crie a primeira
-					para comecar.
+					Uma organização representa um cliente da sua agência. Crie a primeira
+					para começar.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>

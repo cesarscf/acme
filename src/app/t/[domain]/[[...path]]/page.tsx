@@ -60,7 +60,7 @@ export default async function PublicPage({
 			<div className="flex min-h-screen flex-col items-center justify-center">
 				<h1 className="text-2xl font-semibold">{page.title}</h1>
 				<p className="mt-2 text-muted-foreground">
-					Esta pagina ainda nao tem conteudo.
+					Esta página ainda não tem conteúdo.
 				</p>
 			</div>
 		);

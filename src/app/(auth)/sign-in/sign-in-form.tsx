@@ -12,8 +12,8 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
 const signInSchema = z.object({
-	email: z.email("Email invalido"),
-	password: z.string().min(1, "Senha e obrigatoria"),
+	email: z.email("Email inválido"),
+	password: z.string().min(1, "Senha é obrigatória"),
 });
 
 type SignInForm = z.infer<typeof signInSchema>;

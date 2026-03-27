@@ -107,7 +107,7 @@ export const pagesRouter = createTRPCRouter({
 			if (existing.length > 0) {
 				throw new TRPCError({
 					code: "CONFLICT",
-					message: "Ja existe uma pagina com este path nesta organizacao.",
+					message: "Já existe uma página com este path nesta organização.",
 				});
 			}
 
@@ -161,7 +161,7 @@ export const pagesRouter = createTRPCRouter({
 				if (pathConflict.length > 0) {
 					throw new TRPCError({
 						code: "CONFLICT",
-						message: "Ja existe uma pagina com este path nesta organizacao.",
+						message: "Já existe uma página com este path nesta organização.",
 					});
 				}
 			}

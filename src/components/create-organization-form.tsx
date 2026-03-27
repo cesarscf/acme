@@ -18,7 +18,7 @@ const createOrganizationSchema = z.object({
 		.min(2, "Slug deve ter pelo menos 2 caracteres")
 		.regex(
 			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-			"Slug deve conter apenas letras minusculas, numeros e hifens",
+			"Slug deve conter apenas letras minúsculas, números e hífens",
 		),
 });
 
@@ -68,7 +68,7 @@ export function CreateOrganizationForm({
 
 		if (result.error) {
 			setError("root", {
-				message: result.error.message ?? "Falha ao criar organizacao",
+				message: result.error.message ?? "Falha ao criar organização",
 			});
 			setIsLoading(false);
 			return;
@@ -98,11 +98,11 @@ export function CreateOrganizationForm({
 			)}
 
 			<div className="flex flex-col gap-2">
-				<Label htmlFor="name">Nome da organizacao</Label>
+				<Label htmlFor="name">Nome da organização</Label>
 				<Input
 					id="name"
 					type="text"
-					placeholder="Minha Agencia"
+					placeholder="Minha Agência"
 					{...register("name", {
 						onChange: (e) => {
 							const slug = generateSlug(e.target.value);
@@ -113,7 +113,7 @@ export function CreateOrganizationForm({
 			</div>
 
 			<div className="flex flex-col gap-2">
-				<Label htmlFor="slug">Slug (subdominio)</Label>
+				<Label htmlFor="slug">Slug (subdomínio)</Label>
 				<Input
 					id="slug"
 					type="text"
@@ -121,7 +121,7 @@ export function CreateOrganizationForm({
 					{...register("slug")}
 				/>
 				<p className="text-xs text-muted-foreground">
-					Sera acessivel em <span className="font-medium">slug.acme.com</span>
+					Será acessível em <span className="font-medium">slug.acme.com</span>
 				</p>
 			</div>
 
@@ -129,7 +129,7 @@ export function CreateOrganizationForm({
 				{isLoading ? (
 					<LoaderCircle className="animate-spin" />
 				) : (
-					"Criar organizacao"
+					"Criar organização"
 				)}
 			</Button>
 		</form>

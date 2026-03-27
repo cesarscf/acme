@@ -15,20 +15,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc/client";
 
 const editLinksSchema = z.object({
-	title: z.string().min(1, "Titulo obrigatorio").max(200),
+	title: z.string().min(1, "Título obrigatório").max(200),
 	path: z
 		.string()
-		.min(1, "Path obrigatorio")
+		.min(1, "Path obrigatório")
 		.regex(
 			/^\/[a-z0-9-]*$/,
-			"Path deve comecar com / e conter apenas letras minusculas, numeros e hifens",
+			"Path deve começar com / e conter apenas letras minúsculas, números e hífens",
 		)
 		.or(z.literal("/")),
 	published: z.boolean(),
 	links: z.array(
 		z.object({
-			title: z.string().min(1, "Titulo obrigatorio"),
-			url: z.string().min(1, "URL obrigatoria"),
+			title: z.string().min(1, "Título obrigatório"),
+			url: z.string().min(1, "URL obrigatória"),
 		}),
 	),
 });
@@ -36,13 +36,13 @@ const editLinksSchema = z.object({
 type EditLinksForm = z.infer<typeof editLinksSchema>;
 
 const editBioSchema = z.object({
-	title: z.string().min(1, "Titulo obrigatorio").max(200),
+	title: z.string().min(1, "Título obrigatório").max(200),
 	path: z
 		.string()
-		.min(1, "Path obrigatorio")
+		.min(1, "Path obrigatório")
 		.regex(
 			/^\/[a-z0-9-]*$/,
-			"Path deve comecar com / e conter apenas letras minusculas, numeros e hifens",
+			"Path deve começar com / e conter apenas letras minúsculas, números e hífens",
 		)
 		.or(z.literal("/")),
 	published: z.boolean(),
@@ -50,8 +50,8 @@ const editBioSchema = z.object({
 	avatar: z.string(),
 	socialLinks: z.array(
 		z.object({
-			platform: z.string().min(1, "Plataforma obrigatoria"),
-			url: z.string().min(1, "URL obrigatoria"),
+			platform: z.string().min(1, "Plataforma obrigatória"),
+			url: z.string().min(1, "URL obrigatória"),
 		}),
 	),
 });
@@ -140,7 +140,7 @@ function LinksEditor({ page }: { page: PageData }) {
 			await utils.pages.list.invalidate();
 		} catch (err) {
 			const message =
-				err instanceof Error ? err.message : "Falha ao salvar pagina";
+				err instanceof Error ? err.message : "Falha ao salvar página";
 			setError("root", { message });
 		} finally {
 			setIsSubmitting(false);
@@ -157,7 +157,7 @@ function LinksEditor({ page }: { page: PageData }) {
 					className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 				>
 					<ExternalLink className="size-3.5" />
-					Ver pagina
+					Ver página
 				</a>
 			)}
 
@@ -174,7 +174,7 @@ function LinksEditor({ page }: { page: PageData }) {
 						)}
 
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="title">Titulo</Label>
+							<Label htmlFor="title">Título</Label>
 							<Input id="title" {...register("title")} />
 						</div>
 
@@ -223,7 +223,7 @@ function LinksEditor({ page }: { page: PageData }) {
 								>
 									<div className="flex flex-1 flex-col gap-2">
 										<Input
-											placeholder="Titulo do link"
+											placeholder="Título do link"
 											{...register(`links.${index}.title`)}
 										/>
 										<Input
@@ -320,7 +320,7 @@ function BioEditor({ page }: { page: PageData }) {
 			await utils.pages.list.invalidate();
 		} catch (err) {
 			const message =
-				err instanceof Error ? err.message : "Falha ao salvar pagina";
+				err instanceof Error ? err.message : "Falha ao salvar página";
 			setError("root", { message });
 		} finally {
 			setIsSubmitting(false);
@@ -337,7 +337,7 @@ function BioEditor({ page }: { page: PageData }) {
 					className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 				>
 					<ExternalLink className="size-3.5" />
-					Ver pagina
+					Ver página
 				</a>
 			)}
 
@@ -354,7 +354,7 @@ function BioEditor({ page }: { page: PageData }) {
 						)}
 
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="title">Titulo</Label>
+							<Label htmlFor="title">Título</Label>
 							<Input id="title" {...register("title")} />
 						</div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -57,6 +58,15 @@ const editBioSchema = z.object({
 
 type EditBioForm = z.infer<typeof editBioSchema>;
 
+function useStorefrontUrl(path: string) {
+	const { data: org } = trpc.organizations.active.useQuery();
+	if (!org) return null;
+	const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost:3000";
+	const protocol = rootDomain.startsWith("localhost") ? "http" : "https";
+	const pagePath = path === "/" ? "" : path;
+	return `${protocol}://${org.slug}.${rootDomain}${pagePath}`;
+}
+
 export function EditPageForm({ id }: { id: string }) {
 	const { data: page } = trpc.pages.byId.useQuery({ id });
 
@@ -82,6 +92,7 @@ function LinksEditor({ page }: { page: PageData }) {
 	const router = useRouter();
 	const utils = trpc.useUtils();
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const storefrontUrl = useStorefrontUrl(page.path);
 
 	const content = page.content ? JSON.parse(page.content) : { links: [] };
 
@@ -138,6 +149,18 @@ function LinksEditor({ page }: { page: PageData }) {
 
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+			{storefrontUrl && (
+				<a
+					href={storefrontUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+				>
+					<ExternalLink className="size-3.5" />
+					Ver pagina
+				</a>
+			)}
+
 			<Card>
 				<CardHeader>
 					<CardTitle>Detalhes</CardTitle>
@@ -245,6 +268,7 @@ function BioEditor({ page }: { page: PageData }) {
 	const router = useRouter();
 	const utils = trpc.useUtils();
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const storefrontUrl = useStorefrontUrl(page.path);
 
 	const content = page.content
 		? JSON.parse(page.content)
@@ -305,6 +329,18 @@ function BioEditor({ page }: { page: PageData }) {
 
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+			{storefrontUrl && (
+				<a
+					href={storefrontUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+				>
+					<ExternalLink className="size-3.5" />
+					Ver pagina
+				</a>
+			)}
+
 			<Card>
 				<CardHeader>
 					<CardTitle>Detalhes</CardTitle>

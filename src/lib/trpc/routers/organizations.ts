@@ -2,12 +2,18 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { members, organizations } from "@/lib/db/schema";
+import { organizations } from "@/lib/db/schema";
 import {
 	baseProcedure,
 	createTRPCRouter,
 	protectedProcedure,
 } from "@/lib/trpc/init";
+import {
+	addDomain,
+	getDomainConfig,
+	removeDomain,
+	verifyDomain,
+} from "@/lib/vercel-domains";
 
 export const organizationsRouter = createTRPCRouter({
 	bySlug: baseProcedure
@@ -35,6 +41,8 @@ export const organizationsRouter = createTRPCRouter({
 		if (!ctx.session || !ctx.user) {
 			throw new TRPCError({ code: "UNAUTHORIZED" });
 		}
+
+		const { members } = await import("@/lib/db/schema");
 
 		const memberships = await db
 			.select({
@@ -99,6 +107,32 @@ export const organizationsRouter = createTRPCRouter({
 				});
 			}
 
+			// Busca o domínio atual para remover da Vercel se estiver trocando
+			const currentOrg = await db
+				.select({ customDomain: organizations.customDomain })
+				.from(organizations)
+				.where(eq(organizations.id, ctx.organizationId))
+				.limit(1);
+
+			const oldDomain = currentOrg[0]?.customDomain;
+
+			if (oldDomain && oldDomain !== domain) {
+				await removeDomain(oldDomain).catch(() => {});
+			}
+
+			// Adiciona o novo domínio na Vercel
+			try {
+				await addDomain(domain);
+			} catch (err) {
+				const message =
+					err instanceof Error ? err.message : "Falha ao adicionar domínio na Vercel";
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message,
+				});
+			}
+
+			// Salva no banco
 			await db
 				.update(organizations)
 				.set({ customDomain: domain })
@@ -108,6 +142,18 @@ export const organizationsRouter = createTRPCRouter({
 		}),
 
 	removeCustomDomain: protectedProcedure.mutation(async ({ ctx }) => {
+		const currentOrg = await db
+			.select({ customDomain: organizations.customDomain })
+			.from(organizations)
+			.where(eq(organizations.id, ctx.organizationId))
+			.limit(1);
+
+		const domain = currentOrg[0]?.customDomain;
+
+		if (domain) {
+			await removeDomain(domain).catch(() => {});
+		}
+
 		await db
 			.update(organizations)
 			.set({ customDomain: null })
@@ -115,4 +161,21 @@ export const organizationsRouter = createTRPCRouter({
 
 		return { success: true };
 	}),
+
+	domainStatus: protectedProcedure
+		.input(z.object({ domain: z.string().min(1) }))
+		.query(async ({ input }) => {
+			return getDomainConfig(input.domain);
+		}),
+
+	verifyDomain: protectedProcedure
+		.input(z.object({ domain: z.string().min(1) }))
+		.mutation(async ({ input }) => {
+			try {
+				const result = await verifyDomain(input.domain);
+				return { verified: result.verified ?? false };
+			} catch {
+				return { verified: false };
+			}
+		}),
 });

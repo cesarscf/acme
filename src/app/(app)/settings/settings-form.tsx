@@ -1,11 +1,26 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import {
+	AlertCircle,
+	CheckCircle2,
+	Clock,
+	Copy,
+	RefreshCw,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc/client";
@@ -23,12 +38,184 @@ const customDomainSchema = z.object({
 
 type CustomDomainForm = z.infer<typeof customDomainSchema>;
 
+function DomainStatusBadge({ status }: { status: string }) {
+	switch (status) {
+		case "valid":
+			return (
+				<Badge variant="default" className="gap-1 bg-green-600">
+					<CheckCircle2 className="size-3" />
+					Configurado
+				</Badge>
+			);
+		case "pending_verification":
+			return (
+				<Badge variant="secondary" className="gap-1">
+					<Clock className="size-3" />
+					Verificacao pendente
+				</Badge>
+			);
+		case "invalid":
+			return (
+				<Badge variant="destructive" className="gap-1">
+					<AlertCircle className="size-3" />
+					DNS invalido
+				</Badge>
+			);
+		default:
+			return null;
+	}
+}
+
+function CopyButton({ value }: { value: string }) {
+	const [hasCopied, setHasCopied] = useState(false);
+
+	async function handleCopy() {
+		await navigator.clipboard.writeText(value);
+		setHasCopied(true);
+		setTimeout(() => setHasCopied(false), 2000);
+	}
+
+	return (
+		<button
+			type="button"
+			onClick={handleCopy}
+			className="text-muted-foreground hover:text-foreground"
+			title="Copiar"
+		>
+			{hasCopied ? (
+				<CheckCircle2 className="size-3.5 text-green-600" />
+			) : (
+				<Copy className="size-3.5" />
+			)}
+		</button>
+	);
+}
+
+function DnsRecordsTable({
+	domain,
+	isRefreshing,
+	onRefresh,
+}: {
+	domain: string;
+	isRefreshing: boolean;
+	onRefresh: () => void;
+}) {
+	const { data: domainConfig, isLoading } =
+		trpc.organizations.domainStatus.useQuery(
+			{ domain },
+			{ refetchInterval: 20_000 },
+		);
+
+	if (isLoading) {
+		return (
+			<p className="text-sm text-muted-foreground">
+				Verificando configuracao DNS...
+			</p>
+		);
+	}
+
+	if (!domainConfig) return null;
+
+	return (
+		<div className="flex flex-col gap-3">
+			<div className="flex items-center justify-between">
+				<DomainStatusBadge status={domainConfig.status} />
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					onClick={onRefresh}
+					disabled={isRefreshing}
+					className="h-7 gap-1 text-xs"
+				>
+					<RefreshCw
+						className={`size-3 ${isRefreshing ? "animate-spin" : ""}`}
+					/>
+					Verificar
+				</Button>
+			</div>
+
+			{domainConfig.status === "valid" && (
+				<p className="text-sm text-green-700 dark:text-green-400">
+					O dominio esta configurado corretamente e o certificado SSL sera
+					emitido automaticamente.
+				</p>
+			)}
+
+			{domainConfig.status === "pending_verification" &&
+				domainConfig.dnsRecords.length > 0 && (
+					<div className="flex flex-col gap-2">
+						<p className="text-sm text-muted-foreground">
+							Para verificar a propriedade do dominio, adicione o seguinte
+							registro DNS:
+						</p>
+						<DnsTable records={domainConfig.dnsRecords} />
+					</div>
+				)}
+
+			{domainConfig.status === "invalid" &&
+				domainConfig.dnsRecords.length > 0 && (
+					<div className="flex flex-col gap-2">
+						<p className="text-sm text-muted-foreground">
+							Configure os seguintes registros DNS no seu provedor:
+						</p>
+						<DnsTable records={domainConfig.dnsRecords} />
+					</div>
+				)}
+		</div>
+	);
+}
+
+function DnsTable({
+	records,
+}: { records: { type: string; name: string; value: string }[] }) {
+	return (
+		<div className="overflow-hidden rounded-md border">
+			<table className="w-full text-sm">
+				<thead>
+					<tr className="border-b bg-muted/50">
+						<th className="px-3 py-2 text-left font-medium">Tipo</th>
+						<th className="px-3 py-2 text-left font-medium">Nome</th>
+						<th className="px-3 py-2 text-left font-medium">Valor</th>
+					</tr>
+				</thead>
+				<tbody>
+					{records.map((record) => (
+						<tr key={`${record.type}-${record.name}`} className="border-b last:border-0">
+							<td className="px-3 py-2">
+								<Badge variant="outline" className="font-mono text-xs">
+									{record.type}
+								</Badge>
+							</td>
+							<td className="px-3 py-2">
+								<div className="flex items-center gap-1.5">
+									<code className="text-xs">{record.name}</code>
+									<CopyButton value={record.name} />
+								</div>
+							</td>
+							<td className="px-3 py-2">
+								<div className="flex items-center gap-1.5">
+									<code className="max-w-[200px] truncate text-xs">
+										{record.value}
+									</code>
+									<CopyButton value={record.value} />
+								</div>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
 export function SettingsForm() {
 	const utils = trpc.useUtils();
 	const { data: org } = trpc.organizations.active.useQuery();
 
 	const [isSettingDomain, setIsSettingDomain] = useState(false);
 	const [isRemovingDomain, setIsRemovingDomain] = useState(false);
+	const [isVerifying, setIsVerifying] = useState(false);
 
 	const {
 		register,
@@ -55,6 +242,7 @@ export function SettingsForm() {
 				domain: data.domain,
 			});
 			await utils.organizations.active.invalidate();
+			await utils.organizations.domainStatus.invalidate();
 		} catch (err) {
 			const message =
 				err instanceof Error ? err.message : "Falha ao salvar dominio";
@@ -80,6 +268,21 @@ export function SettingsForm() {
 		}
 	}
 
+	async function onVerifyDomain() {
+		if (!org?.customDomain) return;
+
+		setIsVerifying(true);
+
+		try {
+			await utils.client.organizations.verifyDomain.mutate({
+				domain: org.customDomain,
+			});
+			await utils.organizations.domainStatus.invalidate();
+		} finally {
+			setIsVerifying(false);
+		}
+	}
+
 	if (!org) return null;
 
 	return (
@@ -102,7 +305,8 @@ export function SettingsForm() {
 							</span>
 						</div>
 						<p className="text-xs text-muted-foreground">
-							O subdominio e definido automaticamente pelo slug da organizacao e nao pode ser alterado diretamente.
+							O subdominio e definido automaticamente pelo slug da organizacao e
+							nao pode ser alterado diretamente.
 						</p>
 					</div>
 				</CardContent>
@@ -113,28 +317,34 @@ export function SettingsForm() {
 				<CardHeader>
 					<CardTitle>Dominio personalizado</CardTitle>
 					<CardDescription>
-						Configure um dominio proprio para a sua loja.
+						Configure um dominio proprio para a sua loja. Apos salvar, configure
+						os registros DNS no seu provedor.
 					</CardDescription>
 				</CardHeader>
 				<form onSubmit={handleSubmit(onSubmitDomain)}>
 					<CardContent>
-						<div className="flex flex-col gap-2">
+						<div className="flex flex-col gap-4">
 							{hasError && (
 								<p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
 									{firstError}
 								</p>
 							)}
-							<Label htmlFor="domain">Dominio</Label>
-							<Input
-								id="domain"
-								type="text"
-								placeholder="loja.exemplo.com.br"
-								{...register("domain")}
-							/>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="domain">Dominio</Label>
+								<Input
+									id="domain"
+									type="text"
+									placeholder="loja.exemplo.com.br"
+									{...register("domain")}
+								/>
+							</div>
+
 							{org.customDomain && (
-								<p className="text-xs text-muted-foreground">
-									Dominio atual: <span className="font-medium">{org.customDomain}</span>
-								</p>
+								<DnsRecordsTable
+									domain={org.customDomain}
+									isRefreshing={isVerifying}
+									onRefresh={onVerifyDomain}
+								/>
 							)}
 						</div>
 					</CardContent>

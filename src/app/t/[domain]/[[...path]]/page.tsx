@@ -12,8 +12,12 @@ function resolvePath(path?: string[]): string {
 
 async function getPage(domain: string, path: string) {
 	try {
-		return await trpc.pages.byDomainAndPath({ domain, path });
-	} catch {
+		console.log("[PublicPage] resolving:", { domain, path });
+		const page = await trpc.pages.byDomainAndPath({ domain, path });
+		console.log("[PublicPage] found:", { id: page.id, title: page.title });
+		return page;
+	} catch (err) {
+		console.error("[PublicPage] error:", err);
 		return null;
 	}
 }

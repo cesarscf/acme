@@ -1,7 +1,7 @@
-import { FileText, Settings, User } from "lucide-react";
-import Link from "next/link";
+import { User } from "lucide-react";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import { SignOutButton } from "@/components/sign-out-button";
+import { SidebarNav } from "@/components/sidebar-nav";
 
 type Organization = {
 	id: string;
@@ -44,22 +44,7 @@ export function Sidebar({
 			</div>
 
 			{/* Nav */}
-			<nav className="flex flex-col gap-1 px-4">
-				<Link
-					href="/pages"
-					className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-				>
-					<FileText className="size-4" />
-					Paginas
-				</Link>
-				<Link
-					href="/settings"
-					className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-				>
-					<Settings className="size-4" />
-					Configuracoes
-				</Link>
-			</nav>
+			<SidebarNav />
 
 			{/* Spacer */}
 			<div className="flex-1" />

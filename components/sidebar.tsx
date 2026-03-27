@@ -1,4 +1,4 @@
-import { Settings, User } from "lucide-react";
+import { FileText, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -45,6 +45,13 @@ export function Sidebar({
 
 			{/* Nav */}
 			<nav className="flex flex-col gap-1 px-4">
+				<Link
+					href="/pages"
+					className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+				>
+					<FileText className="size-4" />
+					Paginas
+				</Link>
 				<Link
 					href="/settings"
 					className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

@@ -157,9 +157,41 @@ export const accountsRelations = relations(accounts, ({ one }) => ({
 	}),
 }));
 
+export const pages = pgTable(
+	"pages",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organizations.id, { onDelete: "cascade" }),
+		title: text("title").notNull(),
+		path: text("path").notNull(),
+		template: text("template").notNull(),
+		content: text("content"),
+		published: boolean("published").default(false).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.defaultNow()
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("pages_org_path_uidx").on(table.organizationId, table.path),
+		index("pages_organizationId_idx").on(table.organizationId),
+	],
+);
+
 export const organizationsRelations = relations(organizations, ({ many }) => ({
 	members: many(members),
 	invitations: many(invitations),
+	pages: many(pages),
+}));
+
+export const pagesRelations = relations(pages, ({ one }) => ({
+	organization: one(organizations, {
+		fields: [pages.organizationId],
+		references: [organizations.id],
+	}),
 }));
 
 export const membersRelations = relations(members, ({ one }) => ({
@@ -197,5 +229,7 @@ export const schema = {
 	accountsRelations,
 	organizationsRelations,
 	membersRelations,
+	pages,
+	pagesRelations,
 	invitationsRelations,
 };

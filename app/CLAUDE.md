@@ -5,8 +5,11 @@
 - `(auth)/` — rotas publicas de autenticacao (sign-in, sign-up)
 - `(onboarding)/` — fluxo de onboarding pos-cadastro (criar primeira org)
 - `(app)/` — rotas protegidas com sidebar (requer autenticacao + org ativa)
+  - `pages/` — CRUD de paginas (lista, criar, editar)
+  - `pages/new/` — formulario de criacao de pagina
+  - `pages/[id]/edit/` — formulario de edicao de pagina (conteudo por template)
   - `settings/` — configuracoes da org (subdominio e custom domain)
-- `t/[slug]/` — storefront da loja (usa `trpc.organizations.bySlug.prefetch()`, acessada via subdomain rewrite)
+- `t/[slug]/[[...path]]/` — storefront com catch-all route (resolve paginas por org slug + path)
 - `api/auth/[...all]/` — handler do Better Auth
 - `api/trpc/[...trpc]/` — handler do tRPC
 - `api/domain/` — resolve custom domain para slug da organization

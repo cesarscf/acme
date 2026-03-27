@@ -51,7 +51,7 @@ function isRootDomain(request: NextRequest): boolean {
 	);
 }
 
-function rewriteToStorefront(
+function rewriteToTenant(
 	request: NextRequest,
 	domain: string,
 ): NextResponse {
@@ -79,7 +79,7 @@ export function proxy(request: NextRequest) {
 	// 1. Tenta resolver por subdomain
 	const subdomain = extractSubdomain(request);
 	if (subdomain) {
-		return rewriteToStorefront(request, subdomain);
+		return rewriteToTenant(request, subdomain);
 	}
 
 	// 2. Se é o domínio raiz, segue normalmente
@@ -90,7 +90,7 @@ export function proxy(request: NextRequest) {
 	// 3. Custom domain — passa o hostname como domain
 	const host = request.headers.get("host") || "";
 	const hostname = host.split(":")[0];
-	return rewriteToStorefront(request, hostname);
+	return rewriteToTenant(request, hostname);
 }
 
 export const proxyConfig = {

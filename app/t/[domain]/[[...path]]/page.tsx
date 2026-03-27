@@ -34,7 +34,7 @@ export async function generateMetadata({
 	};
 }
 
-export default async function StorefrontPage({
+export default async function PublicPage({
 	params,
 }: {
 	params: Promise<{ domain: string; path?: string[] }>;

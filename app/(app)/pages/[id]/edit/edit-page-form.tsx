@@ -58,7 +58,7 @@ const editBioSchema = z.object({
 
 type EditBioForm = z.infer<typeof editBioSchema>;
 
-function useStorefrontUrl(path: string) {
+function usePublicPageUrl(path: string) {
 	const { data: org } = trpc.organizations.active.useQuery();
 	if (!org) return null;
 	const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost:3000";
@@ -92,7 +92,7 @@ function LinksEditor({ page }: { page: PageData }) {
 	const router = useRouter();
 	const utils = trpc.useUtils();
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const storefrontUrl = useStorefrontUrl(page.path);
+	const publicPageUrl = usePublicPageUrl(page.path);
 
 	const content = page.content ? JSON.parse(page.content) : { links: [] };
 
@@ -149,9 +149,9 @@ function LinksEditor({ page }: { page: PageData }) {
 
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
-			{storefrontUrl && (
+			{publicPageUrl && (
 				<a
-					href={storefrontUrl}
+					href={publicPageUrl}
 					target="_blank"
 					rel="noopener noreferrer"
 					className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -268,7 +268,7 @@ function BioEditor({ page }: { page: PageData }) {
 	const router = useRouter();
 	const utils = trpc.useUtils();
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const storefrontUrl = useStorefrontUrl(page.path);
+	const publicPageUrl = usePublicPageUrl(page.path);
 
 	const content = page.content
 		? JSON.parse(page.content)
@@ -329,9 +329,9 @@ function BioEditor({ page }: { page: PageData }) {
 
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
-			{storefrontUrl && (
+			{publicPageUrl && (
 				<a
-					href={storefrontUrl}
+					href={publicPageUrl}
 					target="_blank"
 					rel="noopener noreferrer"
 					className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

@@ -9,7 +9,7 @@
   - `pages/new/` — formulario de criacao de pagina
   - `pages/[id]/edit/` — formulario de edicao de pagina (conteudo por template)
   - `settings/` — configuracoes da org (subdominio e custom domain)
-- `t/[domain]/[[...path]]/` — storefront com catch-all route (domain pode ser slug da org ou custom domain, resolve pelo banco)
+- `t/[domain]/[[...path]]/` — pagina publica do tenant com catch-all route (domain pode ser slug da org ou custom domain, resolve pelo banco)
 - `api/auth/[...all]/` — handler do Better Auth
 - `api/trpc/[...trpc]/` — handler do tRPC
 

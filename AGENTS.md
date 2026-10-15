@@ -1,3 +1,7 @@
+## Coding standards
+
+Read before writing or reviewing code: naming (kebab-case files, plural tables), language, comments, how much abstraction, framework practice. See `docs/agents/coding-standards.md`.
+
 ## Agent skills
 
 ### Issue tracker

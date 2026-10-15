@@ -4,17 +4,18 @@ import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
+import { catalogEntry } from './catalog';
 
 const api = treaty(app);
 
-test('the Catalog offers Lia, Olga and Tina, and the other Roles as coming soon', async () => {
+test('the Catalog offers scheduling, quotes and billing, and the other Roles as coming soon', async () => {
   const { data, status } = await api.catalog.get();
 
   expect(status).toBe(200);
-  const available = data?.filter((entry) => entry.available).map(({ name }) => name);
-  const comingSoon = data?.filter((entry) => !entry.available).map(({ name }) => name);
-  expect(available).toEqual(['Lia', 'Olga', 'Tina']);
-  expect(comingSoon).toEqual(['Beto', 'Edu', 'Gil', 'Fábio', 'Nina', 'Duda']);
+  const available = data?.filter((entry) => entry.available).map(({ role }) => role);
+  const comingSoon = data?.filter((entry) => !entry.available).map(({ role }) => role);
+  expect(available).toEqual(['scheduling', 'quotes', 'billing']);
+  expect(comingSoon).toEqual(['routes', 'inventory', 'crew', 'finance', 'tax_receipts', 'relationship']);
 });
 
 test('a new Professional has no Team yet', async () => {
@@ -33,8 +34,18 @@ test('choosing Roles creates Assistants named from the Catalog, with an empty dr
   expect(status).toBe(200);
   const { data } = await api.team.get({ headers });
   expect(data).toEqual([
-    expect.objectContaining({ role: 'scheduling', name: 'Lia', title: 'Agenda', playbookStatus: 'draft' }),
-    expect.objectContaining({ role: 'billing', name: 'Tina', title: 'Cobrança', playbookStatus: 'draft' }),
+    expect.objectContaining({
+      role: 'scheduling',
+      name: catalogEntry('scheduling').name,
+      title: 'Agenda',
+      playbookStatus: 'draft',
+    }),
+    expect.objectContaining({
+      role: 'billing',
+      name: catalogEntry('billing').name,
+      title: 'Cobrança',
+      playbookStatus: 'draft',
+    }),
   ]);
   const playbooks = await db
     .select({ playbook: assistants.playbook })
@@ -50,7 +61,7 @@ test('choosing a Role again keeps a single Assistant for it', async () => {
   await api.team.post({ roles: ['scheduling', 'quotes'] }, { headers });
 
   const { data } = await api.team.get({ headers });
-  expect(data?.map(({ name }) => name)).toEqual(['Lia', 'Olga']);
+  expect(data?.map(({ name }) => name)).toEqual([catalogEntry('scheduling').name, catalogEntry('quotes').name]);
 });
 
 test('a coming soon Role cannot be chosen', async () => {
@@ -70,7 +81,7 @@ test('the Team needs at least one Assistant', async () => {
   expect(status).toBe(422);
 });
 
-test('renaming Lia changes her name in the Team', async () => {
+test('renaming the scheduling Assistant changes its name in the Team', async () => {
   const { headers } = await signInNewProfessional();
   await api.team.post({ roles: ['scheduling'] }, { headers });
   const { data: team } = await api.team.get({ headers });
@@ -92,7 +103,7 @@ test("a Professional cannot rename someone else's Assistant", async () => {
 
   expect(status).toBe(404);
   const { data } = await api.team.get({ headers: owner.headers });
-  expect(data?.[0]?.name).toBe('Lia');
+  expect(data?.[0]?.name).toBe(catalogEntry('scheduling').name);
 });
 
 test('a blank name is refused', async () => {

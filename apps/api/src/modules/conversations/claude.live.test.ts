@@ -6,6 +6,7 @@ import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
+import { catalogEntry } from '../team/catalog';
 import { ensureVisitConfirmationTemplate } from '../visits/service';
 import { listMessages } from '../whatsapp/service';
 
@@ -26,12 +27,12 @@ describe.skipIf(!process.env.CLAUDE_LIVE)('the Assistant on the real Claude API'
 
   afterAll(() => emulator.stop());
 
-  async function liaForNewProfessional() {
+  async function schedulingAssistantForNewProfessional() {
     const signedIn = await signInNewProfessional();
     await api.me['ai-consent'].post(undefined, { headers: signedIn.headers });
     await api.team.post({ roles: ['scheduling'] }, { headers: signedIn.headers });
     const { data: team } = await api.team.get({ headers: signedIn.headers });
-    return { ...signedIn, lia: team![0]! };
+    return { ...signedIn, schedulingAssistant: team![0]! };
   }
 
   async function drain<T>(request: Promise<{ data: AsyncIterable<{ data: T }> | null; error: unknown }>) {
@@ -42,30 +43,35 @@ describe.skipIf(!process.env.CLAUDE_LIVE)('the Assistant on the real Claude API'
     return events;
   }
 
-  test('Lia answers in Portuguese and the tokens are recorded', async () => {
-    const { professional, headers, lia } = await liaForNewProfessional();
+  test('the scheduling Assistant answers in Portuguese and the tokens are recorded', async () => {
+    const { professional, headers, schedulingAssistant } = await schedulingAssistantForNewProfessional();
 
-    const events = await drain(api.team({ id: lia.id }).messages.post({ text: 'Oi! Qual é o seu nome?' }, { headers }));
+    const events = await drain(
+      api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Oi! Qual é o seu nome?' }, { headers }),
+    );
 
     expect(events.at(-1)).toEqual({ type: 'done' });
-    const { data } = await api.team({ id: lia.id }).messages.get({ headers });
+    const { data } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
     const reply = data!.items.at(-1)!;
     expect(reply.type).toBe('assistant');
-    expect(reply.type === 'assistant' && reply.text).toContain('Lia');
+    expect(reply.type === 'assistant' && reply.text).toContain(catalogEntry('scheduling').name);
     const [usage] = await db.select().from(llmUsages).where(eq(llmUsages.professionalId, professional.id));
-    expect(usage).toMatchObject({ assistantId: lia.id, model: expect.stringContaining('claude-haiku-5-5') });
+    expect(usage).toMatchObject({
+      assistantId: schedulingAssistant.id,
+      model: expect.stringContaining('claude-haiku-5-5'),
+    });
     expect(usage!.inputTokens).toBeGreaterThan(0);
     expect(usage!.outputTokens).toBeGreaterThan(0);
   }, 60_000);
 
   test('"Marca o João amanhã às 14h" books the Visit, and the confirmation waits for Confirmar', async () => {
-    const { professional, headers, lia } = await liaForNewProfessional();
+    const { professional, headers, schedulingAssistant } = await schedulingAssistantForNewProfessional();
     const customer = `55119${String(randomInt(1e8)).padStart(8, '0')}`;
     const from = process.env.META_PLATFORM_PHONE_NUMBER_ID!;
 
     await drain(
       api
-        .team({ id: lia.id })
+        .team({ id: schedulingAssistant.id })
         .messages.post({ text: `Marca o João Pereira amanhã às 14h. O WhatsApp dele é ${customer}.` }, { headers }),
     );
 
@@ -75,17 +81,20 @@ describe.skipIf(!process.env.CLAUDE_LIVE)('the Assistant on the real Claude API'
     expect(visit).toMatchObject({ status: 'scheduled' });
 
     const events = await drain(
-      api.team({ id: lia.id }).messages.post({ text: 'Manda a confirmação pra ele.' }, { headers }),
+      api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Manda a confirmação pra ele.' }, { headers }),
     );
 
     expect(events.at(-1)).toEqual({ type: 'awaiting_confirmation' });
     expect(await listMessages({ phoneNumberId: from, waId: customer })).toEqual([]);
-    const { data: paused } = await api.team({ id: lia.id }).messages.get({ headers });
+    const { data: paused } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
     const card = paused!.items.find((item) => item.type === 'confirmation');
     expect(card).toMatchObject({ status: 'pending', subtitle: expect.stringContaining('João') });
 
     const resumed = await drain(
-      api.team({ id: lia.id }).confirmations({ confirmationId: card!.id }).post({ confirmed: true }, { headers }),
+      api
+        .team({ id: schedulingAssistant.id })
+        .confirmations({ confirmationId: card!.id })
+        .post({ confirmed: true }, { headers }),
     );
 
     expect(resumed.at(-1)).toEqual({ type: 'done' });
@@ -94,22 +103,22 @@ describe.skipIf(!process.env.CLAUDE_LIVE)('the Assistant on the real Claude API'
   }, 120_000);
 
   test('a free text Briefing answer fills the field of that step', async () => {
-    const { headers, lia } = await liaForNewProfessional();
+    const { headers, schedulingAssistant } = await schedulingAssistantForNewProfessional();
 
     const { data } = await api
-      .team({ id: lia.id })
+      .team({ id: schedulingAssistant.id })
       .briefing.answers.post(
         { step: 'hours', text: 'de segunda a sexta das 7 às 17, sábado só de manhã até 11' },
         { headers },
       );
 
     expect(data).toEqual({ understood: true });
-    const { data: briefing } = await api.team({ id: lia.id }).briefing.get({ headers });
+    const { data: briefing } = await api.team({ id: schedulingAssistant.id }).briefing.get({ headers });
     expect(briefing!.steps.find(({ key }) => key === 'hours')!.answer?.ack).toBeTruthy();
     const [stored] = await db
       .select({ playbook: assistants.playbook })
       .from(assistants)
-      .where(eq(assistants.id, lia.id));
+      .where(eq(assistants.id, schedulingAssistant.id));
     expect(stored!.playbook).toEqual({
       hours: [
         { days: ['mon', 'tue', 'wed', 'thu', 'fri'], start: '07:00', end: '17:00' },

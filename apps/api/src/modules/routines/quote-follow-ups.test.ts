@@ -36,19 +36,19 @@ afterAll(async () => {
   await app.stop();
 });
 
-const olgaChips = { priceList: 'per_job', visitFee: 'free', quoteValidity: '15_days', followUp: 'remind' };
+const quotesChips = { priceList: 'per_job', visitFee: 'free', quoteValidity: '15_days', followUp: 'remind' };
 
-async function approvedOlga(followUp = 'remind') {
+async function approvedQuotesAssistant(followUp = 'remind') {
   const signedIn = await signInNewProfessional();
   await api.team.post({ roles: ['quotes'] }, { headers: signedIn.headers });
   const { data: team } = await api.team.get({ headers: signedIn.headers });
-  const olga = team![0]!;
-  const briefing = api.team({ id: olga.id }).briefing;
+  const quotesAssistant = team![0]!;
+  const briefing = api.team({ id: quotesAssistant.id }).briefing;
   const answer = async (step: string, option: string) =>
     expect((await briefing.answers.post({ step, option }, { headers: signedIn.headers })).status).toBe(200);
-  for (const [step, option] of Object.entries({ ...olgaChips, followUp })) await answer(step, option);
+  for (const [step, option] of Object.entries({ ...quotesChips, followUp })) await answer(step, option);
   expect((await briefing.approve.post(undefined, { headers: signedIn.headers })).status).toBe(200);
-  return { ...signedIn, olga, briefing, answer };
+  return { ...signedIn, quotesAssistant, briefing, answer };
 }
 
 async function quoteSentAt(professionalId: string, sentAt: string, status: 'sent' | 'approved' | 'declined' = 'sent') {
@@ -98,23 +98,23 @@ async function advanceTo(time: string) {
   await clock.tick(60_000);
 }
 
-test('approving Olga\'s Playbook creates the follow-up Routine, and "Não faça nada" or Desfazer removes it', async () => {
-  const { olga, briefing, headers, answer } = await approvedOlga();
+test('approving the quotes Playbook creates the follow-up Routine, and "Não faça nada" or Desfazer removes it', async () => {
+  const { quotesAssistant, briefing, headers, answer } = await approvedQuotesAssistant();
 
-  expect(await findRoutine(olga.id)).toMatchObject({ cron: '0 8-20 * * *', timezone: 'America/Sao_Paulo' });
+  expect(await findRoutine(quotesAssistant.id)).toMatchObject({ cron: '0 8-20 * * *', timezone: 'America/Sao_Paulo' });
 
   await answer('followUp', 'nothing');
-  expect(await findRoutine(olga.id)).toBeNull();
+  expect(await findRoutine(quotesAssistant.id)).toBeNull();
 
   await answer('followUp', 'remind');
-  expect(await findRoutine(olga.id)).not.toBeNull();
+  expect(await findRoutine(quotesAssistant.id)).not.toBeNull();
   await briefing.undo.post(undefined, { headers });
-  expect(await findRoutine(olga.id)).toBeNull();
+  expect(await findRoutine(quotesAssistant.id)).toBeNull();
 });
 
 test('the Routine reminds the Customer once, 2 days after the Quote went out, and not if the Customer answered', async () => {
   await clock.setTime('2030-05-03T13:30:00Z');
-  const { olga, professional } = await approvedOlga();
+  const { quotesAssistant, professional } = await approvedQuotesAssistant();
   const due = await quoteSentAt(professional.id, '2030-05-01T13:00:00Z');
   const recent = await quoteSentAt(professional.id, '2030-05-02T13:00:00Z');
   const approved = await quoteSentAt(professional.id, '2030-05-01T13:00:00Z', 'approved');
@@ -129,14 +129,14 @@ test('the Routine reminds the Customer once, 2 days after the Quote went out, an
     expect.objectContaining({ direction: 'outbound', type: 'template', waId: due.customer.phoneNumber }),
   ]);
   for (const other of [recent, approved, declined]) expect(await messagesAbout(other.id)).toHaveLength(0);
-  expect((await noticesOf(olga.id)).map(({ text }) => text)).toEqual([
+  expect((await noticesOf(quotesAssistant.id)).map(({ text }) => text)).toEqual([
     expect.stringContaining(`lembrei ${due.customer.name}`),
   ]);
 });
 
 test('the Routine sends nothing at night: a Quote due at 2h is reminded at 8h', async () => {
   await clock.setTime('2030-05-10T04:30:00Z');
-  const { professional } = await approvedOlga();
+  const { professional } = await approvedQuotesAssistant();
   const due = await quoteSentAt(professional.id, '2030-05-08T05:00:00Z');
 
   // 3h in São Paulo.
@@ -150,21 +150,21 @@ test('the Routine sends nothing at night: a Quote due at 2h is reminded at 8h', 
 
 test('with "Me avise e eu decido" the Routine tells the Professional and sends nothing to the Customer', async () => {
   await clock.setTime('2030-05-17T13:30:00Z');
-  const { olga, professional } = await approvedOlga('notify_me');
+  const { quotesAssistant, professional } = await approvedQuotesAssistant('notify_me');
   const due = await quoteSentAt(professional.id, '2030-05-15T13:00:00Z');
 
   await advanceTo('2030-05-17T14:00:30Z');
-  await waitFor(async () => (await noticesOf(olga.id)).length > 0);
+  await waitFor(async () => (await noticesOf(quotesAssistant.id)).length > 0);
 
   expect(await messagesAbout(due.id)).toHaveLength(0);
-  expect((await noticesOf(olga.id)).map(({ text }) => text)).toEqual([
+  expect((await noticesOf(quotesAssistant.id)).map(({ text }) => text)).toEqual([
     expect.stringContaining(`${due.customer.name} ainda não respondeu`),
   ]);
 });
 
 test('a follow-up run that fails tries again and reminds no Customer twice', async () => {
   await clock.setTime('2030-05-24T13:30:00Z');
-  const { professional } = await approvedOlga();
+  const { professional } = await approvedQuotesAssistant();
   const first = await quoteSentAt(professional.id, '2030-05-22T10:00:00Z');
   const second = await quoteSentAt(professional.id, '2030-05-22T11:00:00Z');
   const realFetch = globalThis.fetch;

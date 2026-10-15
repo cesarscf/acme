@@ -44,16 +44,16 @@ function newPhoneNumber() {
   return `55119${String(randomInt(1e8)).padStart(8, '0')}`;
 }
 
-async function professionalWithLia() {
+async function professionalWithSchedulingAssistant() {
   const signedIn = await signInNewProfessional();
   await api.me['ai-consent'].post(undefined, { headers: signedIn.headers });
   await api.team.post({ roles: ['scheduling'] }, { headers: signedIn.headers });
   const { data: team } = await api.team.get({ headers: signedIn.headers });
-  const lia = (await findAssistant(signedIn.professional.id, team![0]!.id))!;
-  return { headers: signedIn.headers, lia, conversation: api.team({ id: lia.id }) };
+  const schedulingAssistant = (await findAssistant(signedIn.professional.id, team![0]!.id))!;
+  return { headers: signedIn.headers, schedulingAssistant, conversation: api.team({ id: schedulingAssistant.id }) };
 }
 
-type Lia = Awaited<ReturnType<typeof professionalWithLia>>['lia'];
+type SchedulingAssistant = Awaited<ReturnType<typeof professionalWithSchedulingAssistant>>['schedulingAssistant'];
 
 async function drain<T>(request: Promise<{ data: AsyncIterable<{ data: T }> | null; error: unknown }>) {
   const { data, error } = await request;
@@ -77,13 +77,13 @@ function lastToolResult(request: Anthropic.Beta.MessageCreateParams) {
   return String(content.findLast((block) => block.type === 'tool_result')!.content);
 }
 
-async function bookJoao(lia: Lia, time = '14:00') {
-  const created = await runTool(customerTools(lia), 'createCustomer', {
+async function bookJoao(schedulingAssistant: SchedulingAssistant, time = '14:00') {
+  const created = await runTool(customerTools(schedulingAssistant), 'createCustomer', {
     name: 'João Pereira',
     phoneNumber: newPhoneNumber(),
   });
   const joao = JSON.parse(created.text.slice(created.text.indexOf('{'))) as { id: string; phoneNumber: string };
-  await runTool(visitTools(lia), 'createVisit', {
+  await runTool(visitTools(schedulingAssistant), 'createVisit', {
     customerId: joao.id,
     date: tomorrow(),
     time,
@@ -95,7 +95,7 @@ async function bookJoao(lia: Lia, time = '14:00') {
 }
 
 test('"Marca o João amanhã às 14h" creates the Customer and the Visit', async () => {
-  const { headers, lia, conversation } = await professionalWithLia();
+  const { headers, schedulingAssistant, conversation } = await professionalWithSchedulingAssistant();
   claude.reply({ content: [call('findCustomer', { query: 'João' })] }, say('Não achei o João. Qual o WhatsApp dele?'));
   await drain(conversation.messages.post({ text: 'Marca o João amanhã às 14h' }, { headers }));
   claude.reply(
@@ -119,7 +119,10 @@ test('"Marca o João amanhã às 14h" creates the Customer and the Visit', async
 
   await drain(conversation.messages.post({ text: '11 98765-4321' }, { headers }));
 
-  const [joao] = await db.select().from(customers).where(eq(customers.professionalId, lia.professional.id));
+  const [joao] = await db
+    .select()
+    .from(customers)
+    .where(eq(customers.professionalId, schedulingAssistant.professional.id));
   expect(joao).toMatchObject({ name: 'João', phoneNumber: '5511987654321' });
   const booked = await db.select().from(visits).where(eq(visits.customerId, joao!.id));
   expect(booked).toEqual([expect.objectContaining({ status: 'scheduled', durationMinutes: 60 })]);
@@ -127,9 +130,12 @@ test('"Marca o João amanhã às 14h" creates the Customer and the Visit', async
 });
 
 test('a Visit at the time of another one gets a conflict warning, and is booked only when the Professional insists', async () => {
-  const { headers, lia, conversation } = await professionalWithLia();
-  await bookJoao(lia, '14:00');
-  const created = await runTool(customerTools(lia), 'createCustomer', { name: 'Marta', phoneNumber: newPhoneNumber() });
+  const { headers, schedulingAssistant, conversation } = await professionalWithSchedulingAssistant();
+  await bookJoao(schedulingAssistant, '14:00');
+  const created = await runTool(customerTools(schedulingAssistant), 'createCustomer', {
+    name: 'Marta',
+    phoneNumber: newPhoneNumber(),
+  });
   const marta = JSON.parse(created.text.slice(created.text.indexOf('{'))) as { id: string };
   const book = (allowConflict: boolean) =>
     call('createVisit', {
@@ -172,9 +178,9 @@ async function sendConfirmation(
   return card;
 }
 
-test("Confirmar on the Customer side marks the Visit confirmed and tells the Professional in Lia's conversation", async () => {
-  const { headers, lia, conversation } = await professionalWithLia();
-  const { joao, visit } = await bookJoao(lia);
+test("Confirmar on the Customer side marks the Visit confirmed and tells the Professional in the scheduling Assistant's conversation", async () => {
+  const { headers, schedulingAssistant, conversation } = await professionalWithSchedulingAssistant();
+  const { joao, visit } = await bookJoao(schedulingAssistant);
 
   const card = await sendConfirmation(conversation, headers, visit.id);
 
@@ -210,8 +216,8 @@ test("Confirmar on the Customer side marks the Visit confirmed and tells the Pro
 });
 
 test('Remarcar on the Customer side tells the Professional the Customer wants another time', async () => {
-  const { headers, lia, conversation } = await professionalWithLia();
-  const { joao, visit } = await bookJoao(lia);
+  const { headers, schedulingAssistant, conversation } = await professionalWithSchedulingAssistant();
+  const { joao, visit } = await bookJoao(schedulingAssistant);
   await sendConfirmation(conversation, headers, visit.id);
   const [sent] = await listMessages({ phoneNumberId: platformNumber, waId: joao.phoneNumber });
 
@@ -227,10 +233,10 @@ test('Remarcar on the Customer side tells the Professional the Customer wants an
 });
 
 test('a click on the confirmation of a cancelled Visit leaves it cancelled and says so', async () => {
-  const { headers, lia, conversation } = await professionalWithLia();
-  const { joao, visit } = await bookJoao(lia);
+  const { headers, schedulingAssistant, conversation } = await professionalWithSchedulingAssistant();
+  const { joao, visit } = await bookJoao(schedulingAssistant);
   await sendConfirmation(conversation, headers, visit.id);
-  await runTool(visitTools(lia), 'cancelVisit', { visitId: visit.id });
+  await runTool(visitTools(schedulingAssistant), 'cancelVisit', { visitId: visit.id });
   const [sent] = await listMessages({ phoneNumberId: platformNumber, waId: joao.phoneNumber });
 
   await meta.emulator.messages({ id: sent!.wamid }).click.post({ index: 0 });
@@ -242,10 +248,12 @@ test('a click on the confirmation of a cancelled Visit leaves it cancelled and s
 });
 
 test('sendVisitConfirmation sends the template with Confirmar and Remarcar, tied to the Visit', async () => {
-  const { lia } = await professionalWithLia();
-  const { joao, visit } = await bookJoao(lia);
+  const { schedulingAssistant } = await professionalWithSchedulingAssistant();
+  const { joao, visit } = await bookJoao(schedulingAssistant);
 
-  const { text, isError } = await runTool(visitTools(lia), 'sendVisitConfirmation', { visitId: visit.id });
+  const { text, isError } = await runTool(visitTools(schedulingAssistant), 'sendVisitConfirmation', {
+    visitId: visit.id,
+  });
 
   expect(isError).toBe(false);
   expect(text).toContain('João Pereira');
@@ -259,10 +267,10 @@ test('sendVisitConfirmation sends the template with Confirmar and Remarcar, tied
 });
 
 test('Confirmar on a confirmation sent before the Visit was moved does not confirm the new time', async () => {
-  const { headers, lia, conversation } = await professionalWithLia();
-  const { joao, visit } = await bookJoao(lia);
-  await runTool(visitTools(lia), 'sendVisitConfirmation', { visitId: visit.id });
-  await runTool(visitTools(lia), 'rescheduleVisit', {
+  const { headers, schedulingAssistant, conversation } = await professionalWithSchedulingAssistant();
+  const { joao, visit } = await bookJoao(schedulingAssistant);
+  await runTool(visitTools(schedulingAssistant), 'sendVisitConfirmation', { visitId: visit.id });
+  await runTool(visitTools(schedulingAssistant), 'rescheduleVisit', {
     visitId: visit.id,
     date: tomorrow(),
     time: '16:00',

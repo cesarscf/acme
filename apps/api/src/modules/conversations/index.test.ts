@@ -33,12 +33,12 @@ afterAll(async () => {
   await emulator.stop();
 });
 
-async function consentingProfessionalWithLia() {
+async function consentingProfessionalWithSchedulingAssistant() {
   const signedIn = await signInNewProfessional();
   await api.me['ai-consent'].post(undefined, { headers: signedIn.headers });
   await api.team.post({ roles: ['scheduling'] }, { headers: signedIn.headers });
   const { data: team } = await api.team.get({ headers: signedIn.headers });
-  return { ...signedIn, lia: team![0]! };
+  return { ...signedIn, schedulingAssistant: team![0]! };
 }
 
 async function drain<T>(request: Promise<{ data: AsyncIterable<{ data: T }> | null; error: unknown }>) {
@@ -53,13 +53,16 @@ function newCustomerNumber() {
   return `55119${String(randomInt(1e8)).padStart(8, '0')}`;
 }
 
-// A Customer with a Visit tomorrow, booked through Lia's tools without Claude.
+// A Customer with a Visit tomorrow, booked through the scheduling Assistant's tools without Claude.
 async function bookVisit(professionalId: string, assistantId: string) {
-  const lia = (await findAssistant(professionalId, assistantId))!;
+  const schedulingAssistant = (await findAssistant(professionalId, assistantId))!;
   const customer = newCustomerNumber();
-  const created = await runTool(customerTools(lia), 'createCustomer', { name: 'João Pereira', phoneNumber: customer });
+  const created = await runTool(customerTools(schedulingAssistant), 'createCustomer', {
+    name: 'João Pereira',
+    phoneNumber: customer,
+  });
   const { id: customerId } = JSON.parse(created.text.slice(created.text.indexOf('{')));
-  const booked = await runTool(visitTools(lia), 'createVisit', {
+  const booked = await runTool(visitTools(schedulingAssistant), 'createVisit', {
     customerId,
     date: localDate(new Date(Date.now() + 86_400_000), 'America/Sao_Paulo'),
     time: '14:00',
@@ -94,14 +97,14 @@ test('accepting the AI consent is recorded on the Professional', async () => {
 });
 
 test('the reply streams to the app and the conversation is kept', async () => {
-  const { headers, lia } = await consentingProfessionalWithLia();
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
   claude.reply({ content: [{ type: 'text', text: 'Oi! Sou a Lia.' }] });
 
-  const events = await drain(api.team({ id: lia.id }).messages.post({ text: 'Oi, Lia' }, { headers }));
+  const events = await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Oi, Lia' }, { headers }));
 
   expect(events).toContainEqual({ type: 'text', text: 'Oi! Sou a Lia.' });
   expect(events.at(-1)).toEqual({ type: 'done' });
-  const { data } = await api.team({ id: lia.id }).messages.get({ headers });
+  const { data } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
   expect(data).toMatchObject({
     working: false,
     items: [
@@ -112,10 +115,10 @@ test('the reply streams to the app and the conversation is kept', async () => {
 });
 
 test('Claude runs Haiku 5.5 by default, without the server-side fallback it does not have', async () => {
-  const { headers, lia } = await consentingProfessionalWithLia();
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
   claude.reply({ content: [{ type: 'text', text: 'Oi!' }] });
 
-  await drain(api.team({ id: lia.id }).messages.post({ text: 'Oi' }, { headers }));
+  await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Oi' }, { headers }));
 
   const request = claude.requests.at(-1)!;
   expect(request).toMatchObject({ model: 'claude-haiku-5-5', stream: true, output_config: { effort: 'low' } });
@@ -123,12 +126,12 @@ test('Claude runs Haiku 5.5 by default, without the server-side fallback it does
 });
 
 test('a model with server-side fallback gets it turned on', async () => {
-  const { headers, lia } = await consentingProfessionalWithLia();
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
   claude.reply({ content: [{ type: 'text', text: 'Oi!' }] });
   process.env.CLAUDE_MODEL = 'claude-opus-5-5';
 
   try {
-    await drain(api.team({ id: lia.id }).messages.post({ text: 'Oi' }, { headers }));
+    await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Oi' }, { headers }));
   } finally {
     delete process.env.CLAUDE_MODEL;
   }
@@ -138,11 +141,11 @@ test('a model with server-side fallback gets it turned on', async () => {
 });
 
 test('the prompt is cached, names the Assistant, and the tools are strict', async () => {
-  const { headers, lia } = await consentingProfessionalWithLia();
-  await api.team({ id: lia.id }).patch({ name: 'Ana' }, { headers });
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  await api.team({ id: schedulingAssistant.id }).patch({ name: 'Ana' }, { headers });
   claude.reply({ content: [{ type: 'text', text: 'Oi!' }] });
 
-  await drain(api.team({ id: lia.id }).messages.post({ text: 'Oi' }, { headers }));
+  await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Oi' }, { headers }));
 
   const request = claude.requests.at(-1)!;
   const [fixed, assistant] = request.system as { text: string; cache_control?: object }[];
@@ -156,18 +159,18 @@ test('the prompt is cached, names the Assistant, and the tools are strict', asyn
 });
 
 test('token usage is recorded for the Professional and the Assistant', async () => {
-  const { professional, headers, lia } = await consentingProfessionalWithLia();
+  const { professional, headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
   claude.reply({
     content: [{ type: 'text', text: 'Oi!' }],
     usage: { input_tokens: 1200, output_tokens: 80, cache_read_input_tokens: 900 },
   });
 
-  await drain(api.team({ id: lia.id }).messages.post({ text: 'Oi' }, { headers }));
+  await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Oi' }, { headers }));
 
   const usages = await db.select().from(llmUsages).where(eq(llmUsages.professionalId, professional.id));
   expect(usages).toEqual([
     expect.objectContaining({
-      assistantId: lia.id,
+      assistantId: schedulingAssistant.id,
       model: 'claude-haiku-5-5',
       inputTokens: 1200,
       outputTokens: 80,
@@ -177,18 +180,20 @@ test('token usage is recorded for the Professional and the Assistant', async () 
 });
 
 test('a tool that sends something to the Customer shows a card and runs only after Confirmar', async () => {
-  const { professional, headers, lia } = await consentingProfessionalWithLia();
-  const { customer, visitId } = await bookVisit(professional.id, lia.id);
+  const { professional, headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const { customer, visitId } = await bookVisit(professional.id, schedulingAssistant.id);
   const toolUseId = `toolu_${randomUUID()}`;
   claude.reply({
     content: [{ type: 'text', text: 'Vou avisar o João.' }, sendVisitConfirmationCall(toolUseId, visitId)],
   });
 
-  const events = await drain(api.team({ id: lia.id }).messages.post({ text: 'Avisa o João' }, { headers }));
+  const events = await drain(
+    api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Avisa o João' }, { headers }),
+  );
 
   expect(events.at(-1)).toEqual({ type: 'awaiting_confirmation' });
   expect(await listMessages({ phoneNumberId: process.env.META_PLATFORM_PHONE_NUMBER_ID!, waId: customer })).toEqual([]);
-  const { data: paused } = await api.team({ id: lia.id }).messages.get({ headers });
+  const { data: paused } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
   const card = paused!.items.at(-1)!;
   expect(card).toMatchObject({
     type: 'confirmation',
@@ -200,7 +205,7 @@ test('a tool that sends something to the Customer shows a card and runs only aft
 
   const resumed = await drain(
     api
-      .team({ id: lia.id })
+      .team({ id: schedulingAssistant.id })
       .confirmations({ confirmationId: card.type === 'confirmation' ? card.id : '' })
       .post({ confirmed: true }, { headers }),
   );
@@ -212,23 +217,23 @@ test('a tool that sends something to the Customer shows a card and runs only aft
     role: 'user',
     content: [{ type: 'tool_result', tool_use_id: toolUseId }],
   });
-  const { data } = await api.team({ id: lia.id }).messages.get({ headers });
+  const { data } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
   expect(data!.items.find(({ type }) => type === 'confirmation')).toMatchObject({ status: 'confirmed' });
 });
 
 test('Cancelar tells Claude nothing was sent', async () => {
-  const { professional, headers, lia } = await consentingProfessionalWithLia();
-  const { customer, visitId } = await bookVisit(professional.id, lia.id);
+  const { professional, headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const { customer, visitId } = await bookVisit(professional.id, schedulingAssistant.id);
   const toolUseId = `toolu_${randomUUID()}`;
   claude.reply({ content: [sendVisitConfirmationCall(toolUseId, visitId)] });
-  await drain(api.team({ id: lia.id }).messages.post({ text: 'Avisa o João' }, { headers }));
-  const { data: paused } = await api.team({ id: lia.id }).messages.get({ headers });
+  await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Avisa o João' }, { headers }));
+  const { data: paused } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
   const card = paused!.items.at(-1)!;
   claude.reply({ content: [{ type: 'text', text: 'Tudo bem, não mandei.' }] });
 
   await drain(
     api
-      .team({ id: lia.id })
+      .team({ id: schedulingAssistant.id })
       .confirmations({ confirmationId: card.type === 'confirmation' ? card.id : '' })
       .post({ confirmed: false }, { headers }),
   );
@@ -240,14 +245,14 @@ test('Cancelar tells Claude nothing was sent', async () => {
 });
 
 test('a new message instead of a decision cancels the pending card', async () => {
-  const { professional, headers, lia } = await consentingProfessionalWithLia();
-  const { customer, visitId } = await bookVisit(professional.id, lia.id);
+  const { professional, headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const { customer, visitId } = await bookVisit(professional.id, schedulingAssistant.id);
   const toolUseId = `toolu_${randomUUID()}`;
   claude.reply({ content: [sendVisitConfirmationCall(toolUseId, visitId)] });
-  await drain(api.team({ id: lia.id }).messages.post({ text: 'Avisa o João' }, { headers }));
+  await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Avisa o João' }, { headers }));
   claude.reply({ content: [{ type: 'text', text: 'Certo, esqueci o João.' }] });
 
-  await drain(api.team({ id: lia.id }).messages.post({ text: 'Deixa pra lá' }, { headers }));
+  await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Deixa pra lá' }, { headers }));
 
   expect(await listMessages({ phoneNumberId: process.env.META_PLATFORM_PHONE_NUMBER_ID!, waId: customer })).toEqual([]);
   expect(claude.requests.at(-1)!.messages.at(-1)).toMatchObject({
@@ -257,21 +262,23 @@ test('a new message instead of a decision cancels the pending card', async () =>
       { type: 'text', text: 'Deixa pra lá' },
     ],
   });
-  const { data } = await api.team({ id: lia.id }).messages.get({ headers });
+  const { data } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
   expect(data!.items.find(({ type }) => type === 'confirmation')).toMatchObject({ status: 'cancelled' });
 });
 
 test('a refusal ends the turn without running tools and says so in the conversation', async () => {
-  const { professional, headers, lia } = await consentingProfessionalWithLia();
-  const { customer, visitId } = await bookVisit(professional.id, lia.id);
+  const { professional, headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const { customer, visitId } = await bookVisit(professional.id, schedulingAssistant.id);
   const toolUseId = `toolu_${randomUUID()}`;
   claude.reply({ content: [sendVisitConfirmationCall(toolUseId, visitId)], stop_reason: 'refusal' });
 
-  const events = await drain(api.team({ id: lia.id }).messages.post({ text: 'Pedido estranho' }, { headers }));
+  const events = await drain(
+    api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Pedido estranho' }, { headers }),
+  );
 
   expect(events.at(-1)).toEqual({ type: 'done' });
   expect(await listMessages({ phoneNumberId: process.env.META_PLATFORM_PHONE_NUMBER_ID!, waId: customer })).toEqual([]);
-  const { data } = await api.team({ id: lia.id }).messages.get({ headers });
+  const { data } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
   expect(data!.items).toEqual([
     { id: expect.any(String), type: 'professional', text: 'Pedido estranho' },
     { id: expect.any(String), type: 'assistant', text: 'Não posso ajudar com esse pedido.' },
@@ -279,12 +286,14 @@ test('a refusal ends the turn without running tools and says so in the conversat
 });
 
 test("a Professional cannot talk to someone else's Assistant", async () => {
-  const { lia } = await consentingProfessionalWithLia();
+  const { schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
   const intruder = await signInNewProfessional();
   await api.me['ai-consent'].post(undefined, { headers: intruder.headers });
 
-  const read = await api.team({ id: lia.id }).messages.get({ headers: intruder.headers });
-  const write = await api.team({ id: lia.id }).messages.post({ text: 'Oi' }, { headers: intruder.headers });
+  const read = await api.team({ id: schedulingAssistant.id }).messages.get({ headers: intruder.headers });
+  const write = await api
+    .team({ id: schedulingAssistant.id })
+    .messages.post({ text: 'Oi' }, { headers: intruder.headers });
 
   expect(read.status).toBe(404);
   expect(write.status).toBe(404);

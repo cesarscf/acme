@@ -30,7 +30,7 @@ function interpretation(output: object) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(output) }] };
 }
 
-const liaChips = { agenda: 'paper', hours: 'weekdays', booking: 'ask_first', confirmations: 'day_before' };
+const schedulingChips = { agenda: 'paper', hours: 'weekdays', booking: 'ask_first', confirmations: 'day_before' };
 
 async function answerWithChips(
   briefing: Awaited<ReturnType<typeof professionalWith>>['briefing'],
@@ -43,7 +43,7 @@ async function answerWithChips(
   }
 }
 
-test("Lia's Briefing is the connect card and four questions, with Google Agenda coming soon", async () => {
+test('the scheduling Briefing is the connect card and four questions, with Google Agenda coming soon', async () => {
   const { headers, assistant, briefing } = await professionalWith('scheduling');
 
   const { data, status } = await briefing.get({ headers });
@@ -80,7 +80,7 @@ test('answering only with chips makes a valid Playbook without calling Claude', 
   const requests = claude.requests.length;
 
   await briefing.connect.post(undefined, { headers });
-  await answerWithChips(briefing, headers, liaChips);
+  await answerWithChips(briefing, headers, schedulingChips);
   const { status } = await briefing.approve.post(undefined, { headers });
 
   expect(status).toBe(200);
@@ -95,7 +95,7 @@ test('answering only with chips makes a valid Playbook without calling Claude', 
   });
 });
 
-test("Olga's chips make a valid Playbook too", async () => {
+test('the quotes chips make a valid Playbook too', async () => {
   const { headers, assistant, briefing } = await professionalWith('quotes');
 
   await answerWithChips(briefing, headers, {
@@ -150,7 +150,7 @@ test('a Playbook with steps left cannot be approved', async () => {
 test('the draft Playbook comes when every step is answered, with the Routine marked', async () => {
   const { headers, briefing } = await professionalWith('scheduling');
 
-  await answerWithChips(briefing, headers, liaChips);
+  await answerWithChips(briefing, headers, schedulingChips);
 
   const { data } = await briefing.get({ headers });
   expect(data!.status).toBe('draft');
@@ -240,7 +240,7 @@ test('interpreting free text records the tokens for the Professional and the Ass
 
 test('Ajustar goes back to that step and keeps the other answers', async () => {
   const { headers, briefing } = await professionalWith('scheduling');
-  await answerWithChips(briefing, headers, liaChips);
+  await answerWithChips(briefing, headers, schedulingChips);
 
   const { status } = await briefing.adjust.post({ step: 'hours' }, { headers });
 
@@ -256,7 +256,7 @@ test('Ajustar goes back to that step and keeps the other answers', async () => {
 
 test('the approved Playbook shows in Ver ficha and can be changed later without going back to draft', async () => {
   const { headers, briefing } = await professionalWith('scheduling');
-  await answerWithChips(briefing, headers, liaChips);
+  await answerWithChips(briefing, headers, schedulingChips);
   await briefing.approve.post(undefined, { headers });
 
   await briefing.answers.post({ step: 'confirmations', option: 'on_request' }, { headers });
@@ -274,7 +274,7 @@ test('the approved Playbook shows in Ver ficha and can be changed later without 
 
 test('the approved Playbook goes into the prompt as the Ver ficha rows', async () => {
   const { headers, assistant, briefing } = await professionalWith('scheduling', { consent: true });
-  await answerWithChips(briefing, headers, liaChips);
+  await answerWithChips(briefing, headers, schedulingChips);
   await briefing.approve.post(undefined, { headers });
   claude.reply({ content: [{ type: 'text', text: 'Oi!' }] });
 
@@ -287,7 +287,7 @@ test('the approved Playbook goes into the prompt as the Ver ficha rows', async (
   expect(context!.text).toContain('Quando: Na véspera, às 18h');
 });
 
-test("Tina's Briefing asks how she receives and the Pix key, with bank and card coming soon", async () => {
+test('the billing Briefing asks how the Professional receives and the Pix key, with bank and card coming soon', async () => {
   const { headers, assistant, briefing } = await professionalWith('billing');
 
   const { data, status } = await briefing.get({ headers });
@@ -309,7 +309,7 @@ test("Tina's Briefing asks how she receives and the Pix key, with bank and card 
   expect(data!.steps[0]!.usesAi).toBe(true);
 });
 
-test("Tina's Playbook keeps the PaymentMethods, the default and the Pix key, without calling Claude", async () => {
+test('the billing Playbook keeps the PaymentMethods, the default and the Pix key, without calling Claude', async () => {
   const { headers, assistant, briefing } = await professionalWith('billing');
   const requests = claude.requests.length;
 

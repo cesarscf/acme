@@ -378,7 +378,7 @@ const quotes: BriefingScript = {
 
 const paymentMethodKinds = ['pix', 'cash'] as const;
 
-// Tina charges through Pix, so the Pix key is always one of the PaymentMethods.
+// The billing Assistant charges through Pix, so the Pix key is always one of the PaymentMethods.
 export const paymentMethods = z
   .strictObject({ accepted: z.array(z.enum(paymentMethodKinds)).min(1), default: z.enum(paymentMethodKinds) })
   .refine(({ accepted }) => accepted.includes('pix'), 'pix sempre entra')

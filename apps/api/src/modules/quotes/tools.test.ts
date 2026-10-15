@@ -33,20 +33,23 @@ function newPhoneNumber() {
   return `55119${String(randomInt(1e8)).padStart(8, '0')}`;
 }
 
-async function newCustomer(olga: Assistant, name = 'João Pereira') {
-  const { text } = await runTool(customerTools(olga), 'createCustomer', { name, phoneNumber: newPhoneNumber() });
+async function newCustomer(quotesAssistant: Assistant, name = 'João Pereira') {
+  const { text } = await runTool(customerTools(quotesAssistant), 'createCustomer', {
+    name,
+    phoneNumber: newPhoneNumber(),
+  });
   return JSON.parse(text.slice(text.indexOf('{'))) as { id: string; name: string; phoneNumber: string };
 }
 
-async function upsert(olga: Assistant, name: string, priceCents: number, priceItemId: string | null = null) {
-  return runTool(quoteTools(olga), 'upsertPriceItem', { priceItemId, name, priceCents });
+async function upsert(quotesAssistant: Assistant, name: string, priceCents: number, priceItemId: string | null = null) {
+  return runTool(quoteTools(quotesAssistant), 'upsertPriceItem', { priceItemId, name, priceCents });
 }
 
-async function priceItemsOf(olga: Assistant) {
+async function priceItemsOf(quotesAssistant: Assistant) {
   return db
     .select()
     .from(priceItems)
-    .where(eq(priceItems.professionalId, olga.professional.id))
+    .where(eq(priceItems.professionalId, quotesAssistant.professional.id))
     .orderBy(asc(priceItems.name));
 }
 
@@ -57,8 +60,8 @@ type ItemInput = {
   unitPriceCents?: number | null;
 };
 
-function createQuote(olga: Assistant, customerId: string, items: ItemInput[]) {
-  return runTool(quoteTools(olga), 'createQuote', {
+function createQuote(quotesAssistant: Assistant, customerId: string, items: ItemInput[]) {
+  return runTool(quoteTools(quotesAssistant), 'createQuote', {
     customerId,
     items: items.map((item) => ({
       priceItemId: null,
@@ -70,63 +73,65 @@ function createQuote(olga: Assistant, customerId: string, items: ItemInput[]) {
   });
 }
 
-async function quotesOf(olga: Assistant) {
-  return db.select().from(quotes).where(eq(quotes.professionalId, olga.professional.id));
+async function quotesOf(quotesAssistant: Assistant) {
+  return db.select().from(quotes).where(eq(quotes.professionalId, quotesAssistant.professional.id));
 }
 
-async function olgaWithSplitCleaning() {
-  const olga = await newAssistant('quotes');
-  const joao = await newCustomer(olga);
-  await upsert(olga, 'Limpeza de split', 18000);
-  const [cleaning] = await priceItemsOf(olga);
-  return { olga, joao, cleaning: cleaning! };
+async function quotesAssistantWithSplitCleaning() {
+  const quotesAssistant = await newAssistant('quotes');
+  const joao = await newCustomer(quotesAssistant);
+  await upsert(quotesAssistant, 'Limpeza de split', 18000);
+  const [cleaning] = await priceItemsOf(quotesAssistant);
+  return { quotesAssistant, joao, cleaning: cleaning! };
 }
 
 test('upsertPriceItem adds a PriceItem, and the same name again only changes its price', async () => {
-  const olga = await newAssistant('quotes');
+  const quotesAssistant = await newAssistant('quotes');
 
-  const added = await upsert(olga, 'Limpeza de split', 15000);
-  const changed = await upsert(olga, 'limpeza de split ', 18000);
+  const added = await upsert(quotesAssistant, 'Limpeza de split', 15000);
+  const changed = await upsert(quotesAssistant, 'limpeza de split ', 18000);
 
   expect(added.isError).toBe(false);
   expect(changed.isError).toBe(false);
-  expect(await priceItemsOf(olga)).toEqual([expect.objectContaining({ name: 'Limpeza de split', priceCents: 18000 })]);
+  expect(await priceItemsOf(quotesAssistant)).toEqual([
+    expect.objectContaining({ name: 'Limpeza de split', priceCents: 18000 }),
+  ]);
 });
 
 test('upsertPriceItem with an id renames and reprices that PriceItem, only if it is the Professional’s', async () => {
-  const olga = await newAssistant('quotes');
+  const quotesAssistant = await newAssistant('quotes');
   const intruder = await newAssistant('quotes');
-  await upsert(olga, 'Limpeza', 15000);
-  const [item] = await priceItemsOf(olga);
+  await upsert(quotesAssistant, 'Limpeza', 15000);
+  const [item] = await priceItemsOf(quotesAssistant);
 
   const foreign = await upsert(intruder, 'Roubado', 1, item!.id);
-  const own = await upsert(olga, 'Limpeza de split', 16000, item!.id);
+  const own = await upsert(quotesAssistant, 'Limpeza de split', 16000, item!.id);
 
   expect(foreign.isError).toBe(true);
   expect(own.isError).toBe(false);
-  expect(await priceItemsOf(olga)).toEqual([
+  expect(await priceItemsOf(quotesAssistant)).toEqual([
     expect.objectContaining({ id: item!.id, name: 'Limpeza de split', priceCents: 16000 }),
   ]);
 });
 
 test('upsertPriceItem refuses a price that is not a positive whole number of cents', async () => {
-  const olga = await newAssistant('quotes');
+  const quotesAssistant = await newAssistant('quotes');
 
-  const fractional = await upsert(olga, 'Limpeza', 150.5);
-  const zero = await upsert(olga, 'Limpeza', 0);
+  const fractional = await upsert(quotesAssistant, 'Limpeza', 150.5);
+  const zero = await upsert(quotesAssistant, 'Limpeza', 0);
 
   expect(fractional.isError).toBe(true);
   expect(zero.isError).toBe(true);
-  expect(await priceItemsOf(olga)).toEqual([]);
+  expect(await priceItemsOf(quotesAssistant)).toEqual([]);
 });
 
 test('listPriceItems shows the price list, or says it is empty', async () => {
-  const olga = await newAssistant('quotes');
-  const empty = await runTool(quoteTools(olga), 'listPriceItems', {});
-  await upsert(olga, 'Limpeza de split', 18000);
-  await upsert(olga, 'Instalação de split', 45000);
+  const quotesAssistant = await newAssistant('quotes');
+  const empty = await runTool(quoteTools(quotesAssistant), 'listPriceItems', {});
+  await upsert(quotesAssistant, 'Limpeza de split', 18000);
+  await upsert(quotesAssistant, 'Instalação de split', 45000);
 
-  const { text } = await runTool(quoteTools(olga), 'listPriceItems', {});
+  const { text } = await runTool(quoteTools(quotesAssistant), 'listPriceItems', {});
 
   expect(empty.text).toContain('Nenhum');
   const listed = JSON.parse(text) as { name: string; priceCents: number }[];
@@ -137,16 +142,16 @@ test('listPriceItems shows the price list, or says it is empty', async () => {
 });
 
 test('createQuote builds a draft Quote from PriceItems and items priced on the spot, with the total', async () => {
-  const { olga, joao, cleaning } = await olgaWithSplitCleaning();
+  const { quotesAssistant, joao, cleaning } = await quotesAssistantWithSplitCleaning();
 
-  const { text, isError } = await createQuote(olga, joao.id, [
+  const { text, isError } = await createQuote(quotesAssistant, joao.id, [
     { priceItemId: cleaning.id, quantity: 2 },
     { description: 'Troca de capacitor', unitPriceCents: 12000 },
   ]);
 
   expect(isError).toBe(false);
   expect(text).toContain('João Pereira');
-  const [quote] = await quotesOf(olga);
+  const [quote] = await quotesOf(quotesAssistant);
   expect(quote).toMatchObject({ customerId: joao.id, status: 'draft', totalCents: 48000, sentAt: null });
   const items = await db
     .select()
@@ -170,39 +175,39 @@ test('createQuote builds a draft Quote from PriceItems and items priced on the s
 });
 
 test('createQuote refuses no items, an item without a price, and another Professional’s Customer or PriceItem', async () => {
-  const { olga, joao, cleaning } = await olgaWithSplitCleaning();
+  const { quotesAssistant, joao, cleaning } = await quotesAssistantWithSplitCleaning();
   const intruder = await newAssistant('quotes');
   const someoneElse = await newCustomer(intruder);
 
   const results = await Promise.all([
-    createQuote(olga, joao.id, []),
-    createQuote(olga, joao.id, [{ description: 'Troca de capacitor' }]),
-    createQuote(olga, joao.id, [{ priceItemId: cleaning.id, quantity: 0 }]),
-    createQuote(olga, someoneElse.id, [{ priceItemId: cleaning.id }]),
+    createQuote(quotesAssistant, joao.id, []),
+    createQuote(quotesAssistant, joao.id, [{ description: 'Troca de capacitor' }]),
+    createQuote(quotesAssistant, joao.id, [{ priceItemId: cleaning.id, quantity: 0 }]),
+    createQuote(quotesAssistant, someoneElse.id, [{ priceItemId: cleaning.id }]),
     createQuote(intruder, someoneElse.id, [{ priceItemId: cleaning.id }]),
   ]);
 
   expect(results.map(({ isError }) => isError)).toEqual([true, true, true, true, true]);
-  expect(await quotesOf(olga)).toEqual([]);
+  expect(await quotesOf(quotesAssistant)).toEqual([]);
   expect(await quotesOf(intruder)).toEqual([]);
 });
 
 async function draftQuote() {
-  const setup = await olgaWithSplitCleaning();
-  await createQuote(setup.olga, setup.joao.id, [{ priceItemId: setup.cleaning.id, quantity: 2 }]);
-  const [quote] = await quotesOf(setup.olga);
+  const setup = await quotesAssistantWithSplitCleaning();
+  await createQuote(setup.quotesAssistant, setup.joao.id, [{ priceItemId: setup.cleaning.id, quantity: 2 }]);
+  const [quote] = await quotesOf(setup.quotesAssistant);
   return { ...setup, quote: quote! };
 }
 
 test('sendQuote sends the Quote with Aprovar and Recusar, valid for the days in the Playbook', async () => {
-  const { olga: draft, joao, quote } = await draftQuote();
+  const { quotesAssistant: draft, joao, quote } = await draftQuote();
   await db
     .update(assistants)
     .set({ playbook: { quoteValidity: 7 } })
     .where(eq(assistants.id, draft.id));
-  const olga = (await findAssistant(draft.professional.id, draft.id))!;
+  const quotesAssistant = (await findAssistant(draft.professional.id, draft.id))!;
 
-  const { text, isError } = await runTool(quoteTools(olga), 'sendQuote', { quoteId: quote.id });
+  const { text, isError } = await runTool(quoteTools(quotesAssistant), 'sendQuote', { quoteId: quote.id });
 
   expect(isError).toBe(false);
   expect(text).toContain('João Pereira');
@@ -213,17 +218,17 @@ test('sendQuote sends the Quote with Aprovar and Recusar, valid for the days in 
   expect(message.buttons.map((button) => button.text)).toEqual(['Aprovar', 'Recusar']);
   expect(message.body).toContain('2x Limpeza de split');
   expect(message.body).toMatch(/R\$\s360,00/);
-  const [row] = await quotesOf(olga);
+  const [row] = await quotesOf(quotesAssistant);
   const validUntil = localDate(new Date(Date.now() + 7 * 86_400_000), 'America/Sao_Paulo');
   expect(row).toMatchObject({ status: 'sent', validUntil, followedUpAt: null });
   expect(row!.sentAt).toBeInstanceOf(Date);
 });
 
 test('sendQuote refuses a Quote the Customer already answered', async () => {
-  const { olga, quote } = await draftQuote();
+  const { quotesAssistant, quote } = await draftQuote();
   await db.update(quotes).set({ status: 'approved' }).where(eq(quotes.id, quote.id));
 
-  const { isError } = await runTool(quoteTools(olga), 'sendQuote', { quoteId: quote.id });
+  const { isError } = await runTool(quoteTools(quotesAssistant), 'sendQuote', { quoteId: quote.id });
 
   expect(isError).toBe(true);
 });

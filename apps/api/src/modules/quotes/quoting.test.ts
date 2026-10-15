@@ -37,23 +37,23 @@ afterAll(async () => {
   await app.stop();
 });
 
-async function professionalWithOlga() {
+async function professionalWithQuotesAssistant() {
   const signedIn = await signInNewProfessional();
   await api.me['ai-consent'].post(undefined, { headers: signedIn.headers });
   await api.team.post({ roles: ['quotes'] }, { headers: signedIn.headers });
   const { data: team } = await api.team.get({ headers: signedIn.headers });
-  const olga = (await findAssistant(signedIn.professional.id, team![0]!.id))!;
-  const created = await runTool(customerTools(olga), 'createCustomer', {
+  const quotesAssistant = (await findAssistant(signedIn.professional.id, team![0]!.id))!;
+  const created = await runTool(customerTools(quotesAssistant), 'createCustomer', {
     name: 'João Pereira',
     phoneNumber: `55119${String(randomInt(1e8)).padStart(8, '0')}`,
   });
   const joao = JSON.parse(created.text.slice(created.text.indexOf('{'))) as { id: string; phoneNumber: string };
-  await runTool(quoteTools(olga), 'upsertPriceItem', {
+  await runTool(quoteTools(quotesAssistant), 'upsertPriceItem', {
     priceItemId: null,
     name: 'Limpeza de split',
     priceCents: 18000,
   });
-  return { headers: signedIn.headers, olga, joao, conversation: api.team({ id: olga.id }) };
+  return { headers: signedIn.headers, quotesAssistant, joao, conversation: api.team({ id: quotesAssistant.id }) };
 }
 
 async function drain<T>(request: Promise<{ data: AsyncIterable<{ data: T }> | null; error: unknown }>) {
@@ -81,10 +81,10 @@ function idIn(result: string) {
   return (JSON.parse(result.slice(result.indexOf('{'))) as { id: string }).id;
 }
 
-type Olga = Awaited<ReturnType<typeof professionalWithOlga>>;
+type ProfessionalWithQuotesAssistant = Awaited<ReturnType<typeof professionalWithQuotesAssistant>>;
 
-// Olga looks up the price list and the Customer, builds the Quote and asks to send it, as Claude would.
-async function askForSplitCleaning({ headers, joao, conversation }: Olga) {
+// The quotes Assistant looks up the price list and the Customer, builds the Quote and asks to send it, as Claude would.
+async function askForSplitCleaning({ headers, joao, conversation }: ProfessionalWithQuotesAssistant) {
   let priceList = '';
   claude.reply(
     { content: [call('listPriceItems', {}), call('findCustomer', { query: 'João' })] },
@@ -111,21 +111,23 @@ async function askForSplitCleaning({ headers, joao, conversation }: Olga) {
   return data!.items.at(-1)!;
 }
 
-async function sendSplitCleaning(olga: Olga) {
-  const card = await askForSplitCleaning(olga);
+async function sendSplitCleaning(quotesAssistant: ProfessionalWithQuotesAssistant) {
+  const card = await askForSplitCleaning(quotesAssistant);
   claude.reply(say('Mandei. Te aviso quando ele responder.'));
   await drain(
-    olga.conversation.confirmations({ confirmationId: card.id }).post({ confirmed: true }, { headers: olga.headers }),
+    quotesAssistant.conversation
+      .confirmations({ confirmationId: card.id })
+      .post({ confirmed: true }, { headers: quotesAssistant.headers }),
   );
-  const [sent] = await listMessages({ phoneNumberId: platformNumber, waId: olga.joao.phoneNumber });
-  const [quote] = await db.select().from(quotes).where(eq(quotes.customerId, olga.joao.id));
+  const [sent] = await listMessages({ phoneNumberId: platformNumber, waId: quotesAssistant.joao.phoneNumber });
+  const [quote] = await db.select().from(quotes).where(eq(quotes.customerId, quotesAssistant.joao.id));
   return { sent: sent!, quote: quote! };
 }
 
 test('"Orçamento de limpeza de split pro João" builds the Quote from the PriceItems and shows the confirmation card', async () => {
-  const olga = await professionalWithOlga();
+  const quotesAssistant = await professionalWithQuotesAssistant();
 
-  const card = await askForSplitCleaning(olga);
+  const card = await askForSplitCleaning(quotesAssistant);
 
   expect(card).toMatchObject({
     type: 'confirmation',
@@ -137,14 +139,14 @@ test('"Orçamento de limpeza de split pro João" builds the Quote from the Price
       { label: 'Validade', value: expect.stringContaining('15 dias') },
     ]),
   });
-  const [quote] = await db.select().from(quotes).where(eq(quotes.customerId, olga.joao.id));
+  const [quote] = await db.select().from(quotes).where(eq(quotes.customerId, quotesAssistant.joao.id));
   expect(quote).toMatchObject({ status: 'draft', totalCents: 18000 });
-  expect(await listMessages({ phoneNumberId: platformNumber, waId: olga.joao.phoneNumber })).toEqual([]);
+  expect(await listMessages({ phoneNumberId: platformNumber, waId: quotesAssistant.joao.phoneNumber })).toEqual([]);
 });
 
-test("Aprovar on the Customer side marks the Quote approved and tells the Professional in Olga's conversation", async () => {
-  const olga = await professionalWithOlga();
-  const { sent, quote } = await sendSplitCleaning(olga);
+test("Aprovar on the Customer side marks the Quote approved and tells the Professional in the quotes Assistant's conversation", async () => {
+  const quotesAssistant = await professionalWithQuotesAssistant();
+  const { sent, quote } = await sendSplitCleaning(quotesAssistant);
   expect(sent).toMatchObject({ type: 'template', originType: 'quote', originId: quote.id });
 
   const click = await meta.emulator.messages({ id: sent.wamid }).click.post({ index: 0 });
@@ -152,14 +154,14 @@ test("Aprovar on the Customer side marks the Quote approved and tells the Profes
   expect(click.data?.webhook?.status).toBe(200);
   const [approved] = await db.select().from(quotes).where(eq(quotes.id, quote.id));
   expect(approved!.status).toBe('approved');
-  const { data } = await olga.conversation.messages.get({ headers: olga.headers });
+  const { data } = await quotesAssistant.conversation.messages.get({ headers: quotesAssistant.headers });
   expect(data!.items.at(-1)).toMatchObject({
     type: 'notice',
     text: expect.stringMatching(/^João Pereira aprovou o orçamento de R\$\s180,00\.$/),
   });
   claude.reply(say('Boa!'));
 
-  await drain(olga.conversation.messages.post({ text: 'Valeu' }, { headers: olga.headers }));
+  await drain(quotesAssistant.conversation.messages.post({ text: 'Valeu' }, { headers: quotesAssistant.headers }));
 
   expect(claude.requests.at(-1)!.messages.at(-1)).toEqual({
     role: 'user',
@@ -171,15 +173,15 @@ test("Aprovar on the Customer side marks the Quote approved and tells the Profes
 });
 
 test('Recusar marks the Quote declined, and a later tap changes nothing', async () => {
-  const olga = await professionalWithOlga();
-  const { sent, quote } = await sendSplitCleaning(olga);
+  const quotesAssistant = await professionalWithQuotesAssistant();
+  const { sent, quote } = await sendSplitCleaning(quotesAssistant);
 
   await meta.emulator.messages({ id: sent.wamid }).click.post({ index: 1 });
   await meta.emulator.messages({ id: sent.wamid }).click.post({ index: 0 });
 
   const [row] = await db.select().from(quotes).where(eq(quotes.id, quote.id));
   expect(row!.status).toBe('declined');
-  const { data } = await olga.conversation.messages.get({ headers: olga.headers });
+  const { data } = await quotesAssistant.conversation.messages.get({ headers: quotesAssistant.headers });
   expect(data!.items.slice(-2)).toMatchObject([
     { type: 'notice', text: expect.stringContaining('João Pereira recusou o orçamento') },
     { type: 'notice', text: expect.stringContaining('já estava recusado') },
@@ -187,14 +189,14 @@ test('Recusar marks the Quote declined, and a later tap changes nothing', async 
 });
 
 test('Aprovar after the validity changes nothing and says the Quote expired', async () => {
-  const olga = await professionalWithOlga();
-  const { sent, quote } = await sendSplitCleaning(olga);
+  const quotesAssistant = await professionalWithQuotesAssistant();
+  const { sent, quote } = await sendSplitCleaning(quotesAssistant);
   await db.update(quotes).set({ validUntil: '2020-01-31' }).where(eq(quotes.id, quote.id));
 
   await meta.emulator.messages({ id: sent.wamid }).click.post({ index: 0 });
 
   const [row] = await db.select().from(quotes).where(eq(quotes.id, quote.id));
   expect(row!.status).toBe('sent');
-  const { data } = await olga.conversation.messages.get({ headers: olga.headers });
+  const { data } = await quotesAssistant.conversation.messages.get({ headers: quotesAssistant.headers });
   expect(data!.items.at(-1)).toMatchObject({ type: 'notice', text: expect.stringContaining('venceu em 31/01') });
 });

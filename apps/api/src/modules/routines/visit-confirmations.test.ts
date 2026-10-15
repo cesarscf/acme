@@ -38,23 +38,23 @@ afterAll(async () => {
   await app.stop();
 });
 
-const liaChips = { agenda: 'paper', hours: 'weekdays', booking: 'ask_first', confirmations: 'day_before' };
+const schedulingChips = { agenda: 'paper', hours: 'weekdays', booking: 'ask_first', confirmations: 'day_before' };
 
-async function professionalWithLia() {
+async function professionalWithSchedulingAssistant() {
   const signedIn = await signInNewProfessional();
   await db.update(professionals).set({ timezone: timeZone }).where(eq(professionals.id, signedIn.professional.id));
   await api.team.post({ roles: ['scheduling'] }, { headers: signedIn.headers });
   const { data: team } = await api.team.get({ headers: signedIn.headers });
-  const lia = team![0]!;
-  const briefing = api.team({ id: lia.id }).briefing;
+  const schedulingAssistant = team![0]!;
+  const briefing = api.team({ id: schedulingAssistant.id }).briefing;
   const answer = async (step: string, option: string) =>
     expect((await briefing.answers.post({ step, option }, { headers: signedIn.headers })).status).toBe(200);
-  for (const [step, option] of Object.entries(liaChips)) await answer(step, option);
-  return { ...signedIn, lia, briefing, answer };
+  for (const [step, option] of Object.entries(schedulingChips)) await answer(step, option);
+  return { ...signedIn, schedulingAssistant, briefing, answer };
 }
 
-async function approvedLia() {
-  const professional = await professionalWithLia();
+async function approvedSchedulingAssistant() {
+  const professional = await professionalWithSchedulingAssistant();
   expect((await professional.briefing.approve.post(undefined, { headers: professional.headers })).status).toBe(200);
   return professional;
 }
@@ -108,37 +108,37 @@ async function advanceTo(time: string) {
   await clock.tick(60_000);
 }
 
-test("approving Lia's Playbook creates the Routine in the Professional's time zone, and Desfazer removes it", async () => {
-  const { lia, briefing, headers } = await approvedLia();
+test("approving the scheduling Playbook creates the Routine in the Professional's time zone, and Desfazer removes it", async () => {
+  const { schedulingAssistant, briefing, headers } = await approvedSchedulingAssistant();
 
-  expect(await findRoutine(lia.id)).toMatchObject({ cron: '0 18 * * *', timezone: timeZone });
+  expect(await findRoutine(schedulingAssistant.id)).toMatchObject({ cron: '0 18 * * *', timezone: timeZone });
 
   expect((await briefing.undo.post(undefined, { headers })).status).toBe(200);
 
-  expect(await findRoutine(lia.id)).toBeNull();
+  expect(await findRoutine(schedulingAssistant.id)).toBeNull();
   expect((await briefing.get({ headers })).data!.status).toBe('draft');
 });
 
-test('changing when Lia confirms in Ver ficha moves the Routine, and "Só quando você pedir" removes it', async () => {
-  const { lia, answer } = await approvedLia();
+test('changing when the scheduling Assistant confirms in Ver ficha moves the Routine, and "Só quando você pedir" removes it', async () => {
+  const { schedulingAssistant, answer } = await approvedSchedulingAssistant();
 
   await answer('confirmations', 'same_day');
-  expect(await findRoutine(lia.id)).toMatchObject({ cron: '0 7 * * *', timezone: timeZone });
+  expect(await findRoutine(schedulingAssistant.id)).toMatchObject({ cron: '0 7 * * *', timezone: timeZone });
 
   await answer('confirmations', 'on_request');
-  expect(await findRoutine(lia.id)).toBeNull();
+  expect(await findRoutine(schedulingAssistant.id)).toBeNull();
 });
 
 test('a draft Playbook has no Routine and nothing to undo', async () => {
-  const { lia, briefing, headers } = await professionalWithLia();
+  const { schedulingAssistant, briefing, headers } = await professionalWithSchedulingAssistant();
 
-  expect(await findRoutine(lia.id)).toBeNull();
+  expect(await findRoutine(schedulingAssistant.id)).toBeNull();
   expect((await briefing.undo.post(undefined, { headers })).status).toBe(409);
 });
 
 test("the Routine asks for confirmation of tomorrow's Visits at 18h in the Professional's time zone", async () => {
   await clock.setTime('2030-03-12T20:30:00Z');
-  const { lia, professional } = await approvedLia();
+  const { schedulingAssistant, professional } = await approvedSchedulingAssistant();
   const tomorrow = await visitAt(professional.id, '2030-03-13', '14:00');
   const confirmed = await visitAt(professional.id, '2030-03-13', '09:00', 'confirmed');
   const cancelled = await visitAt(professional.id, '2030-03-13', '10:00', 'cancelled');
@@ -157,13 +157,16 @@ test("the Routine asks for confirmation of tomorrow's Visits at 18h in the Profe
     expect.objectContaining({ direction: 'outbound', waId: tomorrow.customer.phoneNumber }),
   ]);
   for (const other of [confirmed, cancelled, later, today]) expect(await confirmationsSentTo(other.id)).toHaveLength(0);
-  const notices = await db.select().from(assistantNotices).where(eq(assistantNotices.assistantId, lia.id));
+  const notices = await db
+    .select()
+    .from(assistantNotices)
+    .where(eq(assistantNotices.assistantId, schedulingAssistant.id));
   expect(notices.map(({ text }) => text)).toEqual([expect.stringContaining(tomorrow.customer.name)]);
 });
 
 test('a Routine that fails tries again and asks no Customer twice', async () => {
   await clock.setTime('2030-03-19T21:30:00Z');
-  const { professional } = await approvedLia();
+  const { professional } = await approvedSchedulingAssistant();
   const first = await visitAt(professional.id, '2030-03-20', '08:00');
   const second = await visitAt(professional.id, '2030-03-20', '10:00');
   const realFetch = globalThis.fetch;
@@ -191,7 +194,7 @@ test('a Routine that fails tries again and asks no Customer twice', async () => 
 
 test('a run missed while the API was down goes out once it is back, for the Visits it was due for', async () => {
   await clock.setTime('2030-03-26T21:30:00Z');
-  const { professional } = await approvedLia();
+  const { professional } = await approvedSchedulingAssistant();
   const due = await visitAt(professional.id, '2030-03-27', '10:00');
   const dayAfter = await visitAt(professional.id, '2030-03-28', '10:00');
 

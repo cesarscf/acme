@@ -1,0 +1,1 @@
+ALTER TABLE "visits" ADD COLUMN "confirmation_requested_for" timestamp with time zone;

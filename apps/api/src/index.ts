@@ -1,7 +1,10 @@
 import { app } from './app';
 import { ensureLoginCodeTemplate } from './modules/auth/service';
+import { startRoutines } from './modules/routines/service';
 import { ensureVisitConfirmationTemplate } from './modules/visits/service';
 
+// Before listening, so no request starts the Routines' pg-boss on its own.
+await startRoutines();
 app.listen(Number(process.env.PORT ?? 3000));
 
 console.log(`API on http://${app.server?.hostname}:${app.server?.port}`);

@@ -43,3 +43,14 @@ export function useApproveMutation(assistantId: string) {
       ]),
   });
 }
+
+export function useUndoMutation(assistantId: string) {
+  return useMutation({
+    mutationFn: () => unwrap(api.team({ id: assistantId }).briefing.undo.post()),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: briefingKeys.detail(assistantId) }),
+        queryClient.invalidateQueries({ queryKey: teamKeys.all }),
+      ]),
+  });
+}

@@ -280,6 +280,8 @@ export const visits = pgTable(
     scheduledAt: timestamp({ withTimezone: true }).notNull(),
     durationMinutes: integer().notNull(),
     status: visitStatus().notNull().default('scheduled'),
+    // The scheduledAt the Customer was last asked to confirm, so a Routine retry does not ask again.
+    confirmationRequestedFor: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })
       .notNull()

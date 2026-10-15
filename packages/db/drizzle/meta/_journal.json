@@ -64,6 +64,13 @@
       "when": 1792079692045,
       "tag": "0008_customers-and-visits",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792081887967,
+      "tag": "0009_visit-confirmation-requested-for",
+      "breakpoints": true
     }
   ]
 }

@@ -154,11 +154,11 @@ test('the draft Playbook comes when every step is answered, with the Routine mar
   const { data } = await briefing.get({ headers });
   expect(data!.status).toBe('draft');
   expect(data!.playbook).toEqual([
-    { step: null, label: 'O que faz', value: 'Marcar visitas e confirmar com os clientes', routine: false },
-    { step: 'agenda', label: 'Onde', value: 'Aqui no app', routine: false },
-    { step: 'hours', label: 'Atende', value: 'Seg a sex, 8h às 18h', routine: false },
-    { step: 'booking', label: 'Sozinha', value: 'Pergunta antes de marcar', routine: false },
-    { step: 'confirmations', label: 'Quando', value: 'Na véspera, às 18h', routine: true },
+    { step: null, label: 'O que faz', value: 'Marcar visitas e confirmar com os clientes', routine: null },
+    { step: 'agenda', label: 'Onde', value: 'Aqui no app', routine: null },
+    { step: 'hours', label: 'Atende', value: 'Seg a sex, 8h às 18h', routine: null },
+    { step: 'booking', label: 'Sozinha', value: 'Pergunta antes de marcar', routine: null },
+    { step: 'confirmations', label: 'Quando', value: 'Na véspera, às 18h', routine: 'Confirmações na véspera, às 18h' },
   ]);
 });
 
@@ -266,7 +266,7 @@ test('the approved Playbook shows in Ver ficha and can be changed later without 
     step: 'confirmations',
     label: 'Quando',
     value: 'Quando você pedir',
-    routine: false,
+    routine: null,
   });
   expect((await briefing.adjust.post({ step: 'hours' }, { headers })).status).toBe(409);
 });

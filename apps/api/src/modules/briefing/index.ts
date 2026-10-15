@@ -1,7 +1,16 @@
 import { Elysia, status } from 'elysia';
 import { auth } from '../auth';
 import { BriefingModel } from './model';
-import { answerStep, approve, findBriefingAssistant, findStep, getBriefing, reopenStep, skipConnect } from './service';
+import {
+  answerStep,
+  approve,
+  findBriefingAssistant,
+  findStep,
+  getBriefing,
+  reopenStep,
+  skipConnect,
+  undoApproval,
+} from './service';
 
 export const briefing = new Elysia()
   .use(auth)
@@ -48,6 +57,16 @@ export const briefing = new Elysia()
       const assistant = await findBriefingAssistant(professional.id, id);
       if (!assistant) throw status(404, 'Assistant not found');
       if (!(await approve(assistant))) throw status(409, 'Playbook has steps left');
+    },
+    { auth: true, params: 'briefing.Assistant' },
+  )
+  .post(
+    '/team/:id/briefing/undo',
+    async ({ professional, params: { id } }) => {
+      const assistant = await findBriefingAssistant(professional.id, id);
+      if (!assistant) throw status(404, 'Assistant not found');
+      if (assistant.playbookStatus !== 'approved') throw status(409, 'Playbook is not approved');
+      await undoApproval(assistant.id);
     },
     { auth: true, params: 'briefing.Assistant' },
   )

@@ -16,7 +16,7 @@ type StepDefinition<Value> = {
   schema: z.ZodType<Value>;
   options: Option<NoInfer<Value>>[];
   format: (value: NoInfer<Value>) => string;
-  routine?: (value: NoInfer<Value>) => boolean;
+  routine?: (value: NoInfer<Value>) => string | null;
 };
 
 export type BriefingStep = {
@@ -27,7 +27,7 @@ export type BriefingStep = {
   guide: string;
   schema: z.ZodType;
   options: Option<unknown>[];
-  describe: (value: unknown) => { step: string; label: string; value: string; routine: boolean } | undefined;
+  describe: (value: unknown) => { step: string; label: string; value: string; routine: string | null } | undefined;
 };
 
 export type BriefingScript = {
@@ -50,7 +50,7 @@ function step<Value>(definition: StepDefinition<Value>): BriefingStep {
         step: definition.key,
         label: definition.label,
         value: format(parsed.data),
-        routine: routine?.(parsed.data) ?? false,
+        routine: routine?.(parsed.data) ?? null,
       };
     },
   };
@@ -79,7 +79,7 @@ const hours = z
   )
   .min(1);
 
-const confirmations = z
+export const confirmations = z
   .strictObject({ when: z.enum(['day_before', 'same_day', 'on_request']), time: time.nullable() })
   .refine(({ when, time }) => (when === 'on_request') === (time === null), 'time só fica vazio em on_request');
 
@@ -235,7 +235,10 @@ const scheduling: BriefingScript = {
         when === 'on_request'
           ? 'Quando você pedir'
           : `${when === 'day_before' ? 'Na véspera' : 'No dia'}, às ${formatTime(time!)}`,
-      routine: ({ when }) => when !== 'on_request',
+      routine: ({ when, time }) =>
+        when === 'on_request'
+          ? null
+          : `Confirmações ${when === 'day_before' ? 'na véspera' : 'no dia'}, às ${formatTime(time!)}`,
     }),
   ],
   done: 'Pronto! A partir de agora a agenda é comigo. É só me pedir para marcar, remarcar ou cancelar uma visita.',
@@ -352,7 +355,8 @@ const quotes: BriefingScript = {
         if (action === 'notify_me') return `Te avisa em ${days} e você decide`;
         return 'Não insiste';
       },
-      routine: ({ action }) => action === 'remind',
+      routine: ({ action, afterDays }) =>
+        action === 'remind' ? `Lembrete do orçamento ${afterDays === 1 ? 'em 1 dia' : `em ${afterDays} dias`}` : null,
     }),
   ],
   done: 'Pronto! É só me mandar um áudio ou uma descrição do serviço que eu monto o orçamento e te mostro antes de enviar.',

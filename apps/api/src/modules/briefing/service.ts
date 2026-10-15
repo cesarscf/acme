@@ -1,6 +1,7 @@
 import { assistants, db, professionals } from '@acme/db';
 import { and, eq, sql } from 'drizzle-orm';
 import { hasAiConsent } from '../conversations/service';
+import { syncRoutines } from '../routines/service';
 import type { AssistantRole } from '../team/catalog';
 import { interpret } from './interpret';
 import { type BriefingScript, type BriefingStep, briefingScripts } from './scripts';
@@ -63,7 +64,7 @@ export function playbookRows(script: BriefingScript, playbook: Record<string, un
   const rows = script.steps.map((step) => step.describe(playbook[step.key]));
   if (rows.some((row) => !row)) return null;
   return [
-    { step: null, label: 'O que faz', value: script.what, routine: false },
+    { step: null, label: 'O que faz', value: script.what, routine: null },
     ...(rows as NonNullable<(typeof rows)[number]>[]),
   ];
 }
@@ -111,12 +112,14 @@ export async function answerStep(
     const option = step.options.find(({ key }) => key === input.option);
     if (!option || !('value' in option)) return { refused: 'option_not_available' };
     await saveAnswer(assistant.id, step, option.value, { said: option.label, ack: option.ack });
+    await syncRoutines(assistant.id);
     return { understood: true };
   }
   if (!(await hasAiConsent(assistant.professional.id))) return { refused: 'ai_consent_required' };
   const { value, reply } = await interpret(assistant, step, input.text);
   if (value === null) return { understood: false, reply };
   await saveAnswer(assistant.id, step, value, { said: input.text, ack: reply });
+  await syncRoutines(assistant.id);
   return { understood: true };
 }
 
@@ -124,7 +127,14 @@ export async function approve(assistant: BriefingAssistant) {
   const script = briefingScripts[assistant.role];
   if (!script || !playbookRows(script, assistant.playbook)) return false;
   await db.update(assistants).set({ playbookStatus: 'approved' }).where(eq(assistants.id, assistant.id));
+  await syncRoutines(assistant.id);
   return true;
+}
+
+// Desfazer: the Playbook goes back to draft and its Routines stop.
+export async function undoApproval(assistantId: string) {
+  await db.update(assistants).set({ playbookStatus: 'draft' }).where(eq(assistants.id, assistantId));
+  await syncRoutines(assistantId);
 }
 
 export async function reopenStep(assistantId: string, step: BriefingStep) {

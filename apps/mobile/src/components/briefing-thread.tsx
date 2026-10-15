@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import {
   useAdjustMutation,
   useApproveMutation,
   useSkipConnectMutation,
+  useUndoMutation,
 } from '@/hooks/data/briefing/use-briefing-mutation';
 import type { Briefing } from '@/hooks/data/briefing/use-briefing-query';
 import type { Assistant } from '@/hooks/data/team/use-team-query';
@@ -36,12 +37,14 @@ export function BriefingThread({
   const skip = useSkipConnectMutation(assistant.id);
   const adjust = useAdjustMutation(assistant.id);
   const approve = useApproveMutation(assistant.id);
+  const undo = useUndoMutation(assistant.id);
   const [adjusting, setAdjusting] = useState(false);
-  const disabled = busy || skip.isPending || adjust.isPending || approve.isPending;
+  const disabled = busy || skip.isPending || adjust.isPending || approve.isPending || undo.isPending;
   const approved = briefing.status === 'approved';
 
   // Answered steps up to the open one; Ajustar reopens a step and hides the ones after it until it is answered again.
   const visibleSteps = step ? briefing.steps.slice(0, briefing.steps.indexOf(step) + 1) : briefing.steps;
+  const routines = briefing.playbook?.flatMap((row) => (row.routine ? [row.routine] : [])) ?? [];
   const intros = [connectSkipped, ...visibleSteps.map((visible) => visible.answer?.ack ?? '')];
 
   return (
@@ -99,12 +102,26 @@ export function BriefingThread({
                   onCancel={() => setAdjusting(false)}
                 />
               )}
-              {approved && <Reply text={briefing.done} />}
+              {approved && (
+                <>
+                  <SystemLine>
+                    <Text className="font-normal text-[12.5px] text-muted-foreground">
+                      {routines.length ? `Rotina criada: ${routines.join(', ')}` : 'Ficha combinada'} ·
+                    </Text>
+                    <Pressable accessibilityRole="button" disabled={disabled} onPress={() => undo.mutate()}>
+                      <Text className={`font-bold text-[12.5px] text-primary ${disabled ? 'opacity-50' : ''}`}>
+                        Desfazer
+                      </Text>
+                    </Pressable>
+                  </SystemLine>
+                  <Reply text={briefing.done} />
+                </>
+              )}
             </>
           )}
         </>
       )}
-      {(skip.isError || adjust.isError || approve.isError) && (
+      {(skip.isError || adjust.isError || approve.isError || undo.isError) && (
         <Text selectable className="font-normal text-destructive text-sm">
           Não consegui salvar. Tente de novo.
         </Text>

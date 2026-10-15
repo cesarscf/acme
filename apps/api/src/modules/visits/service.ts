@@ -128,6 +128,34 @@ export async function sendVisitConfirmation(
     },
     origin: { type: 'visit', id: visit.id },
   });
+  await db.update(visits).set({ confirmationRequestedFor: visit.scheduledAt }).where(eq(visits.id, visit.id));
+}
+
+// The Routine's run: every Visit of the day still ahead and waiting, except the ones already asked about their current time.
+export async function requestDueVisitConfirmations(
+  professional: { id: string; name: string; timezone: string },
+  date: string,
+) {
+  const due = await listVisits(professional.id, professional.timezone, date, date);
+  for (const visit of due) {
+    if (
+      visit.status !== 'scheduled' ||
+      visit.scheduledAt.getTime() <= Date.now() ||
+      visit.confirmationRequestedFor?.getTime() === visit.scheduledAt.getTime()
+    ) {
+      continue;
+    }
+    await sendVisitConfirmation(visit, professional);
+    const when = formatLocalDateTime(visit.scheduledAt, professional.timezone);
+    await db.transaction((tx) =>
+      addNotice(
+        tx,
+        professional.id,
+        'scheduling',
+        `Rotina: pedi para ${visit.customer.name} confirmar a visita de ${when}.`,
+      ),
+    );
+  }
 }
 
 onButtonClick('visit', async ({ originId, button, tx }) => {

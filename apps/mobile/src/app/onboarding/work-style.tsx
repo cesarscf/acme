@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
+import { Button } from '@/components/button';
 import { Check } from '@/components/check';
-import { PrimaryButton } from '@/components/primary-button';
 import { api } from '@/lib/api';
+import { selectionFeedback } from '@/lib/haptics';
 import { workStyles } from '@/lib/onboarding';
 import { meQuery, queryClient, unwrap, type WorkStyle } from '@/lib/queries';
 
@@ -22,21 +23,31 @@ export default function WorkStyleScreen() {
     },
   });
 
+  function choose(workStyle: WorkStyle) {
+    selectionFeedback();
+    setChosen(workStyle);
+  }
+
   return (
     <View className="flex-1 bg-card px-5" style={{ paddingTop: top + 18, paddingBottom: bottom + 16 }}>
       <BackButton />
-      <Text className="mt-7 font-extrabold text-[29px] text-foreground leading-[33px]">Como você trabalha hoje?</Text>
-      <Text className="mt-2 text-[15px] text-muted-foreground">Assim eu monto a equipe certa para você.</Text>
-      <View className="mt-[22px] gap-2.5">
+      <Text className="mt-7 font-extrabold text-[29px] text-foreground leading-[33px] tracking-[-0.58px]">
+        Como você trabalha hoje?
+      </Text>
+      <Text className="mt-2 font-normal text-[15px] text-muted-foreground leading-[22px]">
+        Assim eu monto a equipe certa para você.
+      </Text>
+      <View className="mt-[22px] gap-2.5" accessibilityRole="radiogroup">
         {workStyles.map(({ workStyle, title, description, people }) => {
           const on = chosen === workStyle;
           return (
             <Pressable
               key={workStyle}
-              className={`min-h-[76px] flex-row items-center gap-3 rounded-[18px] border-[1.5px] px-4 py-3.5 ${on ? 'border-primary bg-accent' : 'border-border bg-card'}`}
+              className={`min-h-[76px] flex-row items-center gap-3 rounded-[18px] border-[1.5px] px-4 py-3.5 ${on ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}
+              style={{ borderCurve: 'continuous' }}
               accessibilityRole="radio"
               accessibilityState={{ checked: on }}
-              onPress={() => setChosen(workStyle)}
+              onPress={() => choose(workStyle)}
             >
               <View className="h-11 w-[54px] flex-row items-end justify-center gap-[3px]">
                 {Array.from({ length: people }, (_, index) => (
@@ -48,7 +59,7 @@ export default function WorkStyleScreen() {
               </View>
               <View className="flex-1">
                 <Text className="font-bold text-base text-foreground">{title}</Text>
-                <Text className="mt-0.5 text-[13.5px] text-muted-foreground">{description}</Text>
+                <Text className="mt-0.5 font-normal text-[13.5px] text-muted-foreground">{description}</Text>
               </View>
               <Check checked={on} />
             </Pressable>
@@ -56,15 +67,23 @@ export default function WorkStyleScreen() {
         })}
       </View>
       <View className="flex-1" />
-      {save.isError && <Text className="mb-2 text-destructive">Não conseguimos salvar. Tente de novo.</Text>}
-      <PrimaryButton label="Continuar" disabled={!chosen || save.isPending} onPress={() => save.mutate(chosen!)} />
-      <Pressable
-        className="min-h-11 items-center justify-center self-center p-3"
-        disabled={save.isPending}
+      {save.isError && (
+        <Text selectable className="mb-2 font-normal text-destructive text-sm">
+          Não conseguimos salvar. Tente de novo.
+        </Text>
+      )}
+      <Button
+        label="Continuar"
+        disabled={!chosen}
+        loading={save.isPending && save.variables !== null}
+        onPress={() => save.mutate(chosen!)}
+      />
+      <Button
+        label="Pular"
+        variant="link"
+        loading={save.isPending && save.variables === null}
         onPress={() => save.mutate(null)}
-      >
-        <Text className="font-bold text-[15px] text-foreground">Pular</Text>
-      </Pressable>
+      />
     </View>
   );
 }

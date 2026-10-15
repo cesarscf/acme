@@ -1,0 +1,30 @@
+import Svg, { Path } from 'react-native-svg';
+import { useCSSVariable } from 'uniwind';
+
+// Stroke icons drawn from the prototype's SVGs.
+const paths = {
+  back: 'M15 5l-7 7 7 7',
+  chevronDown: 'M6 9l6 6 6-6',
+  wrench: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+};
+
+export function Icon({
+  name,
+  size = 20,
+  color = '--color-foreground',
+  strokeWidth = 2,
+}: {
+  name: keyof typeof paths;
+  size?: number;
+  color?: `--color-${string}`;
+  strokeWidth?: number;
+}) {
+  const stroke = useCSSVariable(color) as string;
+
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" accessible={false}>
+      <Path d={paths[name]} stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}

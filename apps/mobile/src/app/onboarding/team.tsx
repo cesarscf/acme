@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
+import { Button } from '@/components/button';
 import { Check } from '@/components/check';
+import { LoadError } from '@/components/load-error';
 import { Mascot } from '@/components/mascot';
-import { PrimaryButton } from '@/components/primary-button';
 import { api } from '@/lib/api';
+import { selectionFeedback } from '@/lib/haptics';
 import { recommendedRoles, teamButtonLabel } from '@/lib/onboarding';
 import {
   type CatalogEntry,
@@ -20,9 +22,12 @@ import {
 } from '@/lib/queries';
 
 export default function Team() {
-  const { data: catalog } = useQuery(catalogQuery);
-  if (!catalog) return <View className="flex-1 bg-card" />;
-  return <TeamPicker catalog={catalog} />;
+  const catalog = useQuery(catalogQuery);
+  if (catalog.isError) {
+    return <LoadError message="Não conseguimos carregar os assistentes." onRetry={() => catalog.refetch()} />;
+  }
+  if (!catalog.data) return <View className="flex-1 bg-card" />;
+  return <TeamPicker catalog={catalog.data} />;
 }
 
 function TeamPicker({ catalog }: { catalog: CatalogEntry[] }) {
@@ -39,6 +44,7 @@ function TeamPicker({ catalog }: { catalog: CatalogEntry[] }) {
   });
 
   function toggle(role: Role) {
+    selectionFeedback();
     setChosen(chosen.includes(role) ? chosen.filter((other) => other !== role) : [...chosen, role]);
   }
 
@@ -46,12 +52,18 @@ function TeamPicker({ catalog }: { catalog: CatalogEntry[] }) {
     <View className="flex-1 bg-card" style={{ paddingTop: top + 18 }}>
       <View className="px-5">
         <BackButton />
-        <Text className="mt-[22px] font-extrabold text-[29px] text-foreground leading-[33px]">Monte sua equipe.</Text>
-        <Text className="mt-2 text-[15px] text-muted-foreground leading-[22px]">
+        <Text className="mt-[22px] font-extrabold text-[29px] text-foreground leading-[33px] tracking-[-0.58px]">
+          Monte sua equipe.
+        </Text>
+        <Text className="mt-2 font-normal text-[15px] text-muted-foreground leading-[22px]">
           Assistentes fazem o trabalho do escritório por você. Já marquei os que combinam com o seu jeito de trabalhar.
         </Text>
       </View>
-      <ScrollView className="flex-1" contentContainerClassName="flex-row flex-wrap gap-2.5 px-5 pt-[18px] pb-3">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="flex-row flex-wrap justify-between gap-y-2.5 px-5 pt-[18px] pb-3"
+        showsVerticalScrollIndicator={false}
+      >
         {catalog.map((entry) => (
           <TeamCard
             key={entry.role}
@@ -62,11 +74,16 @@ function TeamPicker({ catalog }: { catalog: CatalogEntry[] }) {
           />
         ))}
       </ScrollView>
-      <View className="border-border border-t px-5 pt-2.5" style={{ paddingBottom: bottom + 16 }}>
-        {save.isError && <Text className="mb-2 text-destructive">Não conseguimos salvar. Tente de novo.</Text>}
-        <PrimaryButton
+      <View className="border-secondary border-t px-5 pt-2.5" style={{ paddingBottom: bottom + 16 }}>
+        {save.isError && (
+          <Text selectable className="mb-2 font-normal text-destructive text-sm">
+            Não conseguimos salvar. Tente de novo.
+          </Text>
+        )}
+        <Button
           label={teamButtonLabel(chosen.length)}
-          disabled={!chosen.length || save.isPending}
+          disabled={!chosen.length}
+          loading={save.isPending}
           onPress={() => save.mutate()}
         />
       </View>
@@ -87,7 +104,8 @@ function TeamCard({
 }) {
   return (
     <Pressable
-      className={`min-h-[132px] w-[48.4%] rounded-[18px] border-[1.5px] p-3.5 ${checked ? 'border-primary bg-accent' : 'border-border bg-secondary'} ${available ? '' : 'opacity-50'}`}
+      className={`min-h-[132px] w-[48.5%] rounded-[18px] border-[1.5px] p-3.5 ${checked ? 'border-primary bg-primary/10' : 'border-border bg-background'} ${available ? '' : 'opacity-50'}`}
+      style={{ borderCurve: 'continuous' }}
       accessibilityRole="checkbox"
       accessibilityState={{ checked, disabled: !available }}
       accessibilityLabel={`${name}, ${tagline}${available ? '' : ', em breve'}`}
@@ -99,9 +117,9 @@ function TeamCard({
         {available && <Check checked={checked} size={22} />}
       </View>
       <Text className="mt-2.5 font-extrabold text-base text-foreground">{name}</Text>
-      <Text className="mt-0.5 text-[13px] text-muted-foreground leading-[18px]">{tagline}</Text>
-      {available && recommended && (
-        <Text className="mt-2 self-start overflow-hidden rounded-full border border-accent-foreground/20 bg-card px-2 py-0.5 font-bold text-[11.5px] text-accent-foreground">
+      <Text className="mt-0.5 font-normal text-[13px] text-muted-foreground leading-[18px]">{tagline}</Text>
+      {recommended && (
+        <Text className="mt-2 self-start overflow-hidden rounded-full border border-primary/20 bg-card px-2 py-0.5 font-bold text-[11.5px] text-accent-foreground">
           Recomendado
         </Text>
       )}

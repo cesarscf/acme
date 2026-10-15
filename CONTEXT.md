@@ -30,8 +30,16 @@ _Avoid_: Staff, team
 ### Assistants
 
 **Assistant** (Assistente):
-Um membro do Team com nome, mascote e uma função fixa (Agenda, Orçamentos, Cobrança…).
+Um membro do Team, com nome (que o Professional pode trocar), mascote e um Role. Ex.: a Lia é uma Assistant com o Role de agenda.
 _Avoid_: Agent, bot, IA
+
+**Role** (Função):
+O trabalho fixo de um Assistant (agenda, orçamentos, cobrança…). Define o roteiro do Briefing e o que o Assistant sabe fazer.
+_Avoid_: Type, kind, cargo
+
+**Catalog** (Catálogo de assistentes):
+A lista de Roles que o Professional pode escolher para o Team, cada um com um nome e um mascote padrão.
+_Avoid_: Templates, marketplace
 
 **Team** (Equipe, no sentido de assistentes):
 O conjunto de Assistants que o Professional escolheu.

@@ -1,4 +1,6 @@
 import * as z from 'zod';
+import { pixBrCode } from '../pix/br-code';
+import { formatPixKey, parsePixKey, pixKeyTypes } from '../pix/pix-key';
 import type { AssistantRole } from '../team/catalog';
 
 type Option<Value> =
@@ -6,27 +8,33 @@ type Option<Value> =
   // Shown as "em breve": the integration does not exist in the MVP.
   | { key: string; label: string; hint?: string; comingSoon: true };
 
+type Parsed<Value> = { value: Value; ack: string } | { error: string };
+
+// A step with a parse reads free text itself, so a Pix key never goes to Claude.
+type TextAnswer<Value> =
+  | { guide: string; parse?: undefined }
+  | { guide?: undefined; parse: (text: string) => Parsed<Value> };
+
 type StepDefinition<Value> = {
   key: string;
   label: string;
   pre?: string;
   question: string;
-  // What the field keeps, for Claude to fit a free text answer into it.
-  guide: string;
   schema: z.ZodType<Value>;
   options: Option<NoInfer<Value>>[];
   format: (value: NoInfer<Value>) => string;
   routine?: (value: NoInfer<Value>) => string | null;
-};
+} & TextAnswer<NoInfer<Value>>;
 
 export type BriefingStep = {
   key: string;
   label: string;
   pre?: string;
   question: string;
-  guide: string;
   schema: z.ZodType;
   options: Option<unknown>[];
+  guide?: string;
+  parse?: (text: string) => Parsed<unknown>;
   describe: (value: unknown) => { step: string; label: string; value: string; routine: string | null } | undefined;
 };
 
@@ -35,6 +43,7 @@ export type BriefingScript = {
   greeting: string;
   connect: { name: string; reason: string; availability: 'first_message' | 'coming_soon' }[];
   steps: BriefingStep[];
+  testPix?: (playbook: Record<string, unknown>) => { text: string; code: string } | null;
   done: string;
 };
 
@@ -42,7 +51,6 @@ function step<Value>(definition: StepDefinition<Value>): BriefingStep {
   const { format, routine, ...rest } = definition;
   return {
     ...rest,
-    options: definition.options,
     describe: (value) => {
       const parsed = definition.schema.safeParse(value);
       if (!parsed.success) return undefined;
@@ -368,8 +376,125 @@ const quotes: BriefingScript = {
   done: 'Pronto! É só me mandar um áudio ou uma descrição do serviço que eu monto o orçamento e te mostro antes de enviar.',
 };
 
-// Tina's script comes with her PaymentMethods (ticket 12).
-export const briefingScripts: Partial<Record<AssistantRole, BriefingScript>> = { scheduling, quotes };
+const paymentMethodKinds = ['pix', 'cash'] as const;
+
+// Tina charges through Pix, so the Pix key is always one of the PaymentMethods.
+export const paymentMethods = z
+  .strictObject({ accepted: z.array(z.enum(paymentMethodKinds)).min(1), default: z.enum(paymentMethodKinds) })
+  .refine(({ accepted }) => accepted.includes('pix'), 'pix sempre entra')
+  .refine(({ accepted }) => new Set(accepted).size === accepted.length, 'sem repetir')
+  .refine(({ accepted, default: preferred }) => accepted.includes(preferred), 'a padrão é uma das aceitas');
+
+export const pixKey = z.strictObject({ type: z.enum(pixKeyTypes), key: z.string() }).refine(({ type, key }) => {
+  const parsed = parsePixKey(key);
+  return 'key' in parsed && parsed.type === type && parsed.key === key;
+}, 'chave Pix inválida');
+
+// The BR Code carries only ASCII, so a name without Latin letters would come out empty.
+const words = (max: number) =>
+  z
+    .string()
+    .trim()
+    .min(2)
+    .max(max)
+    .regex(/[a-zà-ÿ]/i);
+export const pixName = words(60);
+export const pixCity = words(40);
+
+function parseWords(schema: z.ZodType<string>, error: string) {
+  return (text: string): Parsed<string> => {
+    const parsed = schema.safeParse(text.replace(/\s+/g, ' '));
+    return parsed.success ? { value: parsed.data, ack: `Anotado: ${parsed.data}.` } : { error };
+  };
+}
+
+const billing: BriefingScript = {
+  what: 'Gerar o Pix, confirmar o pagamento e lembrar quem atrasou',
+  greeting: 'Vou cuidar das suas cobranças no Pix, com jeito.',
+  connect: [
+    { name: 'WhatsApp', reason: 'Mandar a cobrança ao cliente', availability: 'first_message' },
+    { name: 'Banco', reason: 'Ver quando o dinheiro caiu', availability: 'coming_soon' },
+  ],
+  steps: [
+    step({
+      key: 'paymentMethods',
+      label: 'Recebe',
+      question: 'Como você aceita receber?',
+      guide:
+        'As formas de receber que o profissional aceita (accepted) e a padrão (default), que vem marcada quando ele registra um serviço: pix ou cash (dinheiro). pix sempre entra, porque a cobrança é no Pix. Cartão e conectar o banco ainda não existem: se ele falar deles, deixe de fora e diga no reply que vêm em breve. Se ele não disser qual é a padrão, use pix.',
+      schema: paymentMethods,
+      options: [
+        {
+          key: 'pix_and_cash',
+          label: 'Pix e dinheiro',
+          hint: 'O Pix vem marcado',
+          ack: 'Anotado: Pix e dinheiro.',
+          value: { accepted: ['pix', 'cash'], default: 'pix' },
+        },
+        {
+          key: 'pix',
+          label: 'Só Pix',
+          ack: 'Anotado: só Pix.',
+          value: { accepted: ['pix'], default: 'pix' },
+        },
+        { key: 'bank', label: 'Conectar banco', hint: 'Vejo quando o dinheiro cai', comingSoon: true },
+        { key: 'card', label: 'Cartão', comingSoon: true },
+      ],
+      format: ({ accepted, default: preferred }) =>
+        accepted.length === 1 ? 'Só Pix' : `Pix e dinheiro, ${preferred === 'pix' ? 'o Pix' : 'o dinheiro'} por padrão`,
+    }),
+    step({
+      key: 'pixKey',
+      label: 'Chave Pix',
+      pre: 'Para gerar o Pix, preciso da chave da conta onde você quer receber.',
+      question: 'Qual é a sua chave Pix?',
+      schema: pixKey,
+      options: [],
+      parse: (text) => {
+        const parsed = parsePixKey(text);
+        if ('error' in parsed) return parsed;
+        // An 11 digit key may be a CPF or a cell phone; a valid CPF wins, and +55 picks the phone.
+        const maybePhone =
+          parsed.type === 'cpf' && parsed.key[2] === '9' ? ' Se for um celular, escreva com +55 na frente.' : '';
+        return { value: parsed, ack: `Anotei a chave: ${formatPixKey(parsed)}.${maybePhone}` };
+      },
+      format: formatPixKey,
+    }),
+    step({
+      key: 'pixName',
+      label: 'Nome',
+      question: 'Qual é o seu nome, do jeito que está no banco?',
+      schema: pixName,
+      options: [],
+      parse: parseWords(pixName, 'Escreva o nome do jeito que aparece no app do banco.'),
+      format: (name) => name,
+    }),
+    step({
+      key: 'pixCity',
+      label: 'Cidade',
+      pre: 'O Pix também leva a sua cidade.',
+      question: 'Em que cidade você está?',
+      schema: pixCity,
+      options: [],
+      parse: parseWords(pixCity, 'Escreva só o nome da cidade, como São Paulo.'),
+      format: (city) => city,
+    }),
+  ],
+  // ADR 0005: a wrong key sends the money to someone else, so the Professional checks the name in the bank app.
+  testPix: (playbook) => {
+    const key = pixKey.safeParse(playbook.pixKey);
+    const name = pixName.safeParse(playbook.pixName);
+    const city = pixCity.safeParse(playbook.pixCity);
+    if (!key.success || !name.success || !city.success) return null;
+    return {
+      text: 'Para conferir a chave, copie este Pix de teste de R$ 0,01, cole no app do seu banco em "Pix copia e cola" e veja se aparece o seu nome. Não precisa pagar.',
+      code: pixBrCode({ key: key.data.key, name: name.data, city: city.data, amountCents: 1 }),
+    };
+  },
+  done: 'Pronto! É só me pedir uma cobrança que eu preparo o Pix e te mostro antes de mandar.',
+};
+
+export const briefingScripts: Partial<Record<AssistantRole, BriefingScript>> = { scheduling, quotes, billing };
 
 function formatDays(days: Weekday[]) {
   const sorted = weekdays.filter((day) => days.includes(day));

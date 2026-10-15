@@ -81,7 +81,7 @@ function Chat({
     const message = text.trim();
     if (!message || !canSend) return;
     // The AI consent sheet comes up on the first real task, then the message goes out on its own.
-    if (!me?.aiConsentedAt) {
+    if (!me?.aiConsentedAt && (!step || step.usesAi)) {
       sendAfterConsent.current = true;
       router.push('/ai-consent');
       return;
@@ -186,7 +186,9 @@ function Chat({
             editable={!reviewing}
             placeholder={
               step
-                ? 'Responda aqui ou escolha uma opção acima'
+                ? step.options.length
+                  ? 'Responda aqui ou escolha uma opção acima'
+                  : 'Responda aqui'
                 : reviewing
                   ? 'Confira a ficha acima'
                   : `Mensagem para ${assistant.name}`

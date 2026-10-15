@@ -29,6 +29,7 @@
     "@acme/typescript-config": "workspace:*",
     "@elysia/eden": "1.4.10",
     "@types/bun": "1.4.3",
+    "pix-utils": "2.8.2",
     "typescript": "6.0.3"
   }
 }

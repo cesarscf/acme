@@ -35,8 +35,8 @@ function StepForm({ assistantId, step }: { assistantId: string; step: BriefingSt
   function saveText() {
     const message = text.trim();
     if (!message || answer.isPending) return;
-    // Free text goes to the AI, so it needs the consent like any real task.
-    if (!me?.aiConsentedAt) {
+    // Free text read by the AI needs the consent like any real task.
+    if (!me?.aiConsentedAt && step.usesAi) {
       router.push('/ai-consent');
       return;
     }

@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PlaybookRow } from '@/components/briefing-cards';
+import { PlaybookRow, TestPixCard } from '@/components/briefing-cards';
 import { Button } from '@/components/button';
 import { Field } from '@/components/field';
 import { Icon } from '@/components/icons';
@@ -92,6 +92,11 @@ function Playbook({ assistant }: { assistant: Assistant }) {
           );
         })}
       </View>
+      {briefing.testPix && (
+        <View className="mt-3">
+          <TestPixCard testPix={briefing.testPix} />
+        </View>
+      )}
     </View>
   );
 }

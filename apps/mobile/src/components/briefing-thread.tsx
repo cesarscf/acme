@@ -9,7 +9,7 @@ import {
 } from '@/hooks/data/briefing/use-briefing-mutation';
 import type { Briefing } from '@/hooks/data/briefing/use-briefing-query';
 import type { Assistant } from '@/hooks/data/team/use-team-query';
-import { AdjustCard, ConnectCard, PlaybookCard, QuestionCard, SystemLine } from './briefing-cards';
+import { AdjustCard, ConnectCard, PlaybookCard, QuestionCard, SystemLine, TestPixCard } from './briefing-cards';
 import { ProfessionalBubble, Reply } from './chat-messages';
 import { Mascot } from './mascot';
 
@@ -74,8 +74,14 @@ export function BriefingThread({
               </View>
             ) : (
               <View key={shownStep.key} className="gap-3">
-                <Reply text={intro} />
-                <QuestionCard step={shownStep} disabled={disabled} onPick={onPick} onOther={onOther} />
+                {shownStep.options.length ? (
+                  <>
+                    <Reply text={intro} />
+                    <QuestionCard step={shownStep} disabled={disabled} onPick={onPick} onOther={onOther} />
+                  </>
+                ) : (
+                  <Reply text={`${intro}\n\n${shownStep.question}`} />
+                )}
                 {!!answering && <ProfessionalBubble text={answering} />}
                 {!!misunderstood && !answering && <Reply text={misunderstood} />}
               </View>
@@ -84,6 +90,7 @@ export function BriefingThread({
           {!step && briefing.playbook && (
             <>
               <Reply text={`${intros.at(-1)}\n\nConfere se eu entendi direito:`} />
+              {briefing.testPix && !approved && <TestPixCard testPix={briefing.testPix} />}
               <PlaybookCard
                 title={`Ficha de ${assistant.name}`}
                 subtitle={assistant.title}

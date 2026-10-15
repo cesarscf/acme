@@ -1,3 +1,5 @@
+import * as Clipboard from 'expo-clipboard';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { Briefing, BriefingStep } from '@/hooks/data/briefing/use-briefing-query';
 import { Icon } from './icons';
@@ -205,6 +207,29 @@ export function AdjustCard({
         />
       ))}
       <OptionRow letter={letters[rows.length]!} label="Nada, está certo" disabled={disabled} onPress={onCancel} />
+    </Card>
+  );
+}
+
+// The R$ 0,01 test Pix: pasted in the bank app, it shows whose key it is without paying (ADR 0005).
+export function TestPixCard({ testPix }: { testPix: NonNullable<Briefing['testPix']> }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Card>
+      <Text className="px-4 pt-3.5 font-normal text-[14px] text-foreground leading-5">{testPix.text}</Text>
+      <Text
+        selectable
+        className="mx-4 mt-2.5 overflow-hidden rounded-xl bg-secondary px-3 py-2 font-normal text-[12px] text-muted-foreground leading-[17px]"
+      >
+        {testPix.code}
+      </Text>
+      <Pressable
+        className="h-11 self-end justify-center px-4"
+        accessibilityRole="button"
+        onPress={() => Clipboard.setStringAsync(testPix.code).then(() => setCopied(true))}
+      >
+        <Text className="font-semibold text-[14.5px] text-primary">{copied ? 'Copiado' : 'Copiar código'}</Text>
+      </Pressable>
     </Card>
   );
 }

@@ -46,6 +46,8 @@ export function getBriefing(assistant: BriefingAssistant) {
       label: step.label,
       pre: step.pre ?? null,
       question: step.question,
+      // A step with its own parse reads free text without Claude, so it needs no AI consent.
+      usesAi: !step.parse,
       options: step.options.map((option) => ({
         key: option.key,
         label: option.label,
@@ -55,6 +57,7 @@ export function getBriefing(assistant: BriefingAssistant) {
       answer: (step.key in assistant.playbook && answers[step.key]) || null,
     })),
     playbook: playbookRows(script, assistant.playbook),
+    testPix: script.testPix?.(assistant.playbook) ?? null,
     done: script.done,
   };
 }
@@ -102,7 +105,7 @@ export type AnswerResult =
   | { understood: false; reply: string }
   | { refused: 'option_not_available' | 'ai_consent_required' };
 
-// A chip goes straight into the Playbook; free text is fitted into the step by Claude.
+// A chip goes straight into the Playbook; free text is read by the step's parse or fitted into the step by Claude.
 export async function answerStep(
   assistant: BriefingAssistant,
   step: BriefingStep,
@@ -115,12 +118,17 @@ export async function answerStep(
     await syncRoutines(assistant.id);
     return { understood: true };
   }
-  if (!(await hasAiConsent(assistant.professional.id))) return { refused: 'ai_consent_required' };
-  const { value, reply } = await interpret(assistant, step, input.text);
-  if (value === null) return { understood: false, reply };
-  await saveAnswer(assistant.id, step, value, { said: input.text, ack: reply });
+  if (!step.parse && !(await hasAiConsent(assistant.professional.id))) return { refused: 'ai_consent_required' };
+  const read = step.parse ? step.parse(input.text) : await interpretAnswer(assistant, step, input.text);
+  if ('error' in read) return { understood: false, reply: read.error };
+  await saveAnswer(assistant.id, step, read.value, { said: input.text, ack: read.ack });
   await syncRoutines(assistant.id);
   return { understood: true };
+}
+
+async function interpretAnswer(assistant: BriefingAssistant, step: BriefingStep, text: string) {
+  const { value, reply } = await interpret(assistant, step, text);
+  return value === null ? { error: reply } : { value, ack: reply };
 }
 
 export async function approve(assistant: BriefingAssistant) {

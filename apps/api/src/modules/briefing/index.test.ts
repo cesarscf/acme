@@ -2,6 +2,7 @@ import { afterAll, expect, test } from 'bun:test';
 import { assistants, db, llmUsages } from '@acme/db';
 import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
+import { hasError, parsePix } from 'pix-utils';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
 import { startFakeClaude } from '../conversations/fake-claude';
@@ -286,13 +287,92 @@ test('the approved Playbook goes into the prompt as the Ver ficha rows', async (
   expect(context!.text).toContain('Quando: Na véspera, às 18h');
 });
 
-test('Tina has no Briefing until her PaymentMethods arrive', async () => {
+test("Tina's Briefing asks how she receives and the Pix key, with bank and card coming soon", async () => {
   const { headers, assistant, briefing } = await professionalWith('billing');
 
-  const { status } = await briefing.get({ headers });
+  const { data, status } = await briefing.get({ headers });
 
-  expect(assistant.hasBriefing).toBe(false);
-  expect(status).toBe(404);
+  expect(assistant.hasBriefing).toBe(true);
+  expect(status).toBe(200);
+  expect(data!.connect.items).toEqual([
+    { name: 'WhatsApp', reason: 'Mandar a cobrança ao cliente', availability: 'first_message' },
+    { name: 'Banco', reason: 'Ver quando o dinheiro caiu', availability: 'coming_soon' },
+  ]);
+  expect(data!.steps.map(({ key }) => key)).toEqual(['paymentMethods', 'pixKey', 'pixName', 'pixCity']);
+  expect(data!.steps[0]!.options.map(({ label, comingSoon }) => [label, comingSoon])).toEqual([
+    ['Pix e dinheiro', false],
+    ['Só Pix', false],
+    ['Conectar banco', true],
+    ['Cartão', true],
+  ]);
+  expect(data!.steps[1]).toMatchObject({ options: [], usesAi: false });
+  expect(data!.steps[0]!.usesAi).toBe(true);
+});
+
+test("Tina's Playbook keeps the PaymentMethods, the default and the Pix key, without calling Claude", async () => {
+  const { headers, assistant, briefing } = await professionalWith('billing');
+  const requests = claude.requests.length;
+
+  await briefing.answers.post({ step: 'paymentMethods', option: 'pix_and_cash' }, { headers });
+  const key = await briefing.answers.post({ step: 'pixKey', text: '(11) 98765-4321' }, { headers });
+  await briefing.answers.post({ step: 'pixName', text: 'José  Antônio da Silva' }, { headers });
+  await briefing.answers.post({ step: 'pixCity', text: 'São Paulo' }, { headers });
+
+  expect(key.data).toEqual({ understood: true });
+  expect(claude.requests.length).toBe(requests);
+  expect((await storedAssistant(assistant.id)).playbook).toEqual({
+    paymentMethods: { accepted: ['pix', 'cash'], default: 'pix' },
+    pixKey: { type: 'phone', key: '+5511987654321' },
+    pixName: 'José Antônio da Silva',
+    pixCity: 'São Paulo',
+  });
+  const { data } = await briefing.get({ headers });
+  expect(data!.steps[1]!.answer).toEqual({
+    said: '(11) 98765-4321',
+    ack: 'Anotei a chave: Celular (11) 98765-4321.',
+  });
+  expect(data!.playbook).toEqual([
+    {
+      step: null,
+      label: 'O que faz',
+      value: 'Gerar o Pix, confirmar o pagamento e lembrar quem atrasou',
+      routine: null,
+    },
+    { step: 'paymentMethods', label: 'Recebe', value: 'Pix e dinheiro, o Pix por padrão', routine: null },
+    { step: 'pixKey', label: 'Chave Pix', value: 'Celular (11) 98765-4321', routine: null },
+    { step: 'pixName', label: 'Nome', value: 'José Antônio da Silva', routine: null },
+    { step: 'pixCity', label: 'Cidade', value: 'São Paulo', routine: null },
+  ]);
+});
+
+test('the draft Playbook comes with a R$ 0,01 test Pix to check the name in the bank app', async () => {
+  const { headers, briefing } = await professionalWith('billing');
+  expect((await briefing.get({ headers })).data!.testPix).toBeNull();
+
+  await briefing.answers.post({ step: 'paymentMethods', option: 'pix' }, { headers });
+  await briefing.answers.post({ step: 'pixKey', text: 'carlos@example.com' }, { headers });
+  await briefing.answers.post({ step: 'pixName', text: 'Carlos Souza' }, { headers });
+  await briefing.answers.post({ step: 'pixCity', text: 'Campinas' }, { headers });
+
+  const { data } = await briefing.get({ headers });
+  expect(data!.testPix!.text).toContain('R$ 0,01');
+  const pix = parsePix(data!.testPix!.code);
+  expect(hasError(pix)).toBe(false);
+  expect(pix).toMatchObject({
+    pixKey: 'carlos@example.com',
+    merchantName: 'Carlos Souza',
+    merchantCity: 'Campinas',
+    transactionAmount: 0.01,
+  });
+});
+
+test('a Pix key that is invalid for its type is refused with the reason', async () => {
+  const { headers, assistant, briefing } = await professionalWith('billing');
+
+  const { data } = await briefing.answers.post({ step: 'pixKey', text: '529.982.247-24' }, { headers });
+
+  expect(data).toEqual({ understood: false, reply: 'Esse CPF não existe. Confira os números.' });
+  expect((await storedAssistant(assistant.id)).playbook).toEqual({});
 });
 
 test('an unknown step is not found', async () => {

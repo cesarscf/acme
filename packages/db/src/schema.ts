@@ -231,3 +231,60 @@ export const audioUsages = pgTable(
   },
   (table) => [index().on(table.professionalId, table.createdAt)],
 );
+
+// App-side notices in an Assistant's conversation (a Customer tapped a button); Claude reads them with the next message.
+export const assistantNotices = pgTable(
+  'assistant_notices',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    assistantId: uuid()
+      .notNull()
+      .references(() => assistants.id, { onDelete: 'cascade' }),
+    text: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().default(sql`clock_timestamp()`),
+  },
+  (table) => [index().on(table.assistantId, table.createdAt)],
+);
+
+// The phone number is the Customer's identity in M1; Meta's BSUID joins it in M2.
+export const customers = pgTable(
+  'customers',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    name: text().notNull(),
+    phoneNumber: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [unique().on(table.professionalId, table.phoneNumber)],
+);
+
+export const visitStatus = pgEnum('visit_status', ['scheduled', 'confirmed', 'reschedule_requested', 'cancelled']);
+
+export const visits = pgTable(
+  'visits',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    customerId: uuid()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    scheduledAt: timestamp({ withTimezone: true }).notNull(),
+    durationMinutes: integer().notNull(),
+    status: visitStatus().notNull().default('scheduled'),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index().on(table.professionalId, table.scheduledAt)],
+);

@@ -20,3 +20,15 @@ export function Reply({ text }: { text: string }) {
     </Text>
   );
 }
+
+// Something that happened outside the conversation, like a Customer tapping a button on WhatsApp.
+export function Notice({ text }: { text: string }) {
+  return (
+    <Text
+      selectable
+      className="self-center overflow-hidden rounded-2xl bg-secondary px-3.5 py-2 text-center font-medium text-[13.5px] text-muted-foreground leading-[19px]"
+    >
+      {text}
+    </Text>
+  );
+}

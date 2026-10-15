@@ -1,5 +1,6 @@
 import { app } from './app';
 import { ensureLoginCodeTemplate } from './modules/auth/service';
+import { ensureVisitConfirmationTemplate } from './modules/visits/service';
 
 app.listen(Number(process.env.PORT ?? 3000));
 
@@ -9,9 +10,10 @@ console.log(`API on http://${app.server?.hostname}:${app.server?.port}`);
 for (;;) {
   try {
     await ensureLoginCodeTemplate();
+    await ensureVisitConfirmationTemplate();
     break;
   } catch (error) {
-    console.warn(`Could not ensure the login code template, retrying in 5s: ${(error as Error).message}`);
+    console.warn(`Could not ensure the WhatsApp templates, retrying in 5s: ${(error as Error).message}`);
     await Bun.sleep(5000);
   }
 }

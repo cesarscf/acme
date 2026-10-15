@@ -207,11 +207,11 @@ test('the verification handshake answers the challenge only for the right verify
 test('a click whose handler fails is answered with an error so the retry is processed', async () => {
   const clicks: ButtonClick[] = [];
   let failures = 1;
-  onButtonClick('visit', (click) => {
-    if (failures-- > 0) throw new Error('Visit unavailable');
+  onButtonClick('charge', (click) => {
+    if (failures-- > 0) throw new Error('Charge unavailable');
     clicks.push(click);
   });
-  const visitId = randomUUID();
+  const chargeId = randomUUID();
   const { wamid } = await sendMessage({
     from: phoneNumberId,
     to: newCustomerNumber(),
@@ -219,11 +219,11 @@ test('a click whose handler fails is answered with an error so the retry is proc
       type: 'interactive',
       interactive: {
         type: 'button',
-        body: { text: 'Confirma a visita amanhã às 9h?' },
-        action: { buttons: [{ type: 'reply', reply: { id: 'confirm', title: 'Confirmar' } }] },
+        body: { text: 'Já pagou o Pix de R$ 350,00?' },
+        action: { buttons: [{ type: 'reply', reply: { id: 'paid', title: 'Já paguei' } }] },
       },
     },
-    origin: { type: 'visit', id: visitId },
+    origin: { type: 'charge', id: chargeId },
   });
 
   const click = ok(await meta.emulator.messages({ id: wamid }).click.post({ index: 0 }));
@@ -232,7 +232,7 @@ test('a click whose handler fails is answered with an error so the retry is proc
   expect(click.webhook?.status).toBe(500);
   expect(resent.webhook?.status).toBe(200);
   expect(clicks).toHaveLength(1);
-  expect(clicks[0]).toMatchObject({ originId: visitId, button: { payload: 'confirm', text: 'Confirmar' } });
+  expect(clicks[0]).toMatchObject({ originId: chargeId, button: { payload: 'paid', text: 'Já paguei' } });
 });
 
 test('a signed webhook that is not JSON is refused as a bad request', async () => {

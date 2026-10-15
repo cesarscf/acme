@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon } from '@/components/icons';
 import { Mascot } from '@/components/mascot';
 import { useSignOutMutation } from '@/hooks/data/auth/use-sign-out-mutation';
 import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
@@ -76,6 +77,15 @@ export default function Home() {
             </Pressable>
           </Link>
         ))}
+        <Link href="/customers" asChild>
+          <Pressable
+            className="mt-2 min-h-[56px] flex-row items-center gap-3.5 border-border border-t px-5 py-2.5 active:bg-secondary"
+            accessibilityHint="Abre a lista de clientes"
+          >
+            <Text className="flex-1 font-bold text-base text-foreground">Clientes</Text>
+            <Icon name="chevronRight" size={18} color="--color-muted-foreground" />
+          </Pressable>
+        </Link>
       </ScrollView>
     </View>
   );

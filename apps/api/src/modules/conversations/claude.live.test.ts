@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { randomInt } from 'node:crypto';
-import { assistants, db, llmUsages } from '@acme/db';
+import { assistants, customers, db, llmUsages, visits } from '@acme/db';
 import { createApp as createEmulator } from '@acme/meta-emulator/app';
 import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
+import { ensureVisitConfirmationTemplate } from '../visits/service';
 import { listMessages } from '../whatsapp/service';
 
 // Calls the real Claude API and spends tokens, so it runs only with `bun run test:claude`.
@@ -17,9 +18,10 @@ describe.skipIf(!process.env.CLAUDE_LIVE)('the Assistant on the real Claude API'
     webhookUrl: 'http://localhost:0/webhooks/whatsapp',
   });
 
-  beforeAll(() => {
+  beforeAll(async () => {
     emulator.listen(0);
     process.env.META_GRAPH_URL = `http://localhost:${emulator.server!.port}`;
+    await ensureVisitConfirmationTemplate();
   });
 
   afterAll(() => emulator.stop());
@@ -56,18 +58,24 @@ describe.skipIf(!process.env.CLAUDE_LIVE)('the Assistant on the real Claude API'
     expect(usage!.outputTokens).toBeGreaterThan(0);
   }, 60_000);
 
-  test('a message to a Customer waits for Confirmar, then goes out on WhatsApp', async () => {
-    const { headers, lia } = await liaForNewProfessional();
+  test('"Marca o João amanhã às 14h" books the Visit, and the confirmation waits for Confirmar', async () => {
+    const { professional, headers, lia } = await liaForNewProfessional();
     const customer = `55119${String(randomInt(1e8)).padStart(8, '0')}`;
     const from = process.env.META_PLATFORM_PHONE_NUMBER_ID!;
 
-    const events = await drain(
+    await drain(
       api
         .team({ id: lia.id })
-        .messages.post(
-          { text: `Manda uma mensagem pro João Pereira no WhatsApp ${customer} dizendo que chego às 14h.` },
-          { headers },
-        ),
+        .messages.post({ text: `Marca o João Pereira amanhã às 14h. O WhatsApp dele é ${customer}.` }, { headers }),
+    );
+
+    const [joao] = await db.select().from(customers).where(eq(customers.professionalId, professional.id));
+    expect(joao).toMatchObject({ phoneNumber: customer });
+    const [visit] = await db.select().from(visits).where(eq(visits.customerId, joao!.id));
+    expect(visit).toMatchObject({ status: 'scheduled' });
+
+    const events = await drain(
+      api.team({ id: lia.id }).messages.post({ text: 'Manda a confirmação pra ele.' }, { headers }),
     );
 
     expect(events.at(-1)).toEqual({ type: 'awaiting_confirmation' });
@@ -82,8 +90,8 @@ describe.skipIf(!process.env.CLAUDE_LIVE)('the Assistant on the real Claude API'
 
     expect(resumed.at(-1)).toEqual({ type: 'done' });
     const [sent] = await listMessages({ phoneNumberId: from, waId: customer });
-    expect(sent?.text).toContain('14');
-  }, 90_000);
+    expect(sent).toMatchObject({ type: 'template', originType: 'visit', originId: visit!.id });
+  }, 120_000);
 
   test('a free text Briefing answer fills the field of that step', async () => {
     const { headers, lia } = await liaForNewProfessional();

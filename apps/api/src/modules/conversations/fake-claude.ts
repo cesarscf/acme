@@ -13,7 +13,8 @@ export type ScriptedReply = {
 
 // Test-only stand-in for the Messages API: answers each request with the next scripted reply, streamed as SSE when asked.
 export function startFakeClaude() {
-  const replies: ScriptedReply[] = [];
+  // A function reply reads the request, e.g. to use an id a tool returned earlier in the turn.
+  const replies: (ScriptedReply | ((request: Anthropic.Beta.MessageCreateParams) => ScriptedReply))[] = [];
   const requests: Anthropic.Beta.MessageCreateParams[] = [];
   const headers: Headers[] = [];
 
@@ -24,7 +25,8 @@ export function startFakeClaude() {
       const body = (await request.json()) as Anthropic.Beta.MessageCreateParams;
       requests.push(body);
       headers.push(request.headers);
-      const reply = replies.shift();
+      const next = replies.shift();
+      const reply = typeof next === 'function' ? next(body) : next;
       if (!reply)
         return Response.json(
           { type: 'error', error: { type: 'api_error', message: 'No reply scripted' } },
@@ -41,7 +43,7 @@ export function startFakeClaude() {
   return {
     requests,
     headers,
-    reply(...scripted: ScriptedReply[]) {
+    reply(...scripted: typeof replies) {
       replies.push(...scripted);
     },
     stop: () => server.stop(true),

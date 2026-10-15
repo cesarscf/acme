@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCSSVariable } from 'uniwind';
 import { BackButton } from '@/components/back-button';
 import { BriefingProgress, BriefingThread } from '@/components/briefing-thread';
-import { ProfessionalBubble, Reply } from '@/components/chat-messages';
+import { Notice, ProfessionalBubble, Reply } from '@/components/chat-messages';
 import { ConfirmationCard } from '@/components/confirmation-card';
 import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
@@ -153,6 +153,8 @@ function Chat({
             <ProfessionalBubble key={item.id} text={item.text} />
           ) : item.type === 'assistant' ? (
             <Reply key={item.id} text={item.text} />
+          ) : item.type === 'notice' ? (
+            <Notice key={item.id} text={item.text} />
           ) : (
             <ConfirmationCard
               key={item.id}

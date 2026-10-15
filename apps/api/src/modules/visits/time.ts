@@ -1,0 +1,62 @@
+// Visits are stored in UTC and spoken in the Professional's time zone (no Temporal in Bun yet).
+
+export function toInstant(date: string, time: string, timeZone: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const wallClock = Date.UTC(year!, month! - 1, day!, hour!, minute!);
+  // The offset at the guess can differ from the offset at the answer around a DST change, so it is checked twice.
+  const guess = wallClock - offsetAt(wallClock, timeZone);
+  return new Date(wallClock - offsetAt(guess, timeZone));
+}
+
+export function nextDay(date: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(Date.UTC(year!, month! - 1, day! + 1)).toISOString().slice(0, 10);
+}
+
+export function localDate(instant: Date, timeZone: string) {
+  const { year, month, day } = parts(instant, timeZone);
+  return `${year}-${month}-${day}`;
+}
+
+export function formatLocalDateTime(instant: Date, timeZone: string) {
+  const { weekday, day, month, hour, minute } = parts(instant, timeZone);
+  return `${weekday}, ${day}/${month}, às ${hour}:${minute}`;
+}
+
+function offsetAt(instant: number, timeZone: string) {
+  const { year, month, day, hour, minute, second } = parts(new Date(instant), timeZone);
+  const asUtc = Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour) % 24,
+    Number(minute),
+    Number(second),
+  );
+  return asUtc - Math.floor(instant / 1000) * 1000;
+}
+
+function parts(instant: Date, timeZone: string) {
+  const formatted = new Intl.DateTimeFormat('pt-BR', {
+    timeZone,
+    weekday: 'long',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(instant);
+  const value = (type: Intl.DateTimeFormatPartTypes) => formatted.find((part) => part.type === type)!.value;
+  return {
+    weekday: value('weekday'),
+    year: value('year'),
+    month: value('month'),
+    day: value('day'),
+    hour: value('hour'),
+    minute: value('minute'),
+    second: value('second'),
+  };
+}

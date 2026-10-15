@@ -6,8 +6,14 @@ import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
+import { customerTools } from '../customers/tools';
+import { ensureVisitConfirmationTemplate } from '../visits/service';
+import { localDate } from '../visits/time';
+import { visitTools } from '../visits/tools';
 import { listMessages } from '../whatsapp/service';
 import { startFakeClaude } from './fake-claude';
+import { findAssistant } from './service';
+import { runTool } from './test-tools';
 
 const api = treaty(app);
 const claude = startFakeClaude();
@@ -17,8 +23,9 @@ const emulator = createEmulator({
   webhookUrl: 'http://localhost:0/webhooks/whatsapp',
 }).listen(0);
 
-beforeAll(() => {
+beforeAll(async () => {
   process.env.META_GRAPH_URL = `http://localhost:${emulator.server!.port}`;
+  await ensureVisitConfirmationTemplate();
 });
 
 afterAll(async () => {
@@ -46,13 +53,25 @@ function newCustomerNumber() {
   return `55119${String(randomInt(1e8)).padStart(8, '0')}`;
 }
 
-function sendCustomerMessageCall(id: string, phoneNumber: string) {
-  return {
-    type: 'tool_use' as const,
-    id,
-    name: 'sendCustomerMessage',
-    input: { customerName: 'João Pereira', phoneNumber, text: 'Oi João, chego às 14h.' },
-  };
+// A Customer with a Visit tomorrow, booked through Lia's tools without Claude.
+async function bookVisit(professionalId: string, assistantId: string) {
+  const lia = (await findAssistant(professionalId, assistantId))!;
+  const customer = newCustomerNumber();
+  const created = await runTool(customerTools(lia), 'createCustomer', { name: 'João Pereira', phoneNumber: customer });
+  const { id: customerId } = JSON.parse(created.text.slice(created.text.indexOf('{')));
+  const booked = await runTool(visitTools(lia), 'createVisit', {
+    customerId,
+    date: localDate(new Date(Date.now() + 86_400_000), 'America/Sao_Paulo'),
+    time: '14:00',
+    durationMinutes: null,
+    allowConflict: false,
+  });
+  const { id: visitId } = JSON.parse(booked.text.slice(booked.text.indexOf('{')));
+  return { customer, visitId: visitId as string };
+}
+
+function sendVisitConfirmationCall(id: string, visitId: string) {
+  return { type: 'tool_use' as const, id, name: 'sendVisitConfirmation', input: { visitId } };
 }
 
 test('the Assistant needs the AI consent before the first task', async () => {
@@ -130,7 +149,7 @@ test('the prompt is cached, names the Assistant, and the tools are strict', asyn
   expect(fixed!.cache_control).toEqual({ type: 'ephemeral' });
   expect(assistant!.text).toContain('Ana');
   expect(assistant!.text).toContain('Agenda');
-  expect(request.tools).toContainEqual(expect.objectContaining({ name: 'sendCustomerMessage', strict: true }));
+  expect(request.tools).toContainEqual(expect.objectContaining({ name: 'sendVisitConfirmation', strict: true }));
   expect(request.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: 'Oi' }] }]);
 });
 
@@ -156,11 +175,11 @@ test('token usage is recorded for the Professional and the Assistant', async () 
 });
 
 test('a tool that sends something to the Customer shows a card and runs only after Confirmar', async () => {
-  const { headers, lia } = await consentingProfessionalWithLia();
-  const customer = newCustomerNumber();
+  const { professional, headers, lia } = await consentingProfessionalWithLia();
+  const { customer, visitId } = await bookVisit(professional.id, lia.id);
   const toolUseId = `toolu_${randomUUID()}`;
   claude.reply({
-    content: [{ type: 'text', text: 'Vou avisar o João.' }, sendCustomerMessageCall(toolUseId, customer)],
+    content: [{ type: 'text', text: 'Vou avisar o João.' }, sendVisitConfirmationCall(toolUseId, visitId)],
   });
 
   const events = await drain(api.team({ id: lia.id }).messages.post({ text: 'Avisa o João' }, { headers }));
@@ -172,8 +191,8 @@ test('a tool that sends something to the Customer shows a card and runs only aft
   expect(card).toMatchObject({
     type: 'confirmation',
     status: 'pending',
-    title: 'Para confirmar: mandar mensagem para João Pereira',
-    question: 'Confirma: mandar a mensagem para João Pereira?',
+    title: 'Para confirmar: pedir a confirmação de João Pereira',
+    question: 'Confirma: pedir para João Pereira confirmar a visita?',
   });
   claude.reply({ content: [{ type: 'text', text: 'Pronto, o João já recebeu.' }] });
 
@@ -186,7 +205,7 @@ test('a tool that sends something to the Customer shows a card and runs only aft
 
   expect(resumed).toContainEqual({ type: 'text', text: 'Pronto, o João já recebeu.' });
   const sent = await listMessages({ phoneNumberId: process.env.META_PLATFORM_PHONE_NUMBER_ID!, waId: customer });
-  expect(sent.map(({ text }) => text)).toEqual(['Oi João, chego às 14h.']);
+  expect(sent).toEqual([expect.objectContaining({ type: 'template', originType: 'visit', originId: visitId })]);
   expect(claude.requests.at(-1)!.messages.at(-1)).toMatchObject({
     role: 'user',
     content: [{ type: 'tool_result', tool_use_id: toolUseId }],
@@ -196,10 +215,10 @@ test('a tool that sends something to the Customer shows a card and runs only aft
 });
 
 test('Cancelar tells Claude nothing was sent', async () => {
-  const { headers, lia } = await consentingProfessionalWithLia();
-  const customer = newCustomerNumber();
+  const { professional, headers, lia } = await consentingProfessionalWithLia();
+  const { customer, visitId } = await bookVisit(professional.id, lia.id);
   const toolUseId = `toolu_${randomUUID()}`;
-  claude.reply({ content: [sendCustomerMessageCall(toolUseId, customer)] });
+  claude.reply({ content: [sendVisitConfirmationCall(toolUseId, visitId)] });
   await drain(api.team({ id: lia.id }).messages.post({ text: 'Avisa o João' }, { headers }));
   const { data: paused } = await api.team({ id: lia.id }).messages.get({ headers });
   const card = paused!.items.at(-1)!;
@@ -219,10 +238,10 @@ test('Cancelar tells Claude nothing was sent', async () => {
 });
 
 test('a new message instead of a decision cancels the pending card', async () => {
-  const { headers, lia } = await consentingProfessionalWithLia();
-  const customer = newCustomerNumber();
+  const { professional, headers, lia } = await consentingProfessionalWithLia();
+  const { customer, visitId } = await bookVisit(professional.id, lia.id);
   const toolUseId = `toolu_${randomUUID()}`;
-  claude.reply({ content: [sendCustomerMessageCall(toolUseId, customer)] });
+  claude.reply({ content: [sendVisitConfirmationCall(toolUseId, visitId)] });
   await drain(api.team({ id: lia.id }).messages.post({ text: 'Avisa o João' }, { headers }));
   claude.reply({ content: [{ type: 'text', text: 'Certo, esqueci o João.' }] });
 
@@ -241,10 +260,10 @@ test('a new message instead of a decision cancels the pending card', async () =>
 });
 
 test('a refusal ends the turn without running tools and says so in the conversation', async () => {
-  const { headers, lia } = await consentingProfessionalWithLia();
-  const customer = newCustomerNumber();
+  const { professional, headers, lia } = await consentingProfessionalWithLia();
+  const { customer, visitId } = await bookVisit(professional.id, lia.id);
   const toolUseId = `toolu_${randomUUID()}`;
-  claude.reply({ content: [sendCustomerMessageCall(toolUseId, customer)], stop_reason: 'refusal' });
+  claude.reply({ content: [sendVisitConfirmationCall(toolUseId, visitId)], stop_reason: 'refusal' });
 
   const events = await drain(api.team({ id: lia.id }).messages.post({ text: 'Pedido estranho' }, { headers }));
 

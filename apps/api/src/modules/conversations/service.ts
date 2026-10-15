@@ -1,7 +1,16 @@
-import { assistantMessages, assistants, db, llmUsages, professionals, toolConfirmations } from '@acme/db';
+import {
+  assistantMessages,
+  assistantNotices,
+  assistants,
+  db,
+  llmUsages,
+  professionals,
+  toolConfirmations,
+} from '@acme/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { runRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
 import { and, asc, eq } from 'drizzle-orm';
+import type { AssistantRole } from '../team/catalog';
 import { type PromptContext, systemPrompt } from './prompts';
 import { type AssistantTool, assistantTools, type ConfirmationCard } from './tools';
 
@@ -22,6 +31,7 @@ export type TurnEvent =
 export type ConversationItem =
   | { id: string; type: 'professional'; text: string }
   | { id: string; type: 'assistant'; text: string }
+  | { id: string; type: 'notice'; text: string }
   | ({ id: string; type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard);
 
 // Haiku 5.5 by default to keep the M1 bill low; CLAUDE_MODEL=claude-opus-5-5 switches to the model of ADR 0006.
@@ -66,13 +76,21 @@ export function isWorking(assistantId: string) {
 
 export async function getConversation(assistant: Assistant) {
   const messages = await loadMessages(assistant.id);
+  const notices = await loadNotices(assistant.id);
   const confirmations = await db
     .select()
     .from(toolConfirmations)
     .where(eq(toolConfirmations.assistantId, assistant.id));
-  const tools = assistantTools();
+  const tools = assistantTools(assistant);
   const items: ConversationItem[] = [];
+  const pushNoticesBefore = (createdAt?: Date) => {
+    while (notices[0] && (!createdAt || notices[0].createdAt < createdAt)) {
+      const { id, text } = notices.shift()!;
+      items.push({ id, type: 'notice', text });
+    }
+  };
   for (const message of messages) {
+    pushNoticesBefore(message.createdAt);
     const text = message.content
       .flatMap((block) => (block.type === 'text' ? [block.text] : []))
       .join('\n\n')
@@ -83,11 +101,28 @@ export async function getConversation(assistant: Assistant) {
       const confirmation = confirmations.find(({ toolUseId }) => toolUseId === block.id);
       const card = findTool(tools, block.name)?.card;
       if (confirmation && card) {
-        items.push({ id: confirmation.id, type: 'confirmation', status: confirmation.status, ...card(block.input) });
+        items.push({
+          id: confirmation.id,
+          type: 'confirmation',
+          status: confirmation.status,
+          ...(await card(block.input)),
+        });
       }
     }
   }
+  pushNoticesBefore();
   return { working: isWorking(assistant.id), items };
+}
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+// Notices go to the Professional's Assistant with that Role; without one, nobody is there to tell.
+export async function addNotice(tx: Transaction, professionalId: string, role: AssistantRole, text: string) {
+  const [assistant] = await tx
+    .select({ id: assistants.id })
+    .from(assistants)
+    .where(and(eq(assistants.professionalId, professionalId), eq(assistants.role, role)));
+  if (assistant) await tx.insert(assistantNotices).values({ assistantId: assistant.id, text });
 }
 
 export function findPendingConfirmation(assistantId: string, id: string) {
@@ -162,7 +197,7 @@ export async function decide(
   if (siblings.some(({ status }) => status === 'pending')) return { type: 'awaiting_confirmation' };
 
   const [message] = await db.select().from(assistantMessages).where(eq(assistantMessages.id, confirmation.messageId));
-  const tools = assistantTools();
+  const tools = assistantTools(assistant);
   const results: ToolResult[] = [];
   for (const call of toolUses(message as StoredMessage)) {
     const entry = findTool(tools, call.name);
@@ -176,7 +211,7 @@ export async function decide(
 }
 
 async function converse(assistant: Assistant, emit: (event: TurnEvent) => void): Promise<TurnEvent> {
-  const tools = assistantTools();
+  const tools = assistantTools(assistant);
   const runner = new Anthropic().beta.messages.toolRunner({
     ...modelParams(),
     max_tokens: 16000,
@@ -187,7 +222,7 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
     cache_control: { type: 'ephemeral' },
     system: systemPrompt(assistant),
     tools: tools.map(({ tool }) => tool),
-    messages: (await loadMessages(assistant.id)).map(({ role, content }) => ({ role, content })),
+    messages: await apiMessages(assistant.id),
   });
 
   for await (const stream of runner) {
@@ -272,6 +307,29 @@ async function loadMessages(assistantId: string) {
     .where(eq(assistantMessages.assistantId, assistantId))
     .orderBy(asc(assistantMessages.createdAt));
   return rows as StoredMessage[];
+}
+
+// Each notice reaches Claude in the first user turn saved after it (a Professional's message or tool results).
+async function apiMessages(assistantId: string) {
+  const messages = await loadMessages(assistantId);
+  const notices = await loadNotices(assistantId);
+  return messages.map(({ role, content, createdAt }) => {
+    const arrived = role === 'user' ? notices.filter((notice) => notice.createdAt < createdAt) : [];
+    notices.splice(0, arrived.length);
+    if (!arrived.length) return { role, content };
+    const results = content.filter((block) => block.type === 'tool_result');
+    const rest = content.filter((block) => block.type !== 'tool_result');
+    const texts = arrived.map(({ text }): Block => ({ type: 'text', text: `<aviso>${text}</aviso>` }));
+    return { role, content: [...results, ...texts, ...rest] };
+  });
+}
+
+function loadNotices(assistantId: string) {
+  return db
+    .select()
+    .from(assistantNotices)
+    .where(eq(assistantNotices.assistantId, assistantId))
+    .orderBy(asc(assistantNotices.createdAt));
 }
 
 async function saveMessage(assistantId: string, role: 'user' | 'assistant', content: Block[]) {

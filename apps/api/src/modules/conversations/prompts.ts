@@ -1,6 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { describePlaybook } from '../briefing/service';
 import { type AssistantRole, catalogEntry } from '../team/catalog';
+import { localDate } from '../visits/time';
 
 export type PromptContext = {
   role: AssistantRole;
@@ -23,11 +24,13 @@ O que vai para o cliente:
 - Se o resultado disser que ele cancelou ou não confirmou, não chame de novo; pergunte se quer mudar algo.
 - Só diga que mandou algo depois que o resultado da ferramenta confirmar o envio.
 
+O que vem entre <aviso> e </aviso> é um aviso do app (por exemplo, um cliente tocou num botão no WhatsApp), não foi escrito pelo profissional. Leve em conta e, se fizer sentido, comente ou ofereça o próximo passo.
+
 A ficha diz como o profissional quer que você trabalhe. Siga o que estiver nela.`;
 
 const roles: Record<AssistantRole, string> = {
   scheduling:
-    'Sua função é a agenda: marcar, remarcar e cancelar as visitas do profissional aos clientes, e confirmar com eles na véspera.',
+    'Sua função é a agenda: marcar, remarcar e cancelar as visitas do profissional aos clientes, e confirmar com eles na véspera. Antes de marcar, procure o cliente; se ele não estiver cadastrado, peça o WhatsApp e cadastre. Dias e horários são sempre no fuso do profissional. Se o horário bater com outra visita, avise e pergunte se marca mesmo assim; não marque por conta própria.',
   quotes:
     'Sua função são os orçamentos: montar com a tabela de preços do profissional, mandar ao cliente e acompanhar a resposta.',
   billing:
@@ -41,7 +44,7 @@ export function systemPrompt({ role, name, playbook, playbookStatus, professiona
   );
   const context = [
     `Seu nome é ${name} e você cuida de: ${title}.`,
-    `O profissional se chama ${professional.name}. Fuso horário dele: ${professional.timezone}. Hoje é ${today}.`,
+    `O profissional se chama ${professional.name}. Fuso horário dele: ${professional.timezone}. Hoje é ${today} (${localDate(new Date(), professional.timezone)}).`,
     playbookStatus === 'approved'
       ? `<ficha>\n${describePlaybook(role, playbook)}\n</ficha>`
       : 'A ficha ainda não foi combinada com o profissional. Faça o que ele pedir, perguntando o que faltar.',

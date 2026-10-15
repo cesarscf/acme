@@ -1,4 +1,4 @@
-import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 export const whatsappMessageDirection = pgEnum('whatsapp_message_direction', ['outbound', 'inbound']);
 
@@ -29,6 +29,21 @@ export const whatsappMessages = pgTable(
   (table) => [index().on(table.phoneNumberId, table.waId, table.sentAt)],
 );
 
+export const workStyle = pgEnum('work_style', ['solo', 'with_helper', 'with_crew']);
+
+export const trade = pgEnum('trade', [
+  'hvac',
+  'electrical',
+  'plumbing',
+  'maintenance',
+  'pest_control',
+  'cleaning',
+  'gardening_and_pools',
+  'installation',
+  'appliance_repair',
+  'other',
+]);
+
 // Better Auth tables (`npx auth generate`); a user is a Professional.
 export const users = pgTable('users', {
   id: uuid().primaryKey().defaultRandom(),
@@ -38,6 +53,9 @@ export const users = pgTable('users', {
   image: text(),
   phoneNumber: text().unique(),
   phoneNumberVerified: boolean(),
+  timezone: text().notNull().default('America/Sao_Paulo'),
+  workStyle: workStyle(),
+  trades: trade().array().notNull().default([]),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true })
     .notNull()
@@ -104,4 +122,29 @@ export const verifications = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [index().on(table.identifier)],
+);
+
+// Only the Roles that exist; the ones marked "em breve" live in the Catalog alone (ADR 0007).
+export const assistantRole = pgEnum('assistant_role', ['scheduling', 'quotes', 'billing']);
+
+export const playbookStatus = pgEnum('playbook_status', ['draft', 'approved']);
+
+export const assistants = pgTable(
+  'assistants',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: assistantRole().notNull(),
+    name: text().notNull(),
+    playbook: jsonb().notNull().default({}),
+    playbookStatus: playbookStatus().notNull().default('draft'),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [unique().on(table.professionalId, table.role)],
 );

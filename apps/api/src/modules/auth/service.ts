@@ -33,7 +33,11 @@ export const auth = betterAuth({
       expiresIn: codeExpirationMinutes * 60,
       phoneNumberValidator: (phoneNumber) => /^55\d{10,11}$/.test(phoneNumber),
       sendOTP: ({ phoneNumber, code }) => sendLoginCode(phoneNumber, code),
-      signUpOnVerification: { getTempEmail: (phoneNumber) => `${phoneNumber}@phone.acme.invalid` },
+      signUpOnVerification: {
+        getTempEmail: (phoneNumber) => `${phoneNumber}@phone.acme.invalid`,
+        // The Professional picks a name in onboarding; empty until then.
+        getTempName: () => '',
+      },
     }),
   ],
 });

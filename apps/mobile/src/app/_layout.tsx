@@ -49,7 +49,7 @@ function Routes() {
   }, [loading]);
 
   if (loading) return null;
-  if (session && team.isError) {
+  if (session && team.isLoadingError) {
     return <LoadError message="Não conseguimos carregar a sua equipe." onRetry={() => team.refetch()} />;
   }
   // Onboarding ends when the Team exists; the ready screen stays reachable so it can show the new Team.

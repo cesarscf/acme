@@ -226,9 +226,9 @@ function AssistantRow({ assistant, next }: { assistant: Assistant; next: boolean
 }
 
 function Services() {
-  const { data: workRecords, isError, refetch } = useWorkRecordsQuery();
+  const { data: workRecords, isLoadingError, refetch } = useWorkRecordsQuery();
 
-  if (isError) {
+  if (isLoadingError) {
     return (
       <Pressable className="items-center px-10 pt-[90px]" accessibilityRole="button" onPress={() => refetch()}>
         <Text className="text-center font-normal text-destructive text-sm">

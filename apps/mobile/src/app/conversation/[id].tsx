@@ -41,11 +41,11 @@ export default function ConversationScreen() {
   const conversation = useConversationQuery(id);
   const briefing = useBriefingQuery(id, { enabled: !!assistant?.hasBriefing });
 
-  if (conversation.isError || briefing.isError) {
+  if (conversation.isLoadingError || briefing.isLoadingError) {
     return (
       <LoadError
         message="Não conseguimos carregar a conversa."
-        onRetry={() => (conversation.isError ? conversation.refetch() : briefing.refetch())}
+        onRetry={() => (conversation.isLoadingError ? conversation.refetch() : briefing.refetch())}
       />
     );
   }

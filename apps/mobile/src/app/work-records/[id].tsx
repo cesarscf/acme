@@ -35,7 +35,7 @@ export default function WorkRecordScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const workRecord = useWorkRecordQuery(id);
 
-  if (workRecord.isError) {
+  if (workRecord.isLoadingError) {
     return <LoadError message="Não conseguimos abrir o serviço." onRetry={() => workRecord.refetch()} />;
   }
   if (!workRecord.data) return <View className="flex-1 bg-background" />;

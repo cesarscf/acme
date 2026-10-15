@@ -9,6 +9,7 @@ import {
 } from '@/hooks/data/briefing/use-briefing-mutation';
 import type { Briefing } from '@/hooks/data/briefing/use-briefing-query';
 import type { Assistant } from '@/hooks/data/team/use-team-query';
+import { formatWhen } from '@/lib/when';
 import { AdjustCard, ConnectCard, PlaybookCard, QuestionCard, SystemLine, TestPixCard } from './briefing-cards';
 import { ProfessionalBubble, Reply } from './chat-messages';
 import { Mascot } from './mascot';
@@ -49,12 +50,6 @@ export function BriefingThread({
 
   return (
     <>
-      <SystemLine>
-        <Mascot mascot={assistant.mascot} size={16} />
-        <Text className="font-normal text-[12.5px] text-muted-foreground">
-          <Text className="font-bold">{assistant.name}</Text> nasceu neste chat
-        </Text>
-      </SystemLine>
       <Reply text={briefing.greeting} />
       <ConnectCard
         connect={briefing.connect}
@@ -137,6 +132,7 @@ export function BriefingThread({
   );
 }
 
+// The prototype's drawer peeking out from behind the message box while the Briefing goes on.
 export function BriefingProgress({
   assistant,
   briefing,
@@ -147,12 +143,39 @@ export function BriefingProgress({
   step: Briefing['steps'][number] | null;
 }) {
   const total = briefing.steps.length + 1;
-  const position = !briefing.connect.skipped ? 1 : step ? briefing.steps.indexOf(step) + 2 : null;
+  const done = briefing.connect.skipped && !step;
+  const position = !briefing.connect.skipped ? 1 : step ? briefing.steps.indexOf(step) + 2 : total;
   return (
-    <Text className="px-2 pb-2 font-semibold text-[12.5px] text-muted-foreground">
-      {position
-        ? `Combinando a função de ${assistant.name} · ${position} de ${total}`
-        : 'Tudo combinado. Confere a ficha.'}
-    </Text>
+    <View
+      className="-mb-3 flex-row items-center gap-2 rounded-t-2xl bg-muted px-3.5 pt-[9px] pb-[18px]"
+      style={{ borderCurve: 'continuous' }}
+    >
+      <Mascot mascot={assistant.mascot} size={16} />
+      <Text numberOfLines={1} className="flex-1 font-semibold text-[13px] text-foreground">
+        {done ? 'Tudo combinado. Confere a ficha.' : `Combinando a função de ${assistant.name}`}
+      </Text>
+      <Text className="font-normal text-[13px] text-muted-foreground">
+        {position} de {total}
+      </Text>
+    </View>
+  );
+}
+
+// "Hoje, 10:27" over the line where the Assistant was born, as in the prototype.
+export function BirthLine({ assistant }: { assistant: Assistant }) {
+  return (
+    <View className="items-center gap-1.5 py-1">
+      <Text className="font-normal text-muted-foreground text-xs">{formatWhen(new Date(assistant.createdAt))}</Text>
+      <View className="w-full flex-row items-center gap-2">
+        <View className="h-px flex-1 bg-border" />
+        <View className="flex-row items-center gap-1.5">
+          <Mascot mascot={assistant.mascot} size={16} />
+          <Text className="font-normal text-[12.5px] text-muted-foreground">
+            <Text className="font-bold">{assistant.name}</Text> nasceu neste chat
+          </Text>
+        </View>
+        <View className="h-px flex-1 bg-border" />
+      </View>
+    </View>
   );
 }

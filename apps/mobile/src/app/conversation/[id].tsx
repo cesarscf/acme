@@ -1,14 +1,14 @@
 import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, type TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCSSVariable } from 'uniwind';
 import { BackButton } from '@/components/back-button';
 import { SystemLine } from '@/components/briefing-cards';
-import { BriefingProgress, BriefingThread } from '@/components/briefing-thread';
+import { BirthLine, BriefingProgress, BriefingThread } from '@/components/briefing-thread';
 import { Notice, ProfessionalBubble, Reply } from '@/components/chat-messages';
+import { Composer } from '@/components/composer';
 import { ConfirmationCard } from '@/components/confirmation-card';
 import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
@@ -30,7 +30,10 @@ import { type Assistant, useTeamQuery } from '@/hooks/data/team/use-team-query';
 type Suggestion = Extract<ConversationItem, { type: 'suggestion' }>;
 type BookVisit = Extract<Suggestion, { action: 'book_visit' }>;
 // What the Professional tapped before the AI consent sheet, done on the way back if allowed.
-type AfterConsent = { type: 'send' } | { type: 'accept'; suggestion: BookVisit } | { type: 'record'; visitId: string };
+type AfterConsent =
+  | { type: 'send'; message: string }
+  | { type: 'accept'; suggestion: BookVisit }
+  | { type: 'record'; visitId: string };
 
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -73,7 +76,6 @@ function Chat({
   const [text, setText] = useState('');
   const afterConsent = useRef<AfterConsent | null>(null);
   const scroll = useRef<ScrollView>(null);
-  const placeholder = useCSSVariable('--color-muted-foreground') as string;
 
   // While the Briefing has a question open, what the Professional types answers it.
   const step = briefing?.status === 'draft' ? (briefing.steps.find((step) => !step.answer) ?? null) : null;
@@ -91,11 +93,13 @@ function Chat({
   const canSend = !!text.trim() && !working && !answer.isPending && !reviewing;
 
   function submit() {
-    const message = text.trim();
-    if (!message || !canSend) return;
+    if (canSend) sendMessage(text.trim());
+  }
+
+  function sendMessage(message: string) {
     // The AI consent sheet comes up on the first real task, then the message goes out on its own.
     if (!me?.aiConsentedAt && (!step || step.usesAi)) {
-      afterConsent.current = { type: 'send' };
+      afterConsent.current = { type: 'send', message };
       router.push('/ai-consent');
       return;
     }
@@ -138,10 +142,10 @@ function Chat({
       if (!pending) return;
       afterConsent.current = null;
       if (!me?.aiConsentedAt) return;
-      if (pending.type === 'send') submit();
+      if (pending.type === 'send') sendMessage(pending.message);
       else if (pending.type === 'accept') answerSuggestion(pending.suggestion, true);
       else recordWork(pending.visitId);
-    }, [me?.aiConsentedAt, submit, answerSuggestion, recordWork]),
+    }, [me?.aiConsentedAt, sendMessage, answerSuggestion, recordWork]),
   );
 
   return (
@@ -172,6 +176,7 @@ function Chat({
         keyboardDismissMode="interactive"
         onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}
       >
+        <BirthLine assistant={assistant} />
         {briefing && (
           <BriefingThread
             assistant={assistant}
@@ -218,41 +223,31 @@ function Chat({
       </ScrollView>
 
       <View className="px-3" style={{ paddingBottom: bottom + 10 }}>
-        {briefing?.status === 'draft' && <BriefingProgress assistant={assistant} briefing={briefing} step={step} />}
-        <View
-          className="flex-row items-end gap-2 rounded-[22px] border border-border bg-card py-2 pr-2 pl-4"
-          style={{ borderCurve: 'continuous' }}
-        >
-          <TextInput
-            ref={input}
-            className="max-h-32 min-h-9 flex-1 py-2 font-normal text-[15px] text-foreground"
-            accessibilityLabel="Mensagem"
-            editable={!reviewing}
-            placeholder={
-              step
-                ? step.options.length
-                  ? 'Responda aqui ou escolha uma opção acima'
-                  : 'Responda aqui'
-                : reviewing
-                  ? 'Confira a ficha acima'
-                  : `Mensagem para ${assistant.name}`
-            }
-            placeholderTextColor={placeholder}
-            multiline
-            value={text}
-            onChangeText={setText}
-          />
-          <Pressable
-            className={`size-9 items-center justify-center rounded-full bg-primary ${canSend ? '' : 'opacity-30'}`}
-            accessibilityRole="button"
-            accessibilityLabel="Enviar"
-            accessibilityState={{ disabled: !canSend }}
-            disabled={!canSend}
-            onPress={submit}
-          >
-            <Icon name="send" size={17} color="--color-primary-foreground" strokeWidth={2.4} />
-          </Pressable>
-        </View>
+        <Composer
+          inputRef={input}
+          value={text}
+          onChangeText={setText}
+          editable={!reviewing}
+          placeholder={
+            step
+              ? step.options.length
+                ? 'Responda aqui ou escolha uma opção acima'
+                : 'Responda aqui'
+              : reviewing
+                ? 'Confira a ficha acima'
+                : working
+                  ? 'Escreva uma correção ou o próximo pedido'
+                  : `Escreva para ${assistant.name}`
+          }
+          canSend={canSend}
+          onSend={submit}
+          onMention={step || reviewing ? undefined : (message) => !working && sendMessage(message)}
+          canListen={!!me?.aiConsentedAt}
+          onListenBlocked={() => router.push('/ai-consent')}
+          drawer={
+            briefing?.status === 'draft' && <BriefingProgress assistant={assistant} briefing={briefing} step={step} />
+          }
+        />
       </View>
     </KeyboardAvoidingView>
   );

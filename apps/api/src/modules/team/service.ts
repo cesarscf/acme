@@ -1,7 +1,9 @@
-import { assistants, db } from '@acme/db';
-import { and, asc, eq } from 'drizzle-orm';
+import { assistantMessages, assistantNotices, assistants, db } from '@acme/db';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { briefingScripts } from '../briefing/scripts';
 import { type AssistantRole, catalogEntry } from './catalog';
+
+type LastMessage = { from: 'professional' | 'assistant' | 'notice'; text: string; at: Date };
 
 export async function listTeam(professionalId: string) {
   const rows = await db
@@ -10,16 +12,68 @@ export async function listTeam(professionalId: string) {
       role: assistants.role,
       name: assistants.name,
       playbookStatus: assistants.playbookStatus,
+      createdAt: assistants.createdAt,
     })
     .from(assistants)
     .where(eq(assistants.professionalId, professionalId))
     .orderBy(asc(assistants.createdAt), asc(assistants.role));
+  const lastMessages = await loadLastMessages(professionalId);
   return rows.map((assistant) => {
     const { title, tagline, mascot } = catalogEntry(assistant.role);
-    return { ...assistant, title, tagline, mascot, hasBriefing: assistant.role in briefingScripts };
+    return {
+      ...assistant,
+      title,
+      tagline,
+      mascot,
+      hasBriefing: assistant.role in briefingScripts,
+      lastMessage: lastMessages.get(assistant.id) ?? null,
+    };
   });
 }
 
+// The home list shows what was said last in each conversation: a message with text or a notice, whichever is newer.
+async function loadLastMessages(professionalId: string) {
+  const messages = await db
+    .selectDistinctOn([assistantMessages.assistantId], {
+      assistantId: assistantMessages.assistantId,
+      role: assistantMessages.role,
+      content: assistantMessages.content,
+      at: assistantMessages.createdAt,
+    })
+    .from(assistantMessages)
+    .innerJoin(assistants, eq(assistants.id, assistantMessages.assistantId))
+    .where(
+      and(
+        eq(assistants.professionalId, professionalId),
+        sql`${assistantMessages.content} @> '[{"type":"text"}]'::jsonb`,
+      ),
+    )
+    .orderBy(assistantMessages.assistantId, desc(assistantMessages.createdAt));
+  const notices = await db
+    .selectDistinctOn([assistantNotices.assistantId], {
+      assistantId: assistantNotices.assistantId,
+      text: assistantNotices.text,
+      at: assistantNotices.createdAt,
+    })
+    .from(assistantNotices)
+    .innerJoin(assistants, eq(assistants.id, assistantNotices.assistantId))
+    .where(eq(assistants.professionalId, professionalId))
+    .orderBy(assistantNotices.assistantId, desc(assistantNotices.createdAt));
+
+  const last = new Map<string, LastMessage>();
+  for (const { assistantId, role, content, at } of messages) {
+    const text = (content as { type: string; text?: string }[])
+      .flatMap((block) => (block.type === 'text' && block.text ? [block.text] : []))
+      .join(' ')
+      .trim();
+    if (text) last.set(assistantId, { from: role === 'user' ? 'professional' : 'assistant', text, at });
+  }
+  for (const { assistantId, text, at } of notices) {
+    const message = last.get(assistantId);
+    if (!message || message.at < at) last.set(assistantId, { from: 'notice', text, at });
+  }
+  return last;
+}
 export async function chooseRoles(professionalId: string, roles: AssistantRole[]) {
   await db
     .insert(assistants)

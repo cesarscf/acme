@@ -1,12 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, type TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCSSVariable } from 'uniwind';
 import { BackButton } from '@/components/back-button';
 import { ProfessionalBubble, Reply } from '@/components/chat-messages';
+import { Composer } from '@/components/composer';
 import { ConfirmationCard } from '@/components/confirmation-card';
 import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
@@ -57,7 +57,6 @@ function Thread({ workRecord }: { workRecord: WorkRecord }) {
   const confirmPaid = useChargeConfirmationMutation(workRecord.id);
   const input = useRef<TextInput>(null);
   const scroll = useRef<ScrollView>(null);
-  const placeholder = useCSSVariable('--color-muted-foreground') as string;
 
   const createdAt = new Date(workRecord.createdAt);
   const working = message.isPending || choose.isPending || charge.isPending || confirmPaid.isPending;
@@ -242,31 +241,15 @@ function Thread({ workRecord }: { workRecord: WorkRecord }) {
       )}
 
       <View className="px-3" style={{ paddingBottom: bottom + 10 }}>
-        <View
-          className="flex-row items-end gap-2 rounded-[22px] border border-border bg-card py-2 pr-2 pl-4"
-          style={{ borderCurve: 'continuous' }}
-        >
-          <TextInput
-            ref={input}
-            className="max-h-32 min-h-9 flex-1 py-2 font-normal text-[15px] text-foreground"
-            accessibilityLabel="Mensagem"
-            placeholder="Pergunte sobre este serviço"
-            placeholderTextColor={placeholder}
-            multiline
-            value={text}
-            onChangeText={setText}
-          />
-          <Pressable
-            className={`size-9 items-center justify-center rounded-full bg-primary ${canSend ? '' : 'opacity-30'}`}
-            accessibilityRole="button"
-            accessibilityLabel="Enviar"
-            accessibilityState={{ disabled: !canSend }}
-            disabled={!canSend}
-            onPress={submit}
-          >
-            <Icon name="send" size={17} color="--color-primary-foreground" strokeWidth={2.4} />
-          </Pressable>
-        </View>
+        <Composer
+          inputRef={input}
+          value={text}
+          onChangeText={setText}
+          placeholder="Pergunte sobre este serviço"
+          canSend={canSend}
+          onSend={submit}
+          canListen
+        />
       </View>
     </KeyboardAvoidingView>
   );

@@ -11,6 +11,7 @@ import { type Assistant, useTeamQuery } from '@/hooks/data/team/use-team-query';
 import { useWorkRecordsQuery, type WorkRecordRow } from '@/hooks/data/work-records/use-work-records-query';
 import { formatMoney } from '@/lib/money';
 import { firstName } from '@/lib/onboarding';
+import { formatListTime } from '@/lib/when';
 
 const coachSeenKey = 'acme.home-coach-seen';
 const coachTips = [
@@ -21,7 +22,7 @@ const coachTips = [
 export default function Home() {
   const { top, bottom } = useSafeAreaInsets();
   const { data: me } = useProfessionalQuery();
-  const { data: team } = useTeamQuery();
+  const { data: team, refetch: refetchTeam } = useTeamQuery();
   const signOut = useSignOutMutation();
   const [tab, setTab] = useState<'assistants' | 'services'>('assistants');
   const [coach, setCoach] = useState(() => (SecureStore.getItem(coachSeenKey) ? -1 : 0));
@@ -61,6 +62,13 @@ export default function Home() {
       recordAfterConsent.current = false;
       if (me?.aiConsentedAt) router.push('/work-records/new');
     }, [me?.aiConsentedAt]),
+  );
+
+  // What was said last changes in the conversations and on WhatsApp, so the list catches up on the way back.
+  useFocusEffect(
+    useCallback(() => {
+      refetchTeam();
+    }, [refetchTeam]),
   );
 
   const tip = coachTips[coach];
@@ -157,36 +165,55 @@ function Assistants({ team }: { team: Assistant[] | undefined }) {
   return (
     <>
       {team?.map((assistant) => (
-        <Link key={assistant.id} href={{ pathname: '/conversation/[id]', params: { id: assistant.id } }} asChild>
-          <Pressable
-            className="min-h-[68px] flex-row items-center gap-3.5 px-5 py-2.5 active:bg-secondary"
-            accessibilityHint="Abre a conversa"
-          >
-            <Mascot mascot={assistant.mascot} size={40} />
-            <View className="min-w-0 flex-1">
-              <View className="flex-row items-center gap-2">
-                <Text className="font-bold text-base text-foreground">{assistant.name}</Text>
-                {assistant.id === next?.id && (
-                  <Text className="h-[22px] overflow-hidden rounded-full bg-primary/10 px-2 font-bold text-[11.5px] text-foreground leading-[22px]">
-                    Próximo
-                  </Text>
-                )}
-              </View>
-              {assistant.playbookStatus === 'approved' ? (
-                <Text numberOfLines={1} className="mt-0.5 font-normal text-muted-foreground text-sm">
-                  {assistant.title} · {assistant.tagline}
-                </Text>
-              ) : (
-                <Text numberOfLines={1} className="mt-0.5 font-semibold text-primary text-sm">
-                  Combine comigo para eu começar
-                </Text>
-              )}
-            </View>
-            {assistant.playbookStatus === 'draft' && <View className="size-[9px] rounded-full bg-primary" />}
-          </Pressable>
-        </Link>
+        <AssistantRow key={assistant.id} assistant={assistant} next={assistant.id === next?.id} />
       ))}
     </>
+  );
+}
+
+// As in a chat app: who it is, what was said last and when.
+function AssistantRow({ assistant, next }: { assistant: Assistant; next: boolean }) {
+  const { lastMessage } = assistant;
+  const fresh = !lastMessage && assistant.playbookStatus === 'draft';
+  const preview = lastMessage
+    ? `${lastMessage.from === 'professional' ? 'Você: ' : ''}${lastMessage.text}`
+    : fresh
+      ? 'Combine comigo para eu começar'
+      : assistant.tagline;
+  return (
+    <Link href={{ pathname: '/conversation/[id]', params: { id: assistant.id } }} asChild>
+      <Pressable
+        className="min-h-[68px] flex-row items-center gap-3.5 px-5 py-2.5 active:bg-secondary"
+        accessibilityHint="Abre a conversa"
+      >
+        <Mascot mascot={assistant.mascot} size={40} />
+        <View className="min-w-0 flex-1">
+          <View className="flex-row items-center gap-2">
+            <Text numberOfLines={1} className="shrink font-bold text-base text-foreground">
+              {assistant.name}
+              <Text className="font-normal text-muted-foreground"> · {assistant.title}</Text>
+            </Text>
+            {next && (
+              <Text className="h-[22px] overflow-hidden rounded-full bg-primary/10 px-2 font-bold text-[11.5px] text-foreground leading-[22px]">
+                Próximo
+              </Text>
+            )}
+          </View>
+          <Text
+            numberOfLines={1}
+            className={`mt-0.5 text-sm ${fresh ? 'font-semibold text-primary' : 'font-normal text-muted-foreground'}`}
+          >
+            {preview}
+          </Text>
+        </View>
+        <View className="items-end gap-1.5 self-stretch justify-center">
+          <Text className="font-normal text-muted-foreground text-xs">
+            {formatListTime(new Date(lastMessage?.at ?? assistant.createdAt))}
+          </Text>
+          {fresh && <View className="size-[9px] rounded-full bg-primary" />}
+        </View>
+      </Pressable>
+    </Link>
   );
 }
 

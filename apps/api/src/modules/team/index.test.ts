@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { assistants, db } from '@acme/db';
+import { assistantMessages, assistantNotices, assistants, db } from '@acme/db';
 import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
 import { app } from '../../app';
@@ -62,6 +62,39 @@ test('choosing a Role again keeps a single Assistant for it', async () => {
 
   const { data } = await api.team.get({ headers });
   expect(data?.map(({ name }) => name)).toEqual([catalogEntry('scheduling').name, catalogEntry('quotes').name]);
+});
+
+test('each Assistant comes with what was said last in its conversation', async () => {
+  const { headers } = await signInNewProfessional();
+  await api.team.post({ roles: ['scheduling', 'billing'] }, { headers });
+  const { data: team } = await api.team.get({ headers });
+  const [scheduling, billing] = team!;
+  expect(scheduling?.lastMessage).toBeNull();
+
+  await db.insert(assistantMessages).values([
+    { assistantId: scheduling!.id, role: 'user', content: [{ type: 'text', text: 'Marca o João amanhã' }] },
+    {
+      assistantId: scheduling!.id,
+      role: 'assistant',
+      content: [
+        { type: 'text', text: 'Marquei às 9h.' },
+        { type: 'tool_use', id: 'toolu_1', name: 'x', input: {} },
+      ],
+    },
+    { assistantId: scheduling!.id, role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1' }] },
+  ]);
+  await db.insert(assistantMessages).values({
+    assistantId: billing!.id,
+    role: 'assistant',
+    content: [{ type: 'text', text: 'Cobrança enviada.' }],
+  });
+  await db.insert(assistantNotices).values({ assistantId: billing!.id, text: 'O João pagou.' });
+
+  const { data } = await api.team.get({ headers });
+  expect(data?.map(({ lastMessage }) => lastMessage && { from: lastMessage.from, text: lastMessage.text })).toEqual([
+    { from: 'assistant', text: 'Marquei às 9h.' },
+    { from: 'notice', text: 'O João pagou.' },
+  ]);
 });
 
 test('a coming soon Role cannot be chosen', async () => {

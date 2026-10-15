@@ -88,6 +88,16 @@ export default function Home() {
         <Text className="flex-1 font-extrabold text-[22px] text-foreground tracking-[-0.22px]">
           {name ? `Olá, ${name}` : 'Olá'}
         </Text>
+        {/* Creating an Assistant of one's own comes later; the button keeps its place from the prototype. */}
+        <Pressable
+          className="size-11 items-center justify-center rounded-full border border-border bg-card opacity-40"
+          accessibilityRole="button"
+          accessibilityLabel="Novo assistente"
+          accessibilityState={{ disabled: true }}
+          disabled
+        >
+          <Icon name="plus" size={20} />
+        </Pressable>
       </View>
       <View className="mx-5 mt-2.5 mb-2 flex-row gap-1 rounded-[14px] bg-muted p-1">
         <Tab label="Assistentes" active={tab === 'assistants'} onPress={() => setTab('assistants')} />

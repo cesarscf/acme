@@ -142,11 +142,7 @@ export function Composer({
           </Text>
         )}
         <View className="flex-row items-center gap-2">
-          <RoundButton
-            label="Anexar foto"
-            icon="attach"
-            onPress={() => Alert.alert('Em breve', 'Anexar fotos da câmera ou da galeria chega numa próxima versão.')}
-          />
+          <RoundButton label="Anexar foto" icon="attach" disabled />
           {onMention && <RoundButton label="Ver dados com @" icon="at" active={menu} onPress={() => setMenu(!menu)} />}
           <View className="flex-1" />
           <Pressable
@@ -185,20 +181,24 @@ function RoundButton({
   label,
   icon,
   active = false,
+  disabled = false,
   onPress,
 }: {
   label: string;
   icon: 'attach' | 'at';
   active?: boolean;
-  onPress: () => void;
+  disabled?: boolean;
+  onPress?: () => void;
 }) {
   return (
     <Pressable
       className={`size-9 items-center justify-center rounded-full border border-border active:bg-secondary ${
         active ? 'bg-secondary' : ''
-      }`}
+      } ${disabled ? 'opacity-40' : ''}`}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
     >
       <Icon name={icon} size={17} color="--color-muted-foreground" />

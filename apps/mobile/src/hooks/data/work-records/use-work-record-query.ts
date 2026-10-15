@@ -9,5 +9,10 @@ function getWorkRecord(id: string) {
 export type WorkRecord = Awaited<ReturnType<typeof getWorkRecord>>;
 
 export function useWorkRecordQuery(id: string) {
-  return useQuery({ queryKey: workRecordKeys.detail(id), queryFn: () => getWorkRecord(id) });
+  return useQuery({
+    queryKey: workRecordKeys.detail(id),
+    queryFn: () => getWorkRecord(id),
+    // While the Pix waits for the Customer, the thread polls so "Já paguei" shows up without leaving it.
+    refetchInterval: (query) => (query.state.data?.charge?.status === 'pending' ? 5000 : false),
+  });
 }

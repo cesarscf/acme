@@ -1,4 +1,5 @@
 import type { BetaRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
+import { chargeTools } from '../charges/tools';
 import { customerTools } from '../customers/tools';
 import { quoteTools } from '../quotes/tools';
 import { visitTools } from '../visits/tools';
@@ -32,6 +33,7 @@ export function confirmed<Input>(
 const roleTools: Partial<Record<Assistant['role'], (assistant: Assistant) => AssistantTool[]>> = {
   scheduling: visitTools,
   quotes: quoteTools,
+  billing: chargeTools,
 };
 
 export function assistantTools(assistant: Assistant): AssistantTool[] {

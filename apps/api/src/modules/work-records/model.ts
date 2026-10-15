@@ -9,4 +9,5 @@ export const WorkRecordsModel = {
   'workRecords.Message': t.Object({ text: text(2000) }),
   'workRecords.WorkRecord': t.Object({ id: t.String({ format: 'uuid' }) }),
   'workRecords.Customer': t.Object({ customerId: t.String({ format: 'uuid' }) }),
+  'workRecords.ChargeConfirmation': t.Object({ received: t.Boolean() }),
 };

@@ -8,6 +8,7 @@ const variants = {
   // Translucent white on the dark welcome screen.
   glass: { box: 'bg-background/10', label: 'text-background', spinner: '--color-background' },
   link: { box: 'h-11 self-center px-3', label: 'text-[15px] text-foreground', spinner: '--color-foreground' },
+  secondary: { box: 'border border-input bg-card', label: 'text-foreground', spinner: '--color-foreground' },
 } as const;
 
 export function Button({

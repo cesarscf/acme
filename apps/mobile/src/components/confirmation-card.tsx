@@ -9,10 +9,13 @@ export function ConfirmationCard({
   confirmation,
   disabled,
   onDecide,
+  decisionLine = true,
 }: {
   confirmation: Confirmation;
   disabled: boolean;
   onDecide: (confirmed: boolean) => void;
+  // The service thread answers with the Professional's own bubble (Confirmar / Cancelar), as in the prototype.
+  decisionLine?: boolean;
 }) {
   return (
     <View className="gap-2.5">
@@ -45,14 +48,16 @@ export function ConfirmationCard({
           <OptionRow letter="B" label="Cancelar" disabled={disabled} onPress={() => onDecide(false)} />
         </View>
       ) : (
-        <View className="flex-row items-center justify-center gap-1.5 py-0.5">
-          {confirmation.status === 'confirmed' && (
-            <Icon name="check" size={14} color="--color-primary" strokeWidth={2.4} />
-          )}
-          <Text className="font-normal text-[12.5px] text-muted-foreground">
-            {confirmation.status === 'confirmed' ? 'Confirmado' : 'Cancelado'}
-          </Text>
-        </View>
+        decisionLine && (
+          <View className="flex-row items-center justify-center gap-1.5 py-0.5">
+            {confirmation.status === 'confirmed' && (
+              <Icon name="check" size={14} color="--color-primary" strokeWidth={2.4} />
+            )}
+            <Text className="font-normal text-[12.5px] text-muted-foreground">
+              {confirmation.status === 'confirmed' ? 'Confirmado' : 'Cancelado'}
+            </Text>
+          </View>
+        )
       )}
     </View>
   );

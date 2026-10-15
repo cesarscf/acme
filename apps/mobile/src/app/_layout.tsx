@@ -64,6 +64,10 @@ function Routes() {
         <Stack.Screen name="work-records/new" />
         <Stack.Screen name="work-records/[id]" />
         <Stack.Screen
+          name="work-records/pix-qr-code"
+          options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents' }}
+        />
+        <Stack.Screen
           name="ai-consent"
           options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents' }}
         />

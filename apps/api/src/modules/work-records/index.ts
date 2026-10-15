@@ -5,7 +5,9 @@ import { transcribe } from '../transcription/transcribe';
 import { WorkRecordsModel } from './model';
 import {
   addMessage,
+  chargeWorkRecord,
   chooseCustomer,
+  confirmWorkRecordCharge,
   createWorkRecord,
   findBillingAssistant,
   getWorkRecord,
@@ -72,4 +74,25 @@ export const workRecords = new Elysia()
       return result.workRecord;
     },
     { auth: true, params: 'workRecords.WorkRecord', body: 'workRecords.Customer' },
+  )
+  .post(
+    '/work-records/:id/charge',
+    async ({ professional, params: { id } }) => {
+      const result = await chargeWorkRecord(professional.id, id);
+      if (result.workRecord) return result.workRecord;
+      if (result.refused === 'work_record_not_found') throw status(404, 'Work record not found');
+      if (result.refused === 'send_failed') throw status(502, 'Sending failed');
+      throw status(409, result.refused);
+    },
+    { auth: true, params: 'workRecords.WorkRecord' },
+  )
+  .post(
+    '/work-records/:id/charge/confirmation',
+    async ({ professional, params: { id }, body: { received } }) => {
+      const result = await confirmWorkRecordCharge(professional.id, id, received);
+      if (result.workRecord) return result.workRecord;
+      if (result.refused === 'not_found') throw status(404, 'Charge not found');
+      throw status(409, result.refused);
+    },
+    { auth: true, params: 'workRecords.WorkRecord', body: 'workRecords.ChargeConfirmation' },
   );

@@ -338,7 +338,12 @@ test('the billing Playbook keeps the PaymentMethods, the default and the Pix key
       value: 'Gerar o Pix, confirmar o pagamento e lembrar quem atrasou',
       routine: null,
     },
-    { step: 'paymentMethods', label: 'Recebe', value: 'Pix e dinheiro, o Pix por padrão', routine: null },
+    {
+      step: 'paymentMethods',
+      label: 'Recebe',
+      value: 'Pix e dinheiro, o Pix por padrão',
+      routine: 'Lembrete do Pix pendente, 1 dia depois',
+    },
     { step: 'pixKey', label: 'Chave Pix', value: 'Celular (11) 98765-4321', routine: null },
     { step: 'pixName', label: 'Nome', value: 'José Antônio da Silva', routine: null },
     { step: 'pixCity', label: 'Cidade', value: 'São Paulo', routine: null },

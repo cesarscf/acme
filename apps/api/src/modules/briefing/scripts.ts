@@ -442,6 +442,8 @@ const billing: BriefingScript = {
       ],
       format: ({ accepted, default: preferred }) =>
         accepted.length === 1 ? 'Só Pix' : `Pix e dinheiro, ${preferred === 'pix' ? 'o Pix' : 'o dinheiro'} por padrão`,
+      // The reminder Routine has no step of its own yet and runs with the spec's default.
+      routine: () => 'Lembrete do Pix pendente, 1 dia depois',
     }),
     step({
       key: 'pixKey',

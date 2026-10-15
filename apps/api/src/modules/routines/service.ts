@@ -2,6 +2,7 @@ import { assistants, db, professionals } from '@acme/db';
 import { and, eq } from 'drizzle-orm';
 import { type ConstructorOptions, type JobWithMetadata, PgBoss } from 'pg-boss';
 import { confirmations, followUp } from '../briefing/scripts';
+import { remindDueCharges } from '../charges/service';
 import { followUpDueQuotes } from '../quotes/service';
 import type { AssistantRole } from '../team/catalog';
 import { requestDueVisitConfirmations } from '../visits/service';
@@ -10,11 +11,13 @@ import { localDate, nextDay, toInstant } from '../visits/time';
 // One pg-boss queue per kind of Routine; each Assistant's Routine is a cron entry in it, keyed by the Assistant's id.
 const visitConfirmationsQueue = 'visit-confirmations';
 const quoteFollowUpsQueue = 'quote-follow-ups';
+const chargeRemindersQueue = 'charge-reminders';
 const queues: Partial<Record<AssistantRole, string>> = {
   scheduling: visitConfirmationsQueue,
   quotes: quoteFollowUpsQueue,
+  billing: chargeRemindersQueue,
 };
-// Follow-ups are checked every hour of the day, so a Quote that comes due at night waits for the morning.
+// Follow-ups and reminders are checked every hour of the day, so one that comes due at night waits for the morning.
 const followUpCron = '0 8-20 * * *';
 
 type RoutineRun = JobWithMetadata<{ assistantId: string }>;
@@ -51,6 +54,7 @@ async function start(options: Omit<ConstructorOptions, 'connectionString'>, work
       runVisitConfirmations(run!),
     );
     await boss.work(quoteFollowUpsQueue, { includeMetadata: true }, ([run]: RoutineRun[]) => runQuoteFollowUps(run!));
+    await boss.work(chargeRemindersQueue, { includeMetadata: true }, ([run]: RoutineRun[]) => runChargeReminders(run!));
   }
   return boss;
 }
@@ -100,6 +104,8 @@ function routineCron(role: AssistantRole, playbook: unknown) {
     const action = followUp.safeParse(fields.followUp).data?.action;
     return action === 'remind' || action === 'notify_me' ? followUpCron : null;
   }
+  // The billing Briefing has no step for reminders yet, so every approved billing Playbook gets the spec's default.
+  if (role === 'billing') return followUpCron;
   return null;
 }
 
@@ -126,6 +132,15 @@ async function runQuoteFollowUps({ data: { assistantId }, createdOn }: RoutineRu
   await followUpDueQuotes(
     { id: assistant.professionalId, name: assistant.professionalName, timezone: assistant.timezone },
     { action, afterDays },
+    createdOn,
+  );
+}
+
+async function runChargeReminders({ data: { assistantId }, createdOn }: RoutineRun) {
+  const assistant = await findRoutineAssistant(assistantId, 'billing');
+  if (!assistant) return;
+  await remindDueCharges(
+    { id: assistant.professionalId, name: assistant.professionalName, timezone: assistant.timezone },
     createdOn,
   );
 }

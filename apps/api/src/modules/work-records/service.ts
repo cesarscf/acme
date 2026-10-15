@@ -1,6 +1,17 @@
 import { assistants, audioUsages, charges, customers, db, professionals, workRecords } from '@acme/db';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { paymentMethods } from '../briefing/scripts';
+import {
+  chargeCard,
+  chargePixCode,
+  confirmChargePaid,
+  createCharge,
+  findPixAccount,
+  findPixCharge,
+  formatWholeMoney,
+  sendCharge,
+} from '../charges/service';
+import { addNotice } from '../conversations/service';
 import { createCustomer, findCustomer, toPhoneNumber } from '../customers/service';
 import { listVisits } from '../visits/service';
 import { addDays, formatLocalDateTime, localDate } from '../visits/time';
@@ -17,7 +28,7 @@ const customerOptionCount = 3;
 
 async function findProfessional(id: string) {
   const [professional] = await db
-    .select({ id: professionals.id, timezone: professionals.timezone })
+    .select({ id: professionals.id, name: professionals.name, timezone: professionals.timezone })
     .from(professionals)
     .where(eq(professionals.id, id));
   return professional!;
@@ -197,6 +208,9 @@ async function viewWorkRecord(workRecord: WorkRecord) {
   const paidCharge = await db.query.charges.findFirst({
     where: and(eq(charges.workRecordId, workRecord.id), eq(charges.status, 'paid')),
   });
+  const pixCharge = await findPixCharge(workRecord.id);
+  const pixAccount = await findPixAccount(workRecord.professionalId);
+  const service = workRecord.description ?? workRecord.title ?? 'Serviço';
   return {
     id: workRecord.id,
     createdAt: workRecord.createdAt,
@@ -207,6 +221,22 @@ async function viewWorkRecord(workRecord: WorkRecord) {
     amountCents: workRecord.amountCents,
     paymentMethod: workRecord.paymentMethod,
     paid: !!paidCharge,
+    // The Pix Charge as the service thread draws it; only a sent one is there to show.
+    charge: pixCharge?.sentAt
+      ? {
+          id: pixCharge.id,
+          status: pixCharge.status,
+          amountCents: pixCharge.amountCents,
+          sentAt: pixCharge.sentAt,
+          paidAt: pixCharge.paidAt,
+          pixCode: pixAccount && chargePixCode(pixCharge, pixAccount),
+        }
+      : null,
+    chargeCard:
+      customer && workRecord.amountCents
+        ? chargeCard({ customerName: customer.name, service, amountCents: workRecord.amountCents })
+        : null,
+    pixReady: !!pixAccount,
     transcript: workRecord.transcript,
     customerOptions: customer ? [] : await listCustomerOptions(workRecord.professionalId),
   };
@@ -259,4 +289,38 @@ export async function listWorkRecords(professionalId: string) {
     : [];
   const paidIds = new Set(paid.map(({ workRecordId }) => workRecordId));
   return rows.map((row) => ({ ...row, paid: paidIds.has(row.id) }));
+}
+
+// "Cobrar no Pix" in the service thread: the Charge is made and sent once the Professional taps Confirmar.
+export async function chargeWorkRecord(professionalId: string, id: string) {
+  const professional = await findProfessional(professionalId);
+  const account = await findPixAccount(professional.id);
+  if (!account) return { refused: 'no_pix_account' as const };
+  const created = await createCharge(professional.id, id);
+  if (created.refused) return { refused: created.refused };
+  if (created.charge.sentAt) return { refused: 'already_sent' as const };
+  try {
+    await sendCharge(created.charge, professional, account);
+  } catch (error) {
+    console.error('Sending the Pix charge failed', error);
+    return { refused: 'send_failed' as const };
+  }
+  const workRecord = await findWorkRecord(professional.id, id);
+  return { workRecord: await viewWorkRecord(workRecord!) };
+}
+
+// "Recebi" or "Não caiu" in the service thread, after the Customer tapped "Já paguei".
+export async function confirmWorkRecordCharge(professionalId: string, id: string, received: boolean) {
+  const charge = await findPixCharge(id);
+  const workRecord = await findWorkRecord(professionalId, id);
+  if (!charge || !workRecord) return { refused: 'not_found' as const };
+  const result = await confirmChargePaid(professionalId, charge.id, received);
+  if (result.refused) return { refused: result.refused };
+  if (received) {
+    const { customer, amountCents } = result.charge;
+    const first = customer.name.split(' ')[0];
+    const text = `Caiu! Os ${formatWholeMoney(amountCents)} do ${first} já estão na sua conta.`;
+    await db.transaction((tx) => addNotice(tx, professionalId, 'billing', text));
+  }
+  return { workRecord: await viewWorkRecord(workRecord) };
 }

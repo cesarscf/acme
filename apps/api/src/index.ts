@@ -1,5 +1,6 @@
 import { app } from './app';
 import { ensureLoginCodeTemplate } from './modules/auth/service';
+import { ensureChargeTemplates } from './modules/charges/service';
 import { ensureQuoteTemplates } from './modules/quotes/service';
 import { startRoutines } from './modules/routines/service';
 import { ensureVisitConfirmationTemplate } from './modules/visits/service';
@@ -16,6 +17,7 @@ for (;;) {
     await ensureLoginCodeTemplate();
     await ensureVisitConfirmationTemplate();
     await ensureQuoteTemplates();
+    await ensureChargeTemplates();
     break;
   } catch (error) {
     console.warn(`Could not ensure the WhatsApp templates, retrying in 5s: ${(error as Error).message}`);

@@ -5,6 +5,7 @@
     "dev": { "persistent": true, "cache": false },
     "check-types": { "dependsOn": ["transit"] },
     "test": { "dependsOn": ["transit"], "cache": false },
+    "evals": { "dependsOn": ["transit"], "cache": false },
     "//#format-and-lint": {},
     "//#format-and-lint:fix": { "cache": false }
   }

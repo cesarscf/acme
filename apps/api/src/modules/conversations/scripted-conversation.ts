@@ -12,7 +12,6 @@ type Block = Anthropic.Beta.BetaContentBlockParam;
 export type ToolCall = { name: string; input: Record<string, unknown> };
 export type Turn = { calls: ToolCall[]; reply: string; end: TurnEvent };
 
-// Eval-only: a new Professional's Assistant on the real model, its Playbook set as if the Briefing had filled it.
 export async function scriptedAssistant(role: AssistantRole, playbook: Record<string, unknown> = {}) {
   const created = await newAssistant(role);
   await db.update(assistants).set({ playbook }).where(eq(assistants.id, created.id));
@@ -35,12 +34,10 @@ export function notice(assistant: Assistant, text: string, extra: Partial<typeof
     .then(([row]) => row!);
 }
 
-// What the Professional types, and what the model did with it: every tool it called and what it answered.
 export function say(assistant: Assistant, text: string) {
   return turn(assistant, (emit) => sendText(assistant, text, emit));
 }
 
-// The one tap on "Marcar a visita": the Assistant gets the message as if typed.
 export function acceptSuggestion(assistant: Assistant, suggestion: { id: string; customerName: string }) {
   return turn(assistant, (emit) => answerSuggestion(assistant, suggestion, true, emit));
 }
@@ -70,7 +67,6 @@ function messagesOf(assistant: Assistant) {
     .orderBy(asc(assistantMessages.createdAt));
 }
 
-// A matcher for one call: `expect(turn.calls).toContainEqual(called('createVisit', { time: '09:00' }))`.
 export function called(name: string, input?: Record<string, unknown>) {
   return expect.objectContaining({ name, ...(input && { input: expect.objectContaining(input) }) });
 }

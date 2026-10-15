@@ -21,7 +21,6 @@ export function Reply({ text }: { text: string }) {
   );
 }
 
-// Something that happened outside the conversation, like a Customer tapping a button on WhatsApp.
 export function Notice({ text }: { text: string }) {
   return (
     <Text

@@ -1,4 +1,3 @@
-// One "Você" line per sentence, as the prototype shows the transcript.
 export function transcriptLines(transcript: string) {
   return transcript
     .split('\n')

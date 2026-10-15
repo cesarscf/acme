@@ -92,7 +92,8 @@ export function chargeTools({ professional }: Assistant): AssistantTool[] {
         inputSchema: z.strictObject({ chargeId: z.string().describe('id da cobrança.') }),
         run: async ({ chargeId }) => {
           const charge = await ownCharge(chargeId);
-          if (charge.status === 'paid') throw new ToolError(`${charge.customer.name} já pagou essa cobrança.`);
+          if (charge.status === 'paid' || charge.status === 'cancelled')
+            throw new ToolError(`${charge.customer.name} já pagou essa cobrança.`);
           const account = await findPixAccount(professional.id);
           if (!account) throw new ToolError(noPixAccount);
           await sendCharge(charge, professional, account);

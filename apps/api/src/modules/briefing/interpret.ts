@@ -14,7 +14,6 @@ const system = `Você ajuda um assistente do Acme, um app de assistentes de IA p
 - Se a resposta não responde à pergunta, ou faltar algo que o campo exige, use understood: false e value: null.
 - reply é uma frase curta em português do Brasil, sem markdown, como um colega de trabalho. Se entendeu, confirme o que anotou (ex.: "Fechado: seg a sex, das 7h às 17h."). Se não entendeu, diga o que faltou.`;
 
-// The LLM only runs for free text; chips go straight into the Playbook.
 export async function interpret(
   assistant: { id: string; professional: { id: string } },
   step: BriefingStep,

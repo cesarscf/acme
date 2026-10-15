@@ -3,7 +3,7 @@ import { createHmac, randomInt, randomUUID } from 'node:crypto';
 import { createApp as createEmulator } from '@acme/meta-emulator/app';
 import { treaty } from '@elysia/eden';
 import { app } from '../../app';
-import { type ButtonClick, listMessages, onButtonClick, sendMessage } from './service';
+import { type ButtonClick, ensureTemplate, listMessages, onButtonClick, sendMessage } from './service';
 
 const phoneNumberId = '1001';
 
@@ -23,7 +23,7 @@ beforeAll(async () => {
     language: 'pt_BR',
     category: 'UTILITY',
     components: [
-      { type: 'BODY', text: 'Olá! Segue o orçamento de {{1}}.' },
+      { type: 'BODY', text: 'Olá! Segue o orçamento de {{1}}.', example: { body_text: [['R$ 350,00']] } },
       {
         type: 'BUTTONS',
         buttons: [
@@ -239,4 +239,21 @@ test('a signed webhook that is not JSON is refused as a bad request', async () =
   const response = await postWebhook('not json', sign('not json'));
 
   expect(response.status).toBe(400);
+});
+
+test('a template is created even when another template whose name contains its name exists', async () => {
+  const wabaId = String(randomInt(1e9));
+  const template = {
+    name: 'visit_reminder',
+    language: 'pt_BR',
+    category: 'UTILITY' as const,
+    components: [{ type: 'BODY' as const, text: 'Lembrete da sua visita.' }],
+  };
+  ok(await meta({ id: wabaId }).message_templates.post({ ...template, name: 'visit_reminder_old' }));
+
+  await ensureTemplate(wabaId, template);
+  await ensureTemplate(wabaId, template);
+
+  const { data } = ok(await meta({ id: wabaId }).message_templates.get({ query: { name: 'visit_reminder' } }));
+  expect(data.map(({ name }) => name).sort()).toEqual(['visit_reminder', 'visit_reminder_old']);
 });

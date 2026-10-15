@@ -132,7 +132,6 @@ export function BriefingThread({
   );
 }
 
-// The prototype's drawer peeking out from behind the message box while the Briefing goes on.
 export function BriefingProgress({
   assistant,
   briefing,
@@ -161,7 +160,6 @@ export function BriefingProgress({
   );
 }
 
-// "Hoje, 10:27" over the line where the Assistant was born, as in the prototype.
 export function BirthLine({ assistant }: { assistant: Assistant }) {
   return (
     <View className="items-center gap-1.5 py-1">

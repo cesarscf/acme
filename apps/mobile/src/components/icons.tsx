@@ -1,7 +1,6 @@
 import Svg, { Path } from 'react-native-svg';
 import { useCSSVariable } from 'uniwind';
 
-// Stroke icons drawn from the prototype's SVGs.
 const paths = {
   back: 'M15 5l-7 7 7 7',
   chevronDown: 'M6 9l6 6 6-6',

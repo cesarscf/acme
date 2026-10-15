@@ -9,7 +9,7 @@ import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
 import { createCustomer } from '../customers/service';
 import { listMessages } from '../whatsapp/service';
-import { ensureChargeTemplates } from './service';
+import { createCharge, ensureChargeTemplates } from './service';
 
 const api = treaty(app);
 app.listen(0);
@@ -201,4 +201,17 @@ test('Confirmar twice sends the Pix once', async () => {
 
   expect(again.status).toBe(409);
   expect(await listMessages({ phoneNumberId: platformNumber, waId: professional.joao.phoneNumber })).toHaveLength(1);
+});
+
+test('two Confirmar at once make one Pix Charge', async () => {
+  const professional = await professionalWithBilling();
+  const workRecord = await workRecordFor(professional.professional.id, professional.joao.id);
+
+  const created = await Promise.all(
+    Array.from({ length: 5 }, () => createCharge(professional.professional.id, workRecord.id)),
+  );
+
+  const saved = await db.select().from(charges).where(eq(charges.workRecordId, workRecord.id));
+  expect(saved).toHaveLength(1);
+  expect(created.map((result) => result.charge?.id)).toEqual(Array(5).fill(saved[0]!.id));
 });

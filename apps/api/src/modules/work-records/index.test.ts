@@ -341,3 +341,113 @@ test("the Serviços list shows the Professional's WorkRecords, newest first, and
   ]);
   expect(opened.status).toBe(404);
 });
+
+async function pixChargeFor(
+  workRecord: { id: string; professionalId: string; customerId: string | null },
+  status: 'pending' | 'paid' = 'pending',
+) {
+  const [charge] = await db
+    .insert(charges)
+    .values({
+      professionalId: workRecord.professionalId,
+      workRecordId: workRecord.id,
+      customerId: workRecord.customerId!,
+      amountCents: 35000,
+      paymentMethod: 'pix',
+      status,
+      sentAt: new Date(),
+      paidAt: status === 'paid' ? new Date() : null,
+    })
+    .returning();
+  return charge!;
+}
+
+async function savedWorkRecord(id: string) {
+  const [saved] = await db.select().from(workRecords).where(eq(workRecords.id, id));
+  return saved!;
+}
+
+test('cash received after the Pix went out settles the service: a paid cash Charge, and the Pix is cancelled', async () => {
+  const { professional, headers } = await professionalWith();
+  const joao = await newCustomer(professional.id, 'João Pereira');
+  claude.reply((request) =>
+    filled({ customer: refOf(request, 'João Pereira'), title: 'Limpeza', amountCents: 35000, paymentMethod: 'pix' }),
+  );
+  const { data: created } = await api['work-records'].post({ transcript: 'Limpei o split do João, 350.' }, { headers });
+  const pix = await pixChargeFor(await savedWorkRecord(created!.id));
+  claude.reply((request) =>
+    filled({ customer: refOf(request, 'João Pereira'), paymentMethod: 'cash', cashReceived: true }),
+  );
+
+  const { data } = await api['work-records']({ id: created!.id }).messages.post(
+    { text: 'Ele acabou me pagando em dinheiro.' },
+    { headers },
+  );
+
+  expect(data).toMatchObject({ paid: true, charge: null });
+  const saved = await db.select().from(charges).where(eq(charges.workRecordId, created!.id));
+  expect(saved).toHaveLength(2);
+  expect(saved.find(({ id }) => id === pix.id)).toMatchObject({ status: 'cancelled' });
+  expect(saved.find(({ paymentMethod }) => paymentMethod === 'cash')).toMatchObject({
+    customerId: joao.id,
+    amountCents: 35000,
+    status: 'paid',
+  });
+  const received = await api['work-records']({ id: created!.id }).charge.confirmation.post(
+    { received: true },
+    { headers },
+  );
+  expect(received.status).toBe(409);
+});
+
+test('a corrected amount reaches the Pix Charge not yet paid, and never a paid one', async () => {
+  const { professional, headers } = await professionalWith();
+  await newCustomer(professional.id, 'João Pereira');
+  const created = [];
+  for (const transcript of ['Limpei o split do João, 350.', 'Troquei o capacitor do João, 350.']) {
+    claude.reply((request) =>
+      filled({ customer: refOf(request, 'João Pereira'), title: 'Limpeza', amountCents: 35000, paymentMethod: 'pix' }),
+    );
+    created.push((await api['work-records'].post({ transcript }, { headers })).data!);
+  }
+  const pending = await pixChargeFor(await savedWorkRecord(created[0]!.id));
+  const paid = await pixChargeFor(await savedWorkRecord(created[1]!.id), 'paid');
+
+  claude.reply(filled({ amountCents: 40000 }));
+  const { data } = await api['work-records']({ id: created[0]!.id }).messages.post(
+    { text: 'Na verdade foram 400.' },
+    { headers },
+  );
+  claude.reply(filled({ amountCents: 40000 }));
+  await api['work-records']({ id: created[1]!.id }).messages.post({ text: 'Na verdade foram 400.' }, { headers });
+
+  expect(data).toMatchObject({ amountCents: 40000, charge: { id: pending.id, amountCents: 40000 } });
+  const [pendingNow] = await db.select().from(charges).where(eq(charges.id, pending.id));
+  const [paidNow] = await db.select().from(charges).where(eq(charges.id, paid.id));
+  expect(pendingNow!.amountCents).toBe(40000);
+  expect(paidNow!.amountCents).toBe(35000);
+});
+
+test('a later message does not replace the Customer of a WorkRecord registered from a Visit', async () => {
+  const { professional, headers } = await professionalWith();
+  const joao = await newCustomer(professional.id, 'João Pereira');
+  await newCustomer(professional.id, 'Marta Lima');
+  const visit = await createVisit(professional.id, joao.id, {
+    scheduledAt: new Date(Date.now() - 2 * 3_600_000),
+    durationMinutes: 60,
+  });
+  claude.reply(filled({ title: 'Limpeza de split' }));
+  const { data: created } = await api['work-records'].post(
+    { transcript: 'Limpei o split.', visitId: visit.id },
+    { headers },
+  );
+  claude.reply((request) => filled({ customer: refOf(request, 'Marta Lima'), amountCents: 35000 }));
+
+  const { data } = await api['work-records']({ id: created!.id }).messages.post(
+    { text: 'A Marta indicou, foram 350.' },
+    { headers },
+  );
+
+  expect(data).toMatchObject({ customer: { id: joao.id }, amountCents: 35000 });
+  expect((await savedWorkRecord(created!.id)).visitId).toBe(visit.id);
+});

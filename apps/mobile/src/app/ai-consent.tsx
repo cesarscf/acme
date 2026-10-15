@@ -14,7 +14,6 @@ const variants = {
     ],
     allow: 'Permitir',
   },
-  // "Registrar serviço" asks before the first recording.
   recording: {
     title: 'Antes de gravar',
     terms: [

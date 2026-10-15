@@ -23,7 +23,6 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Screens draw under the system bars and pad themselves with safe area insets. */}
       <KeyboardProvider statusBarTranslucent navigationBarTranslucent preserveEdgeToEdge>
         {/* Dark icons on the light screens; Android's default is light icons. */}
         <StatusBar style="dark" />
@@ -50,7 +49,7 @@ function Routes() {
   }, [loading]);
 
   if (loading) return null;
-  if (session && team.isError) {
+  if (session && team.isLoadingError) {
     return <LoadError message="Não conseguimos carregar a sua equipe." onRetry={() => team.refetch()} />;
   }
   // Onboarding ends when the Team exists; the ready screen stays reachable so it can show the new Team.

@@ -10,10 +10,13 @@ type Professional = { id: string; name: string; timezone: string };
 export type ChargeWithCustomer = NonNullable<Awaited<ReturnType<typeof findCharge>>>;
 
 // The spec's default for the reminder Routine: a day after the Pix went out, at most twice.
-export const reminderAfterDays = 1;
+const reminderAfterDays = 1;
 const reminderLimit = 2;
 
 const paidButton = { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY', text: 'Já paguei' }] } as const;
+
+const examplePixCode =
+  '00020126430014br.gov.bcb.pix0121carlos@exemplo.com.br5204000053039865406320.005802BR5915Carlos Eletrica6009Sao Paulo62070503***63046F76';
 
 const chargeTemplate = {
   name: 'pix_charge',
@@ -23,6 +26,7 @@ const chargeTemplate = {
     {
       type: 'BODY',
       text: 'Olá, {{1}}! Segue o Pix de {{2}} pelo serviço {{3}}, no valor de {{4}}.\n\nCopie o código abaixo e cole no app do seu banco, em Pix copia e cola:\n{{5}}\n\nDepois de pagar, toque em Já paguei.',
+      example: { body_text: [['Ana', 'Carlos Elétrica', 'Instalação de chuveiro', 'R$ 320,00', examplePixCode]] },
     },
     paidButton,
   ],
@@ -36,6 +40,7 @@ const chargeReminderTemplate = {
     {
       type: 'BODY',
       text: 'Olá, {{1}}! Passando para lembrar do Pix de {{2}}, no valor de {{3}}.\n\nO código para Pix copia e cola é:\n{{4}}\n\nSe já pagou, toque em Já paguei.',
+      example: { body_text: [['Ana', 'Carlos Elétrica', 'R$ 320,00', examplePixCode]] },
     },
     paidButton,
   ],
@@ -48,7 +53,6 @@ export async function ensureChargeTemplates() {
   await ensureTemplate(env('META_PLATFORM_WABA_ID'), chargeReminderTemplate);
 }
 
-// The Pix key, name and city combined in the billing Assistant's Briefing; without all three no Pix can be made.
 export async function findPixAccount(professionalId: string) {
   const [billingAssistant] = await db
     .select({ playbook: assistants.playbook })
@@ -62,7 +66,7 @@ export async function findPixAccount(professionalId: string) {
   return { key: key.data.key, name: name.data, city: city.data };
 }
 
-// The BR Code carries the amount and, as its txid, the Charge's id (at most 25 letters and digits).
+// The Pix txid is at most 25 letters and digits.
 export function chargePixCode(
   { id, amountCents }: { id: string; amountCents: number },
   account: { key: string; name: string; city: string },
@@ -91,12 +95,25 @@ export async function findCharge(professionalId: string, id: string) {
   return charge;
 }
 
-// The Pix Charge of a WorkRecord, if there is one; a WorkRecord is charged by Pix once.
+// A WorkRecord is charged by Pix once.
 export function findPixCharge(workRecordId: string) {
   return db.query.charges.findFirst({
     where: and(eq(charges.workRecordId, workRecordId), eq(charges.paymentMethod, 'pix')),
-    orderBy: desc(charges.createdAt),
   });
+}
+
+// A corrected amount reaches the Pix Charge until it is paid; its Pix code is made from the amount when sent.
+export async function followAmount(workRecordId: string, amountCents: number) {
+  await db
+    .update(charges)
+    .set({ amountCents })
+    .where(
+      and(
+        eq(charges.workRecordId, workRecordId),
+        eq(charges.paymentMethod, 'pix'),
+        inArray(charges.status, ['pending', 'awaiting_confirmation']),
+      ),
+    );
 }
 
 export async function createCharge(professionalId: string, workRecordId: string) {
@@ -110,13 +127,12 @@ export async function createCharge(professionalId: string, workRecordId: string)
     where: and(eq(charges.workRecordId, workRecordId), eq(charges.status, 'paid')),
   });
   if (paid) return { refused: 'already_paid' as const };
-  const existing = await findPixCharge(workRecordId);
-  if (existing) return { charge: (await findCharge(professionalId, existing.id))! };
-  const [created] = await db
+  await db
     .insert(charges)
     .values({ professionalId, workRecordId, customerId, amountCents, paymentMethod: 'pix' })
-    .returning({ id: charges.id });
-  return { charge: (await findCharge(professionalId, created!.id))! };
+    .onConflictDoNothing({ target: [charges.workRecordId, charges.paymentMethod] });
+  const pixCharge = (await findPixCharge(workRecordId))!;
+  return { charge: (await findCharge(professionalId, pixCharge.id))! };
 }
 
 // Sending again (a new link after "Não caiu", say) starts the reminders over.
@@ -143,7 +159,8 @@ export async function sendCharge(
 export async function confirmChargePaid(professionalId: string, id: string, received: boolean) {
   const charge = await findCharge(professionalId, id);
   if (!charge) return { refused: 'not_found' as const };
-  if (charge.status === 'paid') return { refused: 'already_paid' as const };
+  // A cancelled Pix belongs to a WorkRecord the Customer paid another way.
+  if (charge.status === 'paid' || charge.status === 'cancelled') return { refused: 'already_paid' as const };
   await db
     .update(charges)
     .set(received ? { status: 'paid', paidAt: new Date() } : { status: 'pending' })
@@ -308,7 +325,7 @@ onButtonClick('charge', async ({ originId, button, tx }) => {
   // A second tap while the Professional has not answered yet asks nothing new.
   if (charge.status === 'awaiting_confirmation') return;
   let text: string;
-  if (charge.status === 'paid') {
+  if (charge.status === 'paid' || charge.status === 'cancelled') {
     text = `${charge.customerName} tocou em ${button.text} no Pix de ${amount}, mas ele já estava pago. Nada mudou.`;
   } else {
     await tx.update(charges).set({ status: 'awaiting_confirmation' }).where(eq(charges.id, charge.id));

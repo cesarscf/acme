@@ -13,7 +13,8 @@ import { tradesSummary } from '@/lib/onboarding';
 
 export default function Name() {
   const me = useProfessionalQuery();
-  if (me.isError) return <LoadError message="Não conseguimos carregar o seu perfil." onRetry={() => me.refetch()} />;
+  if (me.isLoadingError)
+    return <LoadError message="Não conseguimos carregar o seu perfil." onRetry={() => me.refetch()} />;
   if (!me.data) return <View className="flex-1 bg-card" />;
   return <NameForm me={me.data} />;
 }

@@ -6,7 +6,6 @@ import { conversationKeys } from './keys';
 import { readTurn } from './read-turn';
 import type { Conversation } from './use-conversation-query';
 
-// A suggestion from another Assistant's work, answered with one tap: accepting asks this Assistant, as if typed.
 export function useSuggestionMutation(assistantId: string) {
   const [draft, setDraft] = useState('');
   const mutation = useMutation({

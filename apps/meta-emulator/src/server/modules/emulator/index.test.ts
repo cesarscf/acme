@@ -116,7 +116,7 @@ test('clicking a template quick reply sends a button webhook with the payload gi
     language: 'pt_BR',
     category: 'UTILITY',
     components: [
-      { type: 'BODY', text: 'Confirma a visita de {{1}}?' },
+      { type: 'BODY', text: 'Confirma a visita de {{1}}?', example: { body_text: [['amanhã']] } },
       {
         type: 'BUTTONS',
         buttons: [

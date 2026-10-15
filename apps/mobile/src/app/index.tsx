@@ -41,7 +41,6 @@ export default function Home() {
   }
 
   function registerService() {
-    // The recording notice comes up before the first recording, then the recording starts on its own.
     if (!me?.aiConsentedAt) {
       recordAfterConsent.current = true;
       router.push({ pathname: '/ai-consent', params: { purpose: 'recording' } });
@@ -130,7 +129,7 @@ export default function Home() {
             className="absolute inset-x-5 rounded-[18px] bg-card p-4"
             style={[
               { boxShadow: '0 16px 40px rgba(0,0,0,0.25)', borderCurve: 'continuous' },
-              coach === 0 ? { top: top + 150 + assistantRows * 68 } : { bottom: bottom + 104 },
+              coach === 0 ? { top: top + 154 + assistantRows * 68 } : { bottom: bottom + 104 },
             ]}
           >
             <Text className="font-extrabold text-[15px] text-foreground">{tip.title}</Text>
@@ -181,7 +180,6 @@ function Assistants({ team }: { team: Assistant[] | undefined }) {
   );
 }
 
-// As in a chat app: who it is, what was said last and when.
 function AssistantRow({ assistant, next }: { assistant: Assistant; next: boolean }) {
   const { lastMessage } = assistant;
   const fresh = !lastMessage && assistant.playbookStatus === 'draft';
@@ -228,9 +226,9 @@ function AssistantRow({ assistant, next }: { assistant: Assistant; next: boolean
 }
 
 function Services() {
-  const { data: workRecords, isError, refetch } = useWorkRecordsQuery();
+  const { data: workRecords, isLoadingError, refetch } = useWorkRecordsQuery();
 
-  if (isError) {
+  if (isLoadingError) {
     return (
       <Pressable className="items-center px-10 pt-[90px]" accessibilityRole="button" onPress={() => refetch()}>
         <Text className="text-center font-normal text-destructive text-sm">

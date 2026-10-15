@@ -2,7 +2,14 @@ import { Elysia, status } from 'elysia';
 import type { Store } from '../../store';
 import type { Webhooks } from '../../webhooks';
 import { GraphModel } from './model';
-import { createTemplate, graphError, listTemplates, sendMessage } from './service';
+import {
+  componentMissingExample,
+  createTemplate,
+  graphError,
+  listTemplates,
+  missingExampleError,
+  sendMessage,
+} from './service';
 
 export const graph = (store: Store, webhooks: Webhooks) =>
   new Elysia()
@@ -23,9 +30,15 @@ export const graph = (store: Store, webhooks: Webhooks) =>
       },
       { body: 'graph.SendMessage' },
     )
-    .post('/:id/message_templates', ({ params: { id }, body }) => createTemplate(store, id, body), {
-      body: 'graph.CreateTemplate',
-    })
+    .post(
+      '/:id/message_templates',
+      ({ params: { id }, body }) => {
+        const missing = componentMissingExample(body);
+        if (missing) throw status(400, missingExampleError(missing));
+        return createTemplate(store, id, body);
+      },
+      { body: 'graph.CreateTemplate' },
+    )
     .get('/:id/message_templates', ({ params: { id }, query: { name } }) => listTemplates(store, id, name), {
       query: 'graph.ListTemplates',
     });

@@ -83,7 +83,6 @@ function idIn(result: string) {
 
 type ProfessionalWithQuotesAssistant = Awaited<ReturnType<typeof professionalWithQuotesAssistant>>;
 
-// The quotes Assistant looks up the price list and the Customer, builds the Quote and asks to send it, as Claude would.
 async function askForSplitCleaning({ headers, joao, conversation }: ProfessionalWithQuotesAssistant) {
   let priceList = '';
   claude.reply(

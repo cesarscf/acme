@@ -12,7 +12,11 @@ const visitConfirmationTemplate = {
   language: 'pt_BR',
   category: 'UTILITY',
   components: [
-    { type: 'BODY', text: 'Olá, {{1}}! Sua visita com {{2}} está marcada para {{3}}. Podemos confirmar?' },
+    {
+      type: 'BODY',
+      text: 'Olá, {{1}}! Sua visita com {{2}} está marcada para {{3}}. Podemos confirmar?',
+      example: { body_text: [['Ana', 'Carlos Elétrica', 'quinta-feira, 16/10, às 14:00']] },
+    },
     {
       type: 'BUTTONS',
       buttons: [
@@ -48,7 +52,7 @@ export function listVisits(professionalId: string, timeZone: string, from: strin
   );
 }
 
-// Visits that overlap the given time; one that ends when the other starts does not.
+// A Visit that ends when another starts does not conflict with it.
 export function findConflicts(
   professionalId: string,
   { scheduledAt, durationMinutes }: VisitTiming,
@@ -99,6 +103,11 @@ export async function sendVisitConfirmation(
   visit: VisitWithCustomer,
   professional: { name: string; timezone: string },
 ) {
+  await sendConfirmationTemplate(visit, professional);
+  await db.update(visits).set({ confirmationRequestedFor: visit.scheduledAt }).where(eq(visits.id, visit.id));
+}
+
+async function sendConfirmationTemplate(visit: VisitWithCustomer, professional: { name: string; timezone: string }) {
   // ADR 0003: the Customer channel is the Professional's own number, connected in ticket 18; M1 sends from the platform's.
   await sendMessage({
     from: env('META_PLATFORM_PHONE_NUMBER_ID'),
@@ -128,10 +137,8 @@ export async function sendVisitConfirmation(
     },
     origin: { type: 'visit', id: visit.id },
   });
-  await db.update(visits).set({ confirmationRequestedFor: visit.scheduledAt }).where(eq(visits.id, visit.id));
 }
 
-// The Routine's run: every Visit of the day still ahead and waiting, except the ones already asked about their current time.
 export async function requestDueVisitConfirmations(
   professional: { id: string; name: string; timezone: string },
   date: string,
@@ -145,7 +152,29 @@ export async function requestDueVisitConfirmations(
     ) {
       continue;
     }
-    await sendVisitConfirmation(visit, professional);
+    // Claimed before sending, so a retry overlapping the next run cannot ask the same Customer twice.
+    const [claimed] = await db
+      .update(visits)
+      .set({ confirmationRequestedFor: visit.scheduledAt })
+      .where(
+        and(
+          eq(visits.id, visit.id),
+          eq(visits.status, 'scheduled'),
+          eq(visits.scheduledAt, visit.scheduledAt),
+          sql`${visits.confirmationRequestedFor} is distinct from ${visits.scheduledAt}`,
+        ),
+      )
+      .returning({ id: visits.id });
+    if (!claimed) continue;
+    try {
+      await sendConfirmationTemplate(visit, professional);
+    } catch (error) {
+      await db
+        .update(visits)
+        .set({ confirmationRequestedFor: visit.confirmationRequestedFor })
+        .where(eq(visits.id, visit.id));
+      throw error;
+    }
     const when = formatLocalDateTime(visit.scheduledAt, professional.timezone);
     await db.transaction((tx) =>
       addNotice(
@@ -171,7 +200,9 @@ onButtonClick('visit', async ({ originId, button, tx }) => {
     .from(visits)
     .innerJoin(customers, eq(customers.id, visits.customerId))
     .innerJoin(professionals, eq(professionals.id, visits.professionalId))
-    .where(eq(visits.id, originId));
+    .where(eq(visits.id, originId))
+    // Two quick taps (Confirmar, then Remarcar) are answered one after the other, so the second sees the first.
+    .for('update', { of: visits });
   const separator = button.payload.indexOf(':');
   const action = button.payload.slice(0, separator);
   const askedFor = new Date(button.payload.slice(separator + 1));

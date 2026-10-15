@@ -35,7 +35,7 @@ export default function WorkRecordScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const workRecord = useWorkRecordQuery(id);
 
-  if (workRecord.isError) {
+  if (workRecord.isLoadingError) {
     return <LoadError message="Não conseguimos abrir o serviço." onRetry={() => workRecord.refetch()} />;
   }
   if (!workRecord.data) return <View className="flex-1 bg-background" />;
@@ -388,7 +388,6 @@ function Thinking({ assistant, label = 'Pensando' }: { assistant: Assistant | un
   );
 }
 
-// One of the team actions above the composer, as the prototype's chips: the title, then the mascot and who does it.
 function TeamAction({
   label,
   assistant,
@@ -424,7 +423,6 @@ function TeamAction({
   );
 }
 
-// "Cobrar no Pix" as in the prototype: the confirmation card, the Pix card, then "Já paguei" and "Caiu!".
 function ChargeThread({
   workRecord,
   card,

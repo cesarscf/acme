@@ -4,7 +4,6 @@ import { conversationKeys } from './keys';
 
 type TurnEvent = { type: 'text'; text: string } | { type: 'message' | 'awaiting_confirmation' | 'done' | 'error' };
 
-// Shows the reply as it streams, and swaps it for the saved conversation after each message.
 export async function readTurn(
   assistantId: string,
   request: Promise<{ data: AsyncIterable<{ data: TurnEvent }> | null; error: unknown }>,

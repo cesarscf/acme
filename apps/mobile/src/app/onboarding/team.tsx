@@ -16,7 +16,7 @@ import { recommendedRoles, teamButtonLabel } from '@/lib/onboarding';
 
 export default function Team() {
   const catalog = useCatalogQuery();
-  if (catalog.isError) {
+  if (catalog.isLoadingError) {
     return <LoadError message="Não conseguimos carregar os assistentes." onRetry={() => catalog.refetch()} />;
   }
   if (!catalog.data) return <View className="flex-1 bg-card" />;

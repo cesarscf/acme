@@ -12,7 +12,6 @@ import { useTranscriptionMutation } from '@/hooks/data/work-records/use-transcri
 import { selectionFeedback } from '@/lib/haptics';
 import { Icon } from './icons';
 
-// The prototype's "Ver agora" menu: what each tag asks the Assistant for.
 const mentions = [
   { tag: '@agenda', detail: 'de amanhã' },
   { tag: '@cobranças', detail: 'em aberto' },
@@ -66,7 +65,6 @@ export function Composer({
     onMention?.(message);
   }
 
-  // Hold to talk: what was said lands in the box, to read before sending.
   async function startListening() {
     if (!canListen) return onListenBlocked?.();
     holding.current = true;

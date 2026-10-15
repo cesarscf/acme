@@ -8,7 +8,6 @@ export async function transcribe(audio: File): Promise<Transcription> {
   form.append('file', audio, audio.name || 'audio.m4a');
   form.append('model', model);
   form.append('language', 'pt');
-  // Only providers that keep nothing (Zero Data Retention).
   form.append('provider', JSON.stringify({ zdr: true }));
 
   const response = await fetch(

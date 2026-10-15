@@ -2,16 +2,22 @@ import type Anthropic from '@anthropic-ai/sdk';
 
 type Block =
   | { type: 'text'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> };
+  | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
+  | { type: 'fallback'; from: { model: string }; to: { model: string }; trigger: { type: 'refusal'; category: null } }
+  | { type: 'compaction'; content: string | null };
 
 export type ScriptedReply = {
   content: Block[];
   stop_reason?: Anthropic.Beta.BetaStopReason;
   model?: string;
-  usage?: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number };
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_input_tokens?: number;
+    iterations?: Anthropic.Beta.BetaIterationsUsage;
+  };
 };
 
-// Test-only stand-in for the Messages API: answers each request with the next scripted reply, streamed as SSE when asked.
 export function startFakeClaude() {
   // A function reply reads the request, e.g. to use an id a tool returned earlier in the turn.
   const replies: (ScriptedReply | ((request: Anthropic.Beta.MessageCreateParams) => ScriptedReply))[] = [];
@@ -56,7 +62,7 @@ function message({ content, stop_reason, model, usage }: ScriptedReply, requeste
     type: 'message',
     role: 'assistant',
     model: model ?? requested,
-    content,
+    content: content.map((block) => (block.type === 'compaction' ? { ...block, encrypted_content: null } : block)),
     stop_reason: stop_reason ?? (content.some(({ type }) => type === 'tool_use') ? 'tool_use' : 'end_turn'),
     stop_sequence: null,
     usage: {
@@ -98,6 +104,25 @@ function sse({ content, stop_reason, model, usage }: ScriptedReply, requested: s
       events.push([
         'content_block_delta',
         { type: 'content_block_delta', index, delta: { type: 'text_delta', text: block.text } },
+      ]);
+    } else if (block.type === 'fallback') {
+      events.push(['content_block_start', { type: 'content_block_start', index, content_block: block }]);
+    } else if (block.type === 'compaction') {
+      events.push([
+        'content_block_start',
+        {
+          type: 'content_block_start',
+          index,
+          content_block: { type: 'compaction', content: null, encrypted_content: null },
+        },
+      ]);
+      events.push([
+        'content_block_delta',
+        {
+          type: 'content_block_delta',
+          index,
+          delta: { type: 'compaction_delta', content: block.content, encrypted_content: null },
+        },
       ]);
     } else {
       events.push([

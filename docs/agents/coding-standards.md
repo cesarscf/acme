@@ -38,3 +38,19 @@ Follow each tool's official guidance; `docs/research/mvp-stack.md` summarises it
 - **SDKs** (Anthropic, Better Auth): use the SDK's own helpers and types instead of re-implementing them.
 
 When this file and a tool's docs disagree, this file wins.
+
+## Styling
+
+Both UIs use Tailwind v4 with the **shadcn token names** (`background`, `foreground`, `card`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, plus their `-foreground` pairs), filled with the colours of the product design (`prototype/index.html`). Components use only these tokens (`bg-primary`, `text-muted-foreground`), never raw colours.
+
+- **`apps/meta-emulator`**: shadcn/ui components, added with the `shadcn` CLI.
+- **`apps/mobile`**: Uniwind (ADR 0002) with the same token names.
+- The token values live in one shared CSS file that both apps import. If Uniwind cannot read shadcn's format, each app keeps its own file with identical names and values.
+
+## Dependencies
+
+Add every package at its latest stable version (`npm view <pkg> version`), pinned exactly. Platforms override this:
+
+- **Expo SDK** decides React, React Native and every native package: install them with `bun expo install`.
+- **Uniwind** decides Tailwind: `tailwindcss` matches the `@tailwindcss/node` version Uniwind depends on.
+- The monorepo keeps **one version of each shared package** (React, Tailwind, Elysia), because the hoisted linker would otherwise load two copies; web apps follow the version mobile is forced to use.

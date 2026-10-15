@@ -1,5 +1,17 @@
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 export const whatsappMessageDirection = pgEnum('whatsapp_message_direction', ['outbound', 'inbound']);
 
@@ -198,6 +210,21 @@ export const llmUsages = pgTable(
     outputTokens: integer().notNull(),
     cacheCreationInputTokens: integer().notNull(),
     cacheReadInputTokens: integer().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index().on(table.professionalId, table.createdAt)],
+);
+
+export const audioUsages = pgTable(
+  'audio_usages',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    assistantId: uuid().references(() => assistants.id, { onDelete: 'set null' }),
+    model: text().notNull(),
+    seconds: doublePrecision().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index().on(table.professionalId, table.createdAt)],

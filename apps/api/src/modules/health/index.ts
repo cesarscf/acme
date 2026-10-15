@@ -1,5 +1,6 @@
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
+import { HealthModel } from './model';
 
-export const health = new Elysia().get('/health', () => ({ status: 'ok' as const }), {
-  response: t.Object({ status: t.Literal('ok') }),
-});
+export const health = new Elysia()
+  .model(HealthModel)
+  .get('/health', () => ({ status: 'ok' as const }), { response: 'health.Status' });

@@ -6,7 +6,10 @@ export default function Home() {
   const [health, setHealth] = useState('verificando…');
 
   useEffect(() => {
-    api.health.get().then(({ data, error }) => setHealth(data?.status ?? `erro: ${error?.status}`));
+    api.health
+      .get()
+      .then(({ data }) => setHealth(data?.status ?? 'erro'))
+      .catch(() => setHealth('sem conexão'));
   }, []);
 
   return (

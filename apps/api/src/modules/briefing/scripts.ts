@@ -87,7 +87,9 @@ const visitFee = z
   .strictObject({ kind: z.enum(['free', 'fixed', 'waived_if_hired']), amountCents: z.int().positive().nullable() })
   .refine(({ kind, amountCents }) => kind !== 'free' || amountCents === null, 'visita grátis não tem valor');
 
-const followUp = z
+export const quoteValidity = z.int().min(1).max(90);
+
+export const followUp = z
   .strictObject({ action: z.enum(['remind', 'notify_me', 'nothing']), afterDays: z.int().min(1).max(30).nullable() })
   .refine(
     ({ action, afterDays }) => (action === 'nothing') === (afterDays === null),
@@ -311,7 +313,7 @@ const quotes: BriefingScript = {
       label: 'Validade',
       question: 'Por quanto tempo o orçamento vale?',
       guide: 'Quantos dias o orçamento vale depois de enviado, de 1 a 90.',
-      schema: z.int().min(1).max(90),
+      schema: quoteValidity,
       options: [7, 15, 30].map((days) => ({
         key: `${days}_days`,
         label: `${days} dias`,
@@ -355,8 +357,12 @@ const quotes: BriefingScript = {
         if (action === 'notify_me') return `Te avisa em ${days} e você decide`;
         return 'Não insiste';
       },
-      routine: ({ action, afterDays }) =>
-        action === 'remind' ? `Lembrete do orçamento ${afterDays === 1 ? 'em 1 dia' : `em ${afterDays} dias`}` : null,
+      routine: ({ action, afterDays }) => {
+        const days = afterDays === 1 ? 'em 1 dia' : `em ${afterDays} dias`;
+        if (action === 'remind') return `Lembrete do orçamento ${days}`;
+        if (action === 'notify_me') return `Aviso do orçamento sem resposta ${days}`;
+        return null;
+      },
     }),
   ],
   done: 'Pronto! É só me mandar um áudio ou uma descrição do serviço que eu monto o orçamento e te mostro antes de enviar.',
@@ -379,7 +385,7 @@ function formatTime(time: string) {
   return `${Number(hours)}h${minutes === '00' ? '' : minutes}`;
 }
 
-function formatMoney(cents: number) {
+export function formatMoney(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
 }
 

@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  date,
   doublePrecision,
   index,
   integer,
@@ -289,4 +290,67 @@ export const visits = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [index().on(table.professionalId, table.scheduledAt)],
+);
+
+export const priceItems = pgTable(
+  'price_items',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    name: text().notNull(),
+    priceCents: integer().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index().on(table.professionalId)],
+);
+
+export const quoteStatus = pgEnum('quote_status', ['draft', 'sent', 'approved', 'declined']);
+
+export const quotes = pgTable(
+  'quotes',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    customerId: uuid()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    status: quoteStatus().notNull().default('draft'),
+    totalCents: integer().notNull(),
+    sentAt: timestamp({ withTimezone: true }),
+    // The last day the Customer can approve, in the Professional's time zone.
+    validUntil: date(),
+    // When the follow-up Routine reminded the Customer (or told the Professional), so it happens once per send.
+    followedUpAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index().on(table.professionalId, table.status)],
+);
+
+export const quoteItems = pgTable(
+  'quote_items',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    quoteId: uuid()
+      .notNull()
+      .references(() => quotes.id, { onDelete: 'cascade' }),
+    priceItemId: uuid().references(() => priceItems.id, { onDelete: 'set null' }),
+    // Copied from the PriceItem, so a later price change does not alter a Quote already made.
+    description: text().notNull(),
+    quantity: integer().notNull(),
+    unitPriceCents: integer().notNull(),
+    position: integer().notNull(),
+  },
+  (table) => [index().on(table.quoteId)],
 );

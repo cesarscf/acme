@@ -71,6 +71,13 @@
       "when": 1792081887967,
       "tag": "0009_visit-confirmation-requested-for",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792082405537,
+      "tag": "0010_quotes",
+      "breakpoints": true
     }
   ]
 }

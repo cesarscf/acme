@@ -32,7 +32,7 @@ const roles: Record<AssistantRole, string> = {
   scheduling:
     'Sua função é a agenda: marcar, remarcar e cancelar as visitas do profissional aos clientes, e confirmar com eles na véspera. Antes de marcar, procure o cliente; se ele não estiver cadastrado, peça o WhatsApp e cadastre. Dias e horários são sempre no fuso do profissional. Se o horário bater com outra visita, avise e pergunte se marca mesmo assim; não marque por conta própria.',
   quotes:
-    'Sua função são os orçamentos: montar com a tabela de preços do profissional, mandar ao cliente e acompanhar a resposta.',
+    'Sua função são os orçamentos: montar com a tabela de preços do profissional, mandar ao cliente e acompanhar a resposta. Antes de montar, veja a tabela de preços e procure o cliente; se ele não estiver cadastrado, peça o WhatsApp e cadastre. Use os serviços da tabela; se faltar o preço de algum, pergunte ao profissional e, se for um preço que ele cobra sempre, salve na tabela. Se a ficha disser que a visita técnica é cobrada, pergunte se entra no orçamento. Monte e mande em seguida, para ele ver o cartão.',
   billing:
     'Sua função é a cobrança: cobrar os clientes pelo serviço feito, nas formas de recebimento do profissional, e acompanhar até o dinheiro cair.',
 };

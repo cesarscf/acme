@@ -94,10 +94,11 @@ export async function sendMessage({
 
 // The Graph API refuses a second template with the same name and language, so it is created only when missing.
 export async function ensureTemplate(wabaId: string, template: TemplateDefinition) {
-  const existing = await graph<{ data: { language: string }[] }>(
+  const existing = await graph<{ data: { name: string; language: string }[] }>(
     `/${wabaId}/message_templates?name=${encodeURIComponent(template.name)}`,
   );
-  if (existing.data.some(({ language }) => language === template.language)) return;
+  // The name filter is not documented as exact, so a template whose name merely contains it may come back.
+  if (existing.data.some(({ name, language }) => name === template.name && language === template.language)) return;
   await graph(`/${wabaId}/message_templates`, { method: 'POST', body: JSON.stringify(template) });
 }
 
@@ -184,8 +185,11 @@ async function graph<T>(path: string, init?: RequestInit) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('META_ACCESS_TOKEN')}` },
   });
   if (!response.ok) {
-    const { error } = (await response.json().catch(() => ({}))) as { error?: { message: string } };
-    throw new Error(`Graph API ${init?.method ?? 'GET'} ${path} failed: ${error?.message ?? response.status}`);
+    const { error } = (await response.json().catch(() => ({}))) as {
+      error?: { message: string; error_user_msg?: string };
+    };
+    const reason = error?.error_user_msg ?? error?.message ?? response.status;
+    throw new Error(`Graph API ${init?.method ?? 'GET'} ${path} failed: ${reason}`);
   }
   return (await response.json()) as T;
 }

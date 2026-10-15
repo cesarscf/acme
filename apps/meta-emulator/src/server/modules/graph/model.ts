@@ -64,13 +64,21 @@ export const GraphModel = {
         type: t.Union([t.Literal('HEADER'), t.Literal('BODY'), t.Literal('FOOTER'), t.Literal('BUTTONS')]),
         format: t.Optional(t.String()),
         text: t.Optional(t.String()),
+        example: t.Optional(
+          t.Object({
+            header_text: t.Optional(t.Array(t.String())),
+            body_text: t.Optional(t.Array(t.Array(t.String()))),
+          }),
+        ),
         add_security_recommendation: t.Optional(t.Boolean()),
         code_expiration_minutes: t.Optional(t.Number()),
         buttons: t.Optional(
           t.Array(
             t.Object({
-              type: t.Union([t.Literal('QUICK_REPLY'), t.Literal('OTP')]),
+              type: t.Union([t.Literal('QUICK_REPLY'), t.Literal('URL'), t.Literal('OTP')]),
               text: t.Optional(t.String()),
+              url: t.Optional(t.String()),
+              example: t.Optional(t.Array(t.String())),
               otp_type: t.Optional(t.String()),
             }),
           ),

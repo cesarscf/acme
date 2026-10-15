@@ -22,7 +22,21 @@ const quoteTemplate = {
   language: 'pt_BR',
   category: 'UTILITY',
   components: [
-    { type: 'BODY', text: 'Olá, {{1}}! Segue o orçamento de {{2}}: {{3}}. Total: {{4}}. Válido até {{5}}.' },
+    {
+      type: 'BODY',
+      text: 'Olá, {{1}}! Segue o orçamento de {{2}}: {{3}}. Total: {{4}}. Válido até {{5}}.',
+      example: {
+        body_text: [
+          [
+            'Ana',
+            'Carlos Elétrica',
+            'Troca de tomada (R$ 80,00); 2x Instalação de luminária (R$ 120,00 cada)',
+            'R$ 320,00',
+            '25/10',
+          ],
+        ],
+      },
+    },
     buttons,
   ],
 } as const;
@@ -35,6 +49,7 @@ const quoteReminderTemplate = {
     {
       type: 'BODY',
       text: 'Olá, {{1}}! Passando para lembrar do orçamento de {{2}}, no total de {{3}}, válido até {{4}}. Podemos fechar?',
+      example: { body_text: [['Ana', 'Carlos Elétrica', 'R$ 320,00', '25/10']] },
     },
     buttons,
   ],

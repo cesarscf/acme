@@ -44,7 +44,11 @@ const quoteTemplate = {
   category: 'UTILITY',
   components: [
     { type: 'HEADER', format: 'TEXT', text: 'Orçamento' },
-    { type: 'BODY', text: 'Olá {{1}}, seu orçamento de {{2}} está pronto.' },
+    {
+      type: 'BODY',
+      text: 'Olá {{1}}, seu orçamento de {{2}} está pronto.',
+      example: { body_text: [['Ana', 'R$ 350,00']] },
+    },
     { type: 'FOOTER', text: 'Acme' },
     {
       type: 'BUTTONS',
@@ -128,6 +132,57 @@ test('a request without an access token is refused like the Graph API', async ()
 
   expect(response.status).toBe(401);
   expect(await response.json()).toMatchObject({ error: { code: 190, type: 'OAuthException' } });
+});
+
+test.each([
+  ['BODY', { type: 'BODY', text: 'Olá {{1}}, seu orçamento de {{2}} está pronto.' }],
+  ['BODY', { type: 'BODY', text: 'Olá {{1}}, seu orçamento de {{2}} está pronto.', example: { body_text: [['Ana']] } }],
+  ['HEADER', { type: 'HEADER', format: 'TEXT', text: 'Orçamento {{1}}' }],
+  ['BUTTONS', { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Pagar', url: 'https://acme.test/pay/{{1}}' }] }],
+])('a template whose %s has variables without examples is refused like the Graph API', async (type, component) => {
+  const app = createApp(config);
+
+  const response = await graph(app, '/2001/message_templates', {
+    name: 'missing_example',
+    language: 'pt_BR',
+    category: 'UTILITY',
+    components: [component],
+  });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({
+    error: {
+      message: 'Invalid parameter',
+      type: 'OAuthException',
+      code: 100,
+      error_subcode: 2388043,
+      error_user_msg: expect.stringContaining(type),
+    },
+  });
+  const listed = await app.handle(
+    new Request('http://localhost/2001/message_templates', { headers: { Authorization: 'Bearer token' } }),
+  );
+  expect((await listed.json()).data).toEqual([]);
+});
+
+test('a template with an example for every variable is approved', async () => {
+  const app = createApp(config);
+
+  const response = await graph(app, '/2001/message_templates', {
+    name: 'with_examples',
+    language: 'pt_BR',
+    category: 'UTILITY',
+    components: [
+      { type: 'HEADER', format: 'TEXT', text: 'Orçamento {{1}}', example: { header_text: ['#123'] } },
+      { type: 'BODY', text: 'Olá {{1}}, total {{2}}.', example: { body_text: [['Ana', 'R$ 350,00']] } },
+      {
+        type: 'BUTTONS',
+        buttons: [{ type: 'URL', text: 'Pagar', url: 'https://acme.test/pay/{{1}}', example: ['abc123'] }],
+      },
+    ],
+  });
+
+  expect(response.status).toBe(200);
 });
 
 test('an invalid message is refused with an invalid parameter error', async () => {
@@ -221,4 +276,19 @@ test('templates are listed per WABA and can be filtered by name like the Graph A
       },
     ],
   });
+});
+
+test('the name filter also returns templates whose name only contains it, so callers must match the name exactly', async () => {
+  const app = createApp(config);
+  await graph(app, '/2001/message_templates', quoteTemplate);
+  await graph(app, '/2001/message_templates', { ...quoteTemplate, name: 'quote_sent_reminder' });
+
+  const response = await app.handle(
+    new Request('http://localhost/2001/message_templates?name=quote_sent', {
+      headers: { Authorization: 'Bearer token' },
+    }),
+  );
+
+  const { data } = await response.json();
+  expect(data.map(({ name }: { name: string }) => name)).toEqual(['quote_sent', 'quote_sent_reminder']);
 });

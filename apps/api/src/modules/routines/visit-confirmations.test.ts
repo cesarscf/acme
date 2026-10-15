@@ -7,7 +7,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { TestClock } from 'pg-boss';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
-import { ensureVisitConfirmationTemplate } from '../visits/service';
+import { ensureVisitConfirmationTemplate, requestDueVisitConfirmations } from '../visits/service';
 import { toInstant } from '../visits/time';
 import { findRoutine, startRoutines, stopRoutines } from './service';
 
@@ -190,6 +190,16 @@ test('a Routine that fails tries again and asks no Customer twice', async () => 
 
   expect(await confirmationsSentTo(first.id)).toHaveLength(1);
   expect(await confirmationsSentTo(second.id)).toHaveLength(1);
+});
+
+test('two runs overlapping ask each Customer only once', async () => {
+  const { professional } = await approvedSchedulingAssistant();
+  const visit = await visitAt(professional.id, '2031-04-10', '10:00');
+  const run = () => requestDueVisitConfirmations({ ...professional, timezone: timeZone }, '2031-04-10');
+
+  await Promise.all([run(), run()]);
+
+  expect(await confirmationsSentTo(visit.id)).toHaveLength(1);
 });
 
 test('a run missed while the API was down goes out once it is back, for the Visits it was due for', async () => {

@@ -393,7 +393,8 @@ export const workRecords = pgTable(
   (table) => [index().on(table.professionalId, table.createdAt)],
 );
 
-export const chargeStatus = pgEnum('charge_status', ['pending', 'awaiting_confirmation', 'paid']);
+// cancelled: a Pix Charge left behind when the Customer paid the WorkRecord another way.
+export const chargeStatus = pgEnum('charge_status', ['pending', 'awaiting_confirmation', 'paid', 'cancelled']);
 
 export const charges = pgTable(
   'charges',
@@ -422,5 +423,5 @@ export const charges = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index().on(table.professionalId, table.status), index().on(table.workRecordId)],
+  (table) => [index().on(table.professionalId, table.status), unique().on(table.workRecordId, table.paymentMethod)],
 );

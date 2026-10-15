@@ -8,6 +8,7 @@ import {
   createCharge,
   findPixAccount,
   findPixCharge,
+  followAmount,
   formatWholeMoney,
   sendCharge,
 } from '../charges/service';
@@ -119,23 +120,28 @@ export async function createWorkRecord(professionalId: string, transcript: strin
 }
 
 // A message in the service thread completes or corrects the account: Claude reads it all again.
+// A WorkRecord of a Visit keeps the Visit's Customer, as createWorkRecord does.
 export async function addMessage(professionalId: string, id: string, text: string) {
   const current = await findWorkRecord(professionalId, id);
   if (!current) return;
   const transcript = `${current.transcript}\n${text.trim()}`;
   const extraction = await extract(professionalId, transcript);
-  const resolved = await resolveCustomer(professionalId, extraction);
+  const resolved = current.visitId
+    ? { customerId: current.customerId, newCustomerName: null }
+    : await resolveCustomer(professionalId, extraction);
   const customerId = resolved.customerId ?? current.customerId;
   const [workRecord] = await db
     .update(workRecords)
     .set({
       ...merge(current, extraction),
       customerId,
-      visitId: extraction.visitId ?? (customerId === current.customerId ? current.visitId : null),
+      visitId: current.visitId ?? extraction.visitId,
       transcript,
     })
     .where(eq(workRecords.id, id))
     .returning();
+  if (workRecord!.amountCents && workRecord!.amountCents !== current.amountCents)
+    await followAmount(id, workRecord!.amountCents);
   await settleCash(workRecord!);
   // Not saved: the thread asks for the WhatsApp right after, and the next message carries both again.
   const newCustomerName = customerId ? null : resolved.newCustomerName;
@@ -177,19 +183,33 @@ export async function chooseCustomer(professionalId: string, id: string, custome
 }
 
 // Cash already received becomes a paid Charge once the Customer and the amount are known; nothing goes to the Customer.
+// A Pix Charge not yet paid is cancelled, so it stops being reminded.
 async function settleCash(workRecord: WorkRecord) {
   const { id, professionalId, customerId, amountCents, paymentMethod, cashReceived } = workRecord;
   if (paymentMethod !== 'cash' || !cashReceived || !customerId || !amountCents) return;
-  const existing = await db.query.charges.findFirst({ where: eq(charges.workRecordId, id) });
-  if (existing) return;
-  await db.insert(charges).values({
-    professionalId,
-    workRecordId: id,
-    customerId,
-    amountCents,
-    paymentMethod: 'cash',
-    status: 'paid',
-    paidAt: new Date(),
+  await db.transaction(async (tx) => {
+    const [pixCharge] = await tx
+      .select({ status: charges.status })
+      .from(charges)
+      .where(and(eq(charges.workRecordId, id), eq(charges.paymentMethod, 'pix')))
+      .for('update');
+    if (pixCharge?.status === 'paid') return;
+    await tx
+      .update(charges)
+      .set({ status: 'cancelled' })
+      .where(and(eq(charges.workRecordId, id), eq(charges.paymentMethod, 'pix')));
+    await tx
+      .insert(charges)
+      .values({
+        professionalId,
+        workRecordId: id,
+        customerId,
+        amountCents,
+        paymentMethod: 'cash',
+        status: 'paid',
+        paidAt: new Date(),
+      })
+      .onConflictDoNothing({ target: [charges.workRecordId, charges.paymentMethod] });
   });
 }
 
@@ -224,17 +244,18 @@ async function viewWorkRecord(workRecord: WorkRecord) {
     amountCents: workRecord.amountCents,
     paymentMethod: workRecord.paymentMethod,
     paid: !!paidCharge,
-    // The service thread shows only a Pix Charge that was sent.
-    charge: pixCharge?.sentAt
-      ? {
-          id: pixCharge.id,
-          status: pixCharge.status,
-          amountCents: pixCharge.amountCents,
-          sentAt: pixCharge.sentAt,
-          paidAt: pixCharge.paidAt,
-          pixCode: pixAccount && chargePixCode(pixCharge, pixAccount),
-        }
-      : null,
+    // The service thread shows only a Pix Charge that was sent, and not one cancelled by cash.
+    charge:
+      pixCharge?.sentAt && pixCharge.status !== 'cancelled'
+        ? {
+            id: pixCharge.id,
+            status: pixCharge.status,
+            amountCents: pixCharge.amountCents,
+            sentAt: pixCharge.sentAt,
+            paidAt: pixCharge.paidAt,
+            pixCode: pixAccount && chargePixCode(pixCharge, pixAccount),
+          }
+        : null,
     chargeCard:
       customer && workRecord.amountCents
         ? chargeCard({ customerName: customer.name, service, amountCents: workRecord.amountCents })

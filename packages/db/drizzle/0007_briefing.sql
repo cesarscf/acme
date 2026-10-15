@@ -1,0 +1,1 @@
+ALTER TABLE "assistants" ADD COLUMN "briefing" jsonb DEFAULT '{}'::jsonb NOT NULL;

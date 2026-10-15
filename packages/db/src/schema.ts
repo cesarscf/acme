@@ -154,6 +154,8 @@ export const assistants = pgTable(
     name: text().notNull(),
     playbook: jsonb().notNull().default({}),
     playbookStatus: playbookStatus().notNull().default('draft'),
+    // What the Professional said at each Briefing step, kept apart so the Playbook holds only its fields.
+    briefing: jsonb().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })
       .notNull()

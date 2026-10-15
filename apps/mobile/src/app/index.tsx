@@ -13,6 +13,7 @@ export default function Home() {
   const { data: team } = useTeamQuery();
   const signOut = useSignOutMutation();
   const name = me && firstName(me.name);
+  const next = team?.find((assistant) => assistant.playbookStatus === 'draft');
 
   function confirmSignOut() {
     Alert.alert('Sair da conta?', undefined, [
@@ -45,7 +46,7 @@ export default function Home() {
         contentContainerStyle={{ paddingBottom: bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {team?.map((assistant, index) => (
+        {team?.map((assistant) => (
           <Link key={assistant.id} href={{ pathname: '/conversation/[id]', params: { id: assistant.id } }} asChild>
             <Pressable
               className="min-h-[68px] flex-row items-center gap-3.5 px-5 py-2.5 active:bg-secondary"
@@ -55,17 +56,23 @@ export default function Home() {
               <View className="min-w-0 flex-1">
                 <View className="flex-row items-center gap-2">
                   <Text className="font-bold text-base text-foreground">{assistant.name}</Text>
-                  {index === 0 && (
+                  {assistant.id === next?.id && (
                     <Text className="h-[22px] overflow-hidden rounded-full bg-primary/10 px-2 font-bold text-[11.5px] text-foreground leading-[22px]">
                       Próximo
                     </Text>
                   )}
                 </View>
-                <Text numberOfLines={1} className="mt-0.5 font-semibold text-primary text-sm">
-                  Combine comigo para eu começar
-                </Text>
+                {assistant.playbookStatus === 'approved' ? (
+                  <Text numberOfLines={1} className="mt-0.5 font-normal text-muted-foreground text-sm">
+                    {assistant.title} · {assistant.tagline}
+                  </Text>
+                ) : (
+                  <Text numberOfLines={1} className="mt-0.5 font-semibold text-primary text-sm">
+                    Combine comigo para eu começar
+                  </Text>
+                )}
               </View>
-              <View className="size-[9px] rounded-full bg-primary" />
+              {assistant.playbookStatus === 'draft' && <View className="size-[9px] rounded-full bg-primary" />}
             </Pressable>
           </Link>
         ))}

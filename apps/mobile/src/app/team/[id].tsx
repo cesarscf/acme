@@ -1,10 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PlaybookRow } from '@/components/briefing-cards';
 import { Button } from '@/components/button';
 import { Field } from '@/components/field';
+import { Icon } from '@/components/icons';
 import { Mascot } from '@/components/mascot';
+import { useBriefingQuery } from '@/hooks/data/briefing/use-briefing-query';
 import { useAssistantMutation } from '@/hooks/data/team/use-assistant-mutation';
 import { type Assistant, useTeamQuery } from '@/hooks/data/team/use-team-query';
 
@@ -51,6 +54,44 @@ function RenameForm({ assistant }: { assistant: Assistant }) {
         </Text>
       )}
       <Button className="mt-4" label="Salvar" disabled={!canSave} loading={rename.isPending} onPress={save} />
+      {assistant.hasBriefing && assistant.playbookStatus === 'approved' && <Playbook assistant={assistant} />}
+    </View>
+  );
+}
+
+// Ver ficha: each row opens its Briefing step again, and the Playbook stays approved.
+function Playbook({ assistant }: { assistant: Assistant }) {
+  const { data: briefing } = useBriefingQuery(assistant.id);
+  if (!briefing?.playbook) return null;
+  return (
+    <View className="mt-6">
+      <Text className="font-semibold text-[13px] text-muted-foreground">Ficha</Text>
+      <View className="mt-1.5 overflow-hidden rounded-2xl border border-border" style={{ borderCurve: 'continuous' }}>
+        {briefing.playbook.map((row, index) => {
+          const content = (
+            <View className={`flex-row items-center gap-2 px-4 py-3 ${index > 0 ? 'border-secondary border-t' : ''}`}>
+              <View className="flex-1">
+                <PlaybookRow row={row} />
+              </View>
+              {row.step && <Icon name="chevronRight" size={16} color="--color-muted-foreground" />}
+            </View>
+          );
+          if (!row.step) return <View key={row.label}>{content}</View>;
+          return (
+            <Pressable
+              key={row.label}
+              className="active:bg-secondary"
+              accessibilityRole="button"
+              accessibilityHint="Muda este item da ficha"
+              onPress={() =>
+                router.push({ pathname: '/briefing/[id]/[step]', params: { id: assistant.id, step: row.step! } })
+              }
+            >
+              {content}
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }

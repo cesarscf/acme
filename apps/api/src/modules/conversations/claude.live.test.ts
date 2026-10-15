@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { randomInt } from 'node:crypto';
-import { db, llmUsages } from '@acme/db';
+import { assistants, db, llmUsages } from '@acme/db';
 import { createApp as createEmulator } from '@acme/meta-emulator/app';
 import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
@@ -84,4 +84,29 @@ describe.skipIf(!process.env.CLAUDE_LIVE)('the Assistant on the real Claude API'
     const [sent] = await listMessages({ phoneNumberId: from, waId: customer });
     expect(sent?.text).toContain('14');
   }, 90_000);
+
+  test('a free text Briefing answer fills the field of that step', async () => {
+    const { headers, lia } = await liaForNewProfessional();
+
+    const { data } = await api
+      .team({ id: lia.id })
+      .briefing.answers.post(
+        { step: 'hours', text: 'de segunda a sexta das 7 às 17, sábado só de manhã até 11' },
+        { headers },
+      );
+
+    expect(data).toEqual({ understood: true });
+    const { data: briefing } = await api.team({ id: lia.id }).briefing.get({ headers });
+    expect(briefing!.steps.find(({ key }) => key === 'hours')!.answer?.ack).toBeTruthy();
+    const [stored] = await db
+      .select({ playbook: assistants.playbook })
+      .from(assistants)
+      .where(eq(assistants.id, lia.id));
+    expect(stored!.playbook).toEqual({
+      hours: [
+        { days: ['mon', 'tue', 'wed', 'thu', 'fri'], start: '07:00', end: '17:00' },
+        { days: ['sat'], start: expect.any(String), end: '11:00' },
+      ],
+    });
+  }, 60_000);
 });

@@ -1,5 +1,6 @@
 import { assistants, db } from '@acme/db';
 import { and, asc, eq } from 'drizzle-orm';
+import { briefingScripts } from '../briefing/scripts';
 import { type AssistantRole, catalogEntry } from './catalog';
 
 export async function listTeam(professionalId: string) {
@@ -15,7 +16,7 @@ export async function listTeam(professionalId: string) {
     .orderBy(asc(assistants.createdAt), asc(assistants.role));
   return rows.map((assistant) => {
     const { title, tagline, mascot } = catalogEntry(assistant.role);
-    return { ...assistant, title, tagline, mascot };
+    return { ...assistant, title, tagline, mascot, hasBriefing: assistant.role in briefingScripts };
   });
 }
 

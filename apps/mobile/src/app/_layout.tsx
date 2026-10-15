@@ -69,6 +69,10 @@ function Routes() {
           name="team/[id]"
           options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents' }}
         />
+        <Stack.Screen
+          name="briefing/[id]/[step]"
+          options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!!session && !hasTeam}>
         <Stack.Screen name="onboarding/name" />

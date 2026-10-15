@@ -11,7 +11,7 @@ export type ScriptedReply = {
   usage?: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number };
 };
 
-// Test-only stand-in for the Messages API: answers each request with the next scripted reply, streamed as SSE.
+// Test-only stand-in for the Messages API: answers each request with the next scripted reply, streamed as SSE when asked.
 export function startFakeClaude() {
   const replies: ScriptedReply[] = [];
   const requests: Anthropic.Beta.MessageCreateParams[] = [];
@@ -30,6 +30,7 @@ export function startFakeClaude() {
           { type: 'error', error: { type: 'api_error', message: 'No reply scripted' } },
           { status: 500 },
         );
+      if (!body.stream) return Response.json(message(reply, body.model));
       return new Response(sse(reply, body.model), { headers: { 'content-type': 'text/event-stream' } });
     },
   });
@@ -44,6 +45,25 @@ export function startFakeClaude() {
       replies.push(...scripted);
     },
     stop: () => server.stop(true),
+  };
+}
+
+function message({ content, stop_reason, model, usage }: ScriptedReply, requested: string) {
+  return {
+    id: `msg_${crypto.randomUUID()}`,
+    type: 'message',
+    role: 'assistant',
+    model: model ?? requested,
+    content,
+    stop_reason: stop_reason ?? (content.some(({ type }) => type === 'tool_use') ? 'tool_use' : 'end_turn'),
+    stop_sequence: null,
+    usage: {
+      input_tokens: 100,
+      output_tokens: 20,
+      cache_read_input_tokens: 0,
+      cache_creation_input_tokens: 0,
+      ...usage,
+    },
   };
 }
 

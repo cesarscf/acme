@@ -10,6 +10,7 @@ const paths = {
   chevronRight: 'M9 5l7 7-7 7',
   send: 'M12 19V5M6 11l6-6 6 6',
   shield: 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z',
+  link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
 };
 
 export function Icon({

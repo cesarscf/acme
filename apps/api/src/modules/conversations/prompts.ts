@@ -1,4 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
+import { describePlaybook } from '../briefing/service';
 import { type AssistantRole, catalogEntry } from '../team/catalog';
 
 export type PromptContext = {
@@ -42,7 +43,7 @@ export function systemPrompt({ role, name, playbook, playbookStatus, professiona
     `Seu nome é ${name} e você cuida de: ${title}.`,
     `O profissional se chama ${professional.name}. Fuso horário dele: ${professional.timezone}. Hoje é ${today}.`,
     playbookStatus === 'approved'
-      ? `<ficha>${JSON.stringify(playbook)}</ficha>`
+      ? `<ficha>\n${describePlaybook(role, playbook)}\n</ficha>`
       : 'A ficha ainda não foi combinada com o profissional. Faça o que ele pedir, perguntando o que faltar.',
   ].join('\n');
   // The fixed text goes first and is cached; what changes per Assistant or per day comes after the breakpoint.

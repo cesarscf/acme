@@ -1,6 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { ConversationItem } from '@/hooks/data/conversation/use-conversation-query';
 import { Icon } from './icons';
+import { OptionRow } from './option-row';
 
 type Confirmation = Extract<ConversationItem, { type: 'confirmation' }>;
 
@@ -40,8 +41,8 @@ export function ConfirmationCard({
           style={{ borderCurve: 'continuous' }}
         >
           <Text className="px-3.5 pb-3 font-bold text-[15px] text-foreground">{confirmation.question}</Text>
-          <Option letter="A" label="Confirmar" strong disabled={disabled} onPress={() => onDecide(true)} />
-          <Option letter="B" label="Cancelar" disabled={disabled} onPress={() => onDecide(false)} />
+          <OptionRow letter="A" label="Confirmar" strong disabled={disabled} onPress={() => onDecide(true)} />
+          <OptionRow letter="B" label="Cancelar" disabled={disabled} onPress={() => onDecide(false)} />
         </View>
       ) : (
         <View className="flex-row items-center justify-center gap-1.5 py-0.5">
@@ -65,38 +66,5 @@ function Row({ label, value }: { label: string; value: string }) {
         {value}
       </Text>
     </View>
-  );
-}
-
-function Option({
-  letter,
-  label,
-  strong,
-  disabled,
-  onPress,
-}: {
-  letter: string;
-  label: string;
-  strong?: boolean;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      className={`min-h-[52px] flex-row items-center gap-3 border-secondary border-t px-3.5 active:bg-secondary ${disabled ? 'opacity-50' : ''}`}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-    >
-      <View className="size-7 items-center justify-center rounded-lg bg-secondary">
-        <Text className="font-bold text-[13px] text-muted-foreground">{letter}</Text>
-      </View>
-      <Text className={`flex-1 text-[14.5px] text-foreground ${strong ? 'font-semibold' : 'font-medium'}`}>
-        {label}
-      </Text>
-      <Icon name="chevronRight" size={16} color="--color-muted-foreground" />
-    </Pressable>
   );
 }

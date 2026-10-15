@@ -177,16 +177,11 @@ export async function decide(
 
 async function converse(assistant: Assistant, emit: (event: TurnEvent) => void): Promise<TurnEvent> {
   const tools = assistantTools();
-  const model = process.env.CLAUDE_MODEL || defaultModel;
   const runner = new Anthropic().beta.messages.toolRunner({
-    model,
+    ...modelParams(),
     max_tokens: 16000,
     stream: true,
     max_iterations: 20,
-    ...(modelsWithServerFallback.includes(model) && {
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default' as const,
-    }),
     // Short chat replies on a phone; low effort spends the fewest tokens.
     output_config: { effort: 'low' },
     cache_control: { type: 'ephemeral' },
@@ -233,6 +228,17 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
   return { type: 'done' };
 }
 
+export function modelParams() {
+  const model = process.env.CLAUDE_MODEL || defaultModel;
+  return {
+    model,
+    ...(modelsWithServerFallback.includes(model) && {
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default' as const,
+    }),
+  };
+}
+
 async function run(entry: AssistantTool, call: ToolUse): Promise<ToolResult> {
   const { content, isError } = await runRunnableTool(entry.tool, call.input, { toolUse: call, toolUseBlock: call });
   return result(call, content, isError);
@@ -273,7 +279,10 @@ async function saveMessage(assistantId: string, role: 'user' | 'assistant', cont
   return stored!;
 }
 
-async function recordUsage(assistant: Assistant, message: Anthropic.Beta.BetaMessage) {
+export async function recordUsage(
+  assistant: { id: string; professional: { id: string } },
+  message: Anthropic.Beta.BetaMessage,
+) {
   // With a fallback, each model that ran reports its own usage in `iterations`.
   const attempts = message.usage.iterations?.filter(
     (attempt) => attempt.type === 'message' || attempt.type === 'fallback_message',

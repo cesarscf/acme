@@ -128,7 +128,6 @@ export async function getConversation(assistant: Assistant) {
   return { working: isWorking(assistant.id), items };
 }
 
-// What happened outside the conversation, at the time it happened: notices, with the suggestion each offers, and the scheduling Assistant's ended Visits.
 async function loadTimedItems(assistant: Assistant) {
   const notices = await db
     .select({
@@ -165,7 +164,6 @@ function bookVisitMessage(customerName: string) {
   return `Marcar a visita de ${customerName}`;
 }
 
-// A Visit whose time has passed offers "Registrar serviço" where it ended, until a WorkRecord is about it.
 async function loadEndedVisits(professional: Assistant['professional']) {
   const now = new Date();
   const endsAt = sql<Date>`${visits.scheduledAt} + make_interval(mins => ${visits.durationMinutes})`;
@@ -450,7 +448,6 @@ async function loadMessages(assistantId: string) {
   return rows as StoredMessage[];
 }
 
-// Each notice reaches Claude in the first user turn saved after it (a Professional's message or tool results).
 async function apiMessages(assistantId: string) {
   const messages = await loadMessages(assistantId);
   const notices = await loadNotices(assistantId);

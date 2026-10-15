@@ -68,7 +68,6 @@ export async function findRoutine(assistantId: string) {
   return null;
 }
 
-// Called whenever an Assistant's Playbook may have changed: the Routine follows what the approved Playbook says.
 export async function syncRoutines(assistantId: string) {
   const boss = await routines();
   const [assistant] = await db

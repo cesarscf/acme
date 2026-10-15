@@ -180,7 +180,6 @@ export function PlaybookRow({ row }: { row: NonNullable<Briefing['playbook']>[nu
   );
 }
 
-// "O que você quer ajustar?": Ajustar goes back to the step picked here.
 export function AdjustCard({
   playbook,
   disabled,

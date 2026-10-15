@@ -59,7 +59,6 @@ function RenameForm({ assistant }: { assistant: Assistant }) {
   );
 }
 
-// Ver ficha: each row opens its Briefing step again, and the Playbook stays approved.
 function Playbook({ assistant }: { assistant: Assistant }) {
   const { data: briefing } = useBriefingQuery(assistant.id);
   if (!briefing?.playbook) return null;

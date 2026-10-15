@@ -10,7 +10,6 @@ const errors = {
   unknown: 'Não reconheci essa chave. A chave Pix pode ser CPF, CNPJ, e-mail, celular com DDD ou a chave aleatória.',
 };
 
-// Detects the key type the way the Professional writes it, and returns the key as the BR Code carries it.
 export function parsePixKey(text: string): PixKey | { error: string } {
   const trimmed = text.trim();
 

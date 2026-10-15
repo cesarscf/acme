@@ -11,7 +11,6 @@ export type ScriptedReply = {
   usage?: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number };
 };
 
-// Test-only stand-in for the Messages API: answers each request with the next scripted reply, streamed as SSE when asked.
 export function startFakeClaude() {
   // A function reply reads the request, e.g. to use an id a tool returned earlier in the turn.
   const replies: (ScriptedReply | ((request: Anthropic.Beta.MessageCreateParams) => ScriptedReply))[] = [];

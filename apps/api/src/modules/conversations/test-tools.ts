@@ -8,7 +8,6 @@ import type { AssistantTool } from './tools';
 
 const api = treaty(app);
 
-// Test-only: an Assistant as the conversation sees it, for running its tools without Claude.
 export async function newAssistant(role: AssistantRole = 'scheduling') {
   const { professional, headers } = await signInNewProfessional();
   await api.team.post({ roles: [role] }, { headers });

@@ -67,7 +67,6 @@ function say(text: string) {
   return { content: [{ type: 'text' as const, text }] };
 }
 
-// The Customer gets the Quote on WhatsApp and taps Aprovar.
 async function approveQuote({ professional, joao }: Team) {
   const quoteId = await createQuote(professional.id, joao.id, [
     { priceItemId: null, description: 'Instalação de split', quantity: 1, unitPriceCents: 45000 },
@@ -77,7 +76,6 @@ async function approveQuote({ professional, joao }: Team) {
   await meta.emulator.messages({ id: sent!.wamid }).click.post({ index: 0 });
 }
 
-// What went out to the Customer on WhatsApp: only the Quote, never anything a suggestion did on its own.
 async function sentTo(customer: Team['joao']) {
   const messages = await listMessages({ phoneNumberId: platformNumber, waId: customer.phoneNumber });
   return messages.filter(({ direction }) => direction === 'outbound').map(({ type }) => type);

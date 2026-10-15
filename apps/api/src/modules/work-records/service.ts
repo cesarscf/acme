@@ -51,7 +51,6 @@ async function findPaymentMethods(professionalId: string): Promise<PaymentMethod
   return parsed.success ? parsed.data : fallbackPaymentMethods;
 }
 
-// The Visits a WorkRecord can be about: the last week up to the end of today, newest first.
 async function listRecentVisits(professional: { id: string; timezone: string }) {
   const today = localDate(new Date(), professional.timezone);
   const recent = await listVisits(professional.id, professional.timezone, addDays(today, -recentVisitDays), today);
@@ -225,7 +224,7 @@ async function viewWorkRecord(workRecord: WorkRecord) {
     amountCents: workRecord.amountCents,
     paymentMethod: workRecord.paymentMethod,
     paid: !!paidCharge,
-    // The Pix Charge as the service thread draws it; only a sent one is there to show.
+    // The service thread shows only a Pix Charge that was sent.
     charge: pixCharge?.sentAt
       ? {
           id: pixCharge.id,
@@ -313,7 +312,6 @@ export async function chargeWorkRecord(professionalId: string, id: string) {
   return { workRecord: await viewWorkRecord(workRecord!) };
 }
 
-// "Recebi" or "Não caiu" in the service thread, after the Customer tapped "Já paguei".
 export async function confirmWorkRecordCharge(professionalId: string, id: string, received: boolean) {
   const charge = await findPixCharge(id);
   const workRecord = await findWorkRecord(professionalId, id);

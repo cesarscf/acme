@@ -388,7 +388,6 @@ function Thinking({ assistant, label = 'Pensando' }: { assistant: Assistant | un
   );
 }
 
-// One of the team actions above the composer, as the prototype's chips: the title, then the mascot and who does it.
 function TeamAction({
   label,
   assistant,
@@ -424,7 +423,6 @@ function TeamAction({
   );
 }
 
-// "Cobrar no Pix" as in the prototype: the confirmation card, the Pix card, then "Já paguei" and "Caiu!".
 function ChargeThread({
   workRecord,
   card,

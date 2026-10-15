@@ -18,7 +18,7 @@ import {
   upsertPriceItem,
 } from './service';
 
-// When the Playbook has no validity yet (not combined in the Briefing), the middle chip.
+// The Briefing's middle chip, until the Playbook has a validity.
 const defaultValidityDays = 15;
 
 // Plain numbers: strict tools reject the bounds that z.int() adds to the schema.

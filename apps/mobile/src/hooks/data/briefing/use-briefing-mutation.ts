@@ -16,7 +16,6 @@ function useRefreshingMutation<Variables, Result>(
   });
 }
 
-// A chip or a free text answer; free text that does not fit the step comes back with understood false.
 export function useAnswerMutation(assistantId: string) {
   return useRefreshingMutation(assistantId, (answer: Answer) =>
     unwrap(api.team({ id: assistantId }).briefing.answers.post(answer)),

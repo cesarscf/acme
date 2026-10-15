@@ -23,7 +23,6 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Screens draw under the system bars and pad themselves with safe area insets. */}
       <KeyboardProvider statusBarTranslucent navigationBarTranslucent preserveEdgeToEdge>
         {/* Dark icons on the light screens; Android's default is light icons. */}
         <StatusBar style="dark" />

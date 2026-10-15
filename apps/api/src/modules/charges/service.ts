@@ -10,7 +10,7 @@ type Professional = { id: string; name: string; timezone: string };
 export type ChargeWithCustomer = NonNullable<Awaited<ReturnType<typeof findCharge>>>;
 
 // The spec's default for the reminder Routine: a day after the Pix went out, at most twice.
-export const reminderAfterDays = 1;
+const reminderAfterDays = 1;
 const reminderLimit = 2;
 
 const paidButton = { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY', text: 'Já paguei' }] } as const;
@@ -48,7 +48,6 @@ export async function ensureChargeTemplates() {
   await ensureTemplate(env('META_PLATFORM_WABA_ID'), chargeReminderTemplate);
 }
 
-// The Pix key, name and city combined in the billing Assistant's Briefing; without all three no Pix can be made.
 export async function findPixAccount(professionalId: string) {
   const [billingAssistant] = await db
     .select({ playbook: assistants.playbook })
@@ -62,7 +61,7 @@ export async function findPixAccount(professionalId: string) {
   return { key: key.data.key, name: name.data, city: city.data };
 }
 
-// The BR Code carries the amount and, as its txid, the Charge's id (at most 25 letters and digits).
+// The Pix txid is at most 25 letters and digits.
 export function chargePixCode(
   { id, amountCents }: { id: string; amountCents: number },
   account: { key: string; name: string; city: string },
@@ -91,7 +90,7 @@ export async function findCharge(professionalId: string, id: string) {
   return charge;
 }
 
-// The Pix Charge of a WorkRecord, if there is one; a WorkRecord is charged by Pix once.
+// A WorkRecord is charged by Pix once.
 export function findPixCharge(workRecordId: string) {
   return db.query.charges.findFirst({
     where: and(eq(charges.workRecordId, workRecordId), eq(charges.paymentMethod, 'pix')),

@@ -71,7 +71,6 @@ function say(text: string) {
   return { content: [{ type: 'text' as const, text }] };
 }
 
-// The text of the last tool result in a request Claude received.
 function lastToolResult(request: Anthropic.Beta.MessageCreateParams) {
   const content = request.messages.at(-1)!.content as Anthropic.Beta.BetaToolResultBlockParam[];
   return String(content.findLast((block) => block.type === 'tool_result')!.content);

@@ -411,7 +411,6 @@ export const charges = pgTable(
     amountCents: integer().notNull(),
     paymentMethod: paymentMethod().notNull(),
     status: chargeStatus().notNull().default('pending'),
-    // When the Pix went to the Customer's WhatsApp; a Charge not sent yet has none.
     sentAt: timestamp({ withTimezone: true }),
     // How many times the reminder Routine reminded the Customer since the last send, and when it last did.
     remindedCount: integer().notNull().default(0),

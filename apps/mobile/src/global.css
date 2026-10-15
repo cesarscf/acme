@@ -2,7 +2,7 @@
 @import "uniwind";
 @import "@acme/theme/theme.css";
 
-/* Plus Jakarta Sans, as in the prototype; one family per weight, loaded with useFonts in the root layout. */
+/* One family per weight, loaded with useFonts in the root layout. */
 @theme {
   --font-normal: "PlusJakartaSans_400Regular";
   --font-medium: "PlusJakartaSans_500Medium";

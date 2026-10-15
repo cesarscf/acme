@@ -9,7 +9,6 @@ import { type Answer, useAnswerMutation } from '@/hooks/data/briefing/use-briefi
 import { type BriefingStep, useBriefingQuery } from '@/hooks/data/briefing/use-briefing-query';
 import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
 
-// Changes one field of an approved Playbook, with the same chips and free text as the Briefing.
 export default function PlaybookStepSheet() {
   const { id, step: key } = useLocalSearchParams<{ id: string; step: string }>();
   const { data: briefing } = useBriefingQuery(id);
@@ -35,7 +34,6 @@ function StepForm({ assistantId, step }: { assistantId: string; step: BriefingSt
   function saveText() {
     const message = text.trim();
     if (!message || answer.isPending) return;
-    // Free text read by the AI needs the consent like any real task.
     if (!me?.aiConsentedAt && step.usesAi) {
       router.push('/ai-consent');
       return;

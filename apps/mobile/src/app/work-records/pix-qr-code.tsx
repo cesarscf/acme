@@ -11,7 +11,6 @@ import { qrCodePath } from '@/lib/qr-code';
 
 const qrCodeSize = 200;
 
-// The prototype's QR sheet: the Customer can pay on the spot by scanning the same Pix sent on WhatsApp.
 export default function PixQrCode() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { bottom } = useSafeAreaInsets();

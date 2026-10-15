@@ -48,7 +48,7 @@ export function listVisits(professionalId: string, timeZone: string, from: strin
   );
 }
 
-// Visits that overlap the given time; one that ends when the other starts does not.
+// A Visit that ends when another starts does not conflict with it.
 export function findConflicts(
   professionalId: string,
   { scheduledAt, durationMinutes }: VisitTiming,
@@ -131,7 +131,6 @@ export async function sendVisitConfirmation(
   await db.update(visits).set({ confirmationRequestedFor: visit.scheduledAt }).where(eq(visits.id, visit.id));
 }
 
-// The Routine's run: every Visit of the day still ahead and waiting, except the ones already asked about their current time.
 export async function requestDueVisitConfirmations(
   professional: { id: string; name: string; timezone: string },
   date: string,

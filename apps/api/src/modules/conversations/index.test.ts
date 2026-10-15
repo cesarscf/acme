@@ -53,7 +53,6 @@ function newCustomerNumber() {
   return `55119${String(randomInt(1e8)).padStart(8, '0')}`;
 }
 
-// A Customer with a Visit tomorrow, booked through the scheduling Assistant's tools without Claude.
 async function bookVisit(professionalId: string, assistantId: string) {
   const schedulingAssistant = (await findAssistant(professionalId, assistantId))!;
   const customer = newCustomerNumber();

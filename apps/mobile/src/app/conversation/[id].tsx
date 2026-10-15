@@ -29,7 +29,6 @@ import { type Assistant, useTeamQuery } from '@/hooks/data/team/use-team-query';
 
 type Suggestion = Extract<ConversationItem, { type: 'suggestion' }>;
 type BookVisit = Extract<Suggestion, { action: 'book_visit' }>;
-// What the Professional tapped before the AI consent sheet, done on the way back if allowed.
 type AfterConsent =
   | { type: 'send'; message: string }
   | { type: 'accept'; suggestion: BookVisit }
@@ -77,7 +76,6 @@ function Chat({
   const afterConsent = useRef<AfterConsent | null>(null);
   const scroll = useRef<ScrollView>(null);
 
-  // While the Briefing has a question open, what the Professional types answers it.
   const step = briefing?.status === 'draft' ? (briefing.steps.find((step) => !step.answer) ?? null) : null;
   const reviewing = briefing?.status === 'draft' && !step;
   const interpreting = answer.isPending && !!answer.variables && 'text' in answer.variables;
@@ -97,7 +95,6 @@ function Chat({
   }
 
   function sendMessage(message: string) {
-    // The AI consent sheet comes up on the first real task, then the message goes out on its own.
     if (!me?.aiConsentedAt && (!step || step.usesAi)) {
       afterConsent.current = { type: 'send', message };
       router.push('/ai-consent');
@@ -120,7 +117,6 @@ function Chat({
     suggest.mutate({ suggestionId: suggestion.id, accepted, message: suggestion.message });
   }
 
-  // The same recording as the home's "Registrar serviço", about this Visit.
   function recordWork(visitId: string) {
     if (!me?.aiConsentedAt) {
       afterConsent.current = { type: 'record', visitId };
@@ -135,7 +131,6 @@ function Chat({
     answer.mutate(variables, { onSuccess: (result) => setMisunderstood(result.understood ? null : result.reply) });
   }
 
-  // Back from the consent sheet: do what was tapped if the Professional allowed, forget it if not.
   useFocusEffect(
     useCallback(() => {
       const pending = afterConsent.current;
@@ -253,7 +248,6 @@ function Chat({
   );
 }
 
-// A handoff between Assistants, as the prototype's question cards: one tap does it, nothing happens on its own.
 function SuggestionCard({
   suggestion,
   disabled,

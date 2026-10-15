@@ -3,7 +3,6 @@ import { and, asc, eq, ilike, or } from 'drizzle-orm';
 
 export type Customer = typeof customers.$inferSelect;
 
-// Accepts what people type: with or without 55, spaces, dashes and parentheses.
 export function toPhoneNumber(typed: string) {
   const digits = typed.replace(/\D/g, '');
   const national = digits.length > 11 && digits.startsWith('55') ? digits.slice(2) : digits;

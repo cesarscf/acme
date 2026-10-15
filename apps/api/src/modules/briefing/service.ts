@@ -62,7 +62,6 @@ export function getBriefing(assistant: BriefingAssistant) {
   };
 }
 
-// The Ver ficha rows, or null while a step still has no valid answer.
 export function playbookRows(script: BriefingScript, playbook: Record<string, unknown>) {
   const rows = script.steps.map((step) => step.describe(playbook[step.key]));
   if (rows.some((row) => !row)) return null;
@@ -105,7 +104,6 @@ export type AnswerResult =
   | { understood: false; reply: string }
   | { refused: 'option_not_available' | 'ai_consent_required' };
 
-// A chip goes straight into the Playbook; free text is read by the step's parse or fitted into the step by Claude.
 export async function answerStep(
   assistant: BriefingAssistant,
   step: BriefingStep,
@@ -139,7 +137,6 @@ export async function approve(assistant: BriefingAssistant) {
   return true;
 }
 
-// Desfazer: the Playbook goes back to draft and its Routines stop.
 export async function undoApproval(assistantId: string) {
   await db.update(assistants).set({ playbookStatus: 'draft' }).where(eq(assistants.id, assistantId));
   await syncRoutines(assistantId);

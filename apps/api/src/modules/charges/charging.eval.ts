@@ -26,7 +26,6 @@ async function serviceFor(
   return workRecord!;
 }
 
-// The Pix went out and João tapped "Já paguei": the app put the Charge on hold and told the Assistant.
 async function chargeAwaitingConfirmation(assistant: Assistant) {
   const joao = await customerOf(assistant, 'João Pereira');
   const created = await createCharge(assistant.professional.id, (await serviceFor(assistant, joao.id)).id);

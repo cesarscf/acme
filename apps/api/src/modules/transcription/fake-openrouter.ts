@@ -1,4 +1,3 @@
-// Test-only stand-in for OpenRouter's transcription endpoint: answers each request with the next scripted reply.
 export function startFakeOpenRouter() {
   const replies: Response[] = [];
   const requests: Awaited<ReturnType<Request['formData']>>[] = [];

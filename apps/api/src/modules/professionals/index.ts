@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { auth } from '../auth';
 import { ProfessionalsModel } from './model';
-import { getProfessional, updateProfessional } from './service';
+import { consentToAi, getProfessional, updateProfessional } from './service';
 
 export const professionals = new Elysia()
   .use(auth)
@@ -10,4 +10,5 @@ export const professionals = new Elysia()
   .patch('/me', ({ professional, body }) => updateProfessional(professional.id, body), {
     auth: true,
     body: 'professionals.Changes',
-  });
+  })
+  .post('/me/ai-consent', ({ professional }) => consentToAi(professional.id), { auth: true });

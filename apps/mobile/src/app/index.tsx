@@ -46,10 +46,10 @@ export default function Home() {
         showsVerticalScrollIndicator={false}
       >
         {team?.map((assistant, index) => (
-          <Link key={assistant.id} href={{ pathname: '/team/[id]', params: { id: assistant.id } }} asChild>
+          <Link key={assistant.id} href={{ pathname: '/conversation/[id]', params: { id: assistant.id } }} asChild>
             <Pressable
               className="min-h-[68px] flex-row items-center gap-3.5 px-5 py-2.5 active:bg-secondary"
-              accessibilityHint="Abre as opções do assistente"
+              accessibilityHint="Abre a conversa"
             >
               <Mascot mascot={assistant.mascot} size={40} />
               <View className="min-w-0 flex-1">

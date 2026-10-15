@@ -7,6 +7,9 @@ const paths = {
   chevronDown: 'M6 9l6 6 6-6',
   wrench: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
   check: 'M5 12.5l4.5 4.5L19 7.5',
+  chevronRight: 'M9 5l7 7-7 7',
+  send: 'M12 19V5M6 11l6-6 6 6',
+  shield: 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z',
 };
 
 export function Icon({

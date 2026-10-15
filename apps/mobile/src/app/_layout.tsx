@@ -60,6 +60,11 @@ function Routes() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={!!session && hasTeam}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="conversation/[id]" />
+        <Stack.Screen
+          name="ai-consent"
+          options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents' }}
+        />
         <Stack.Screen
           name="team/[id]"
           options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents' }}

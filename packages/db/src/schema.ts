@@ -1,4 +1,5 @@
-import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 export const whatsappMessageDirection = pgEnum('whatsapp_message_direction', ['outbound', 'inbound']);
 
@@ -56,6 +57,7 @@ export const users = pgTable('users', {
   timezone: text().notNull().default('America/Sao_Paulo'),
   workStyle: workStyle(),
   trades: trade().array().notNull().default([]),
+  aiConsentedAt: timestamp({ withTimezone: true }),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true })
     .notNull()
@@ -147,4 +149,56 @@ export const assistants = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [unique().on(table.professionalId, table.role)],
+);
+
+export const assistantMessageRole = pgEnum('assistant_message_role', ['user', 'assistant']);
+
+// One row per Messages API turn, content kept as the API sent it so the history replays unchanged.
+export const assistantMessages = pgTable(
+  'assistant_messages',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    assistantId: uuid()
+      .notNull()
+      .references(() => assistants.id, { onDelete: 'cascade' }),
+    role: assistantMessageRole().notNull(),
+    content: jsonb().notNull(),
+    // clock_timestamp, not now(): rows written in one transaction must keep their order.
+    createdAt: timestamp({ withTimezone: true }).notNull().default(sql`clock_timestamp()`),
+  },
+  (table) => [index().on(table.assistantId, table.createdAt)],
+);
+
+export const toolConfirmationStatus = pgEnum('tool_confirmation_status', ['pending', 'confirmed', 'cancelled']);
+
+export const toolConfirmations = pgTable('tool_confirmations', {
+  id: uuid().primaryKey().defaultRandom(),
+  assistantId: uuid()
+    .notNull()
+    .references(() => assistants.id, { onDelete: 'cascade' }),
+  messageId: uuid()
+    .notNull()
+    .references(() => assistantMessages.id, { onDelete: 'cascade' }),
+  toolUseId: text().notNull().unique(),
+  status: toolConfirmationStatus().notNull().default('pending'),
+  decidedAt: timestamp({ withTimezone: true }),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+export const llmUsages = pgTable(
+  'llm_usages',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    assistantId: uuid().references(() => assistants.id, { onDelete: 'set null' }),
+    model: text().notNull(),
+    inputTokens: integer().notNull(),
+    outputTokens: integer().notNull(),
+    cacheCreationInputTokens: integer().notNull(),
+    cacheReadInputTokens: integer().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index().on(table.professionalId, table.createdAt)],
 );

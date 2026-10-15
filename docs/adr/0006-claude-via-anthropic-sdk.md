@@ -6,3 +6,4 @@ Os Assistants rodam no Claude pela API da Anthropic, com o SDK oficial (`@anthro
 
 - O uso de tokens é registrado por Professional desde o M1, para medir o custo real antes de decidir por um modelo mais barato.
 - A análise de privacidade e LGPD da pesquisa (`docs/research/mvp-stack.md`, §6.3) foi feita para o OpenRouter e precisa ser refeita para a Anthropic.
+- Em 2026-10-15 o padrão do M1 passou a ser o Claude Haiku 5.5 (`effort: low`), para os créditos de teste durarem; `CLAUDE_MODEL=claude-opus-5-5` volta ao Opus. O Haiku 5.5 não tem fallback no servidor, então `fallbacks: "default"` só vai nas requisições de modelos que o aceitam; a recusa (`stop_reason: refusal`) é tratada em qualquer modelo.

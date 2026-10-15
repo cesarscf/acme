@@ -45,8 +45,8 @@ export const trade = pgEnum('trade', [
   'other',
 ]);
 
-// Better Auth tables (`npx auth generate`); a user is a Professional.
-export const users = pgTable('users', {
+// Better Auth tables (`npx auth generate`); its user model is the Professional (`modelName` in the auth config).
+export const professionals = pgTable('professionals', {
   id: uuid().primaryKey().defaultRandom(),
   name: text().notNull(),
   email: text().notNull().unique(),
@@ -69,9 +69,9 @@ export const sessions = pgTable(
   'sessions',
   {
     id: uuid().primaryKey().defaultRandom(),
-    userId: uuid()
+    professionalId: uuid()
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => professionals.id, { onDelete: 'cascade' }),
     token: text().notNull().unique(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     ipAddress: text(),
@@ -82,16 +82,16 @@ export const sessions = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index().on(table.userId)],
+  (table) => [index().on(table.professionalId)],
 );
 
 export const accounts = pgTable(
   'accounts',
   {
     id: uuid().primaryKey().defaultRandom(),
-    userId: uuid()
+    professionalId: uuid()
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => professionals.id, { onDelete: 'cascade' }),
     accountId: text().notNull(),
     providerId: text().notNull(),
     accessToken: text(),
@@ -107,7 +107,7 @@ export const accounts = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [index().on(table.userId)],
+  (table) => [index().on(table.professionalId)],
 );
 
 export const verifications = pgTable(
@@ -137,7 +137,7 @@ export const assistants = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     professionalId: uuid()
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => professionals.id, { onDelete: 'cascade' }),
     role: assistantRole().notNull(),
     name: text().notNull(),
     playbook: jsonb().notNull().default({}),
@@ -191,7 +191,7 @@ export const llmUsages = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     professionalId: uuid()
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+      .references(() => professionals.id, { onDelete: 'cascade' }),
     assistantId: uuid().references(() => assistants.id, { onDelete: 'set null' }),
     model: text().notNull(),
     inputTokens: integer().notNull(),

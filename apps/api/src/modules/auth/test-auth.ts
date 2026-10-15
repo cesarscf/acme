@@ -8,6 +8,9 @@ import { testUtils } from 'better-auth/plugins';
 const testAuth = betterAuth({
   database: drizzleAdapter(db, { provider: 'pg', usePlural: true }),
   advanced: { database: { generateId: 'uuid' } },
+  user: { modelName: 'professional' },
+  account: { fields: { userId: 'professionalId' } },
+  session: { fields: { userId: 'professionalId' } },
   plugins: [testUtils()],
 });
 

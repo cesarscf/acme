@@ -22,7 +22,11 @@ const loginCodeTemplate = {
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: 'pg', usePlural: true }),
   advanced: { database: { generateId: 'uuid' } },
+  // Better Auth calls the Professional a user; these keep its tables in the domain's words.
+  user: { modelName: 'professional' },
+  account: { fields: { userId: 'professionalId' } },
   session: {
+    fields: { userId: 'professionalId' },
     // Login costs a WhatsApp message, so a session lasts long and renews while the app is used.
     expiresIn: 60 * 60 * 24 * 90,
   },

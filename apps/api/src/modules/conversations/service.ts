@@ -1,4 +1,4 @@
-import { assistantMessages, assistants, db, llmUsages, toolConfirmations, users } from '@acme/db';
+import { assistantMessages, assistants, db, llmUsages, professionals, toolConfirmations } from '@acme/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { runRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
 import { and, asc, eq } from 'drizzle-orm';
@@ -44,16 +44,19 @@ export async function findAssistant(professionalId: string, id: string): Promise
       name: assistants.name,
       playbook: assistants.playbook,
       playbookStatus: assistants.playbookStatus,
-      professional: { id: users.id, name: users.name, timezone: users.timezone },
+      professional: { id: professionals.id, name: professionals.name, timezone: professionals.timezone },
     })
     .from(assistants)
-    .innerJoin(users, eq(users.id, assistants.professionalId))
+    .innerJoin(professionals, eq(professionals.id, assistants.professionalId))
     .where(and(eq(assistants.id, id), eq(assistants.professionalId, professionalId)));
   return row;
 }
 
 export async function hasAiConsent(professionalId: string) {
-  const [row] = await db.select({ aiConsentedAt: users.aiConsentedAt }).from(users).where(eq(users.id, professionalId));
+  const [row] = await db
+    .select({ aiConsentedAt: professionals.aiConsentedAt })
+    .from(professionals)
+    .where(eq(professionals.id, professionalId));
   return !!row?.aiConsentedAt;
 }
 

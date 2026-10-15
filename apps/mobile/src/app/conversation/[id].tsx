@@ -6,19 +6,31 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCSSVariable } from 'uniwind';
 import { BackButton } from '@/components/back-button';
+import { SystemLine } from '@/components/briefing-cards';
 import { BriefingProgress, BriefingThread } from '@/components/briefing-thread';
 import { Notice, ProfessionalBubble, Reply } from '@/components/chat-messages';
 import { ConfirmationCard } from '@/components/confirmation-card';
 import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
 import { Mascot } from '@/components/mascot';
+import { OptionRow } from '@/components/option-row';
 import { type Answer, useAnswerMutation } from '@/hooks/data/briefing/use-briefing-mutation';
 import { type Briefing, useBriefingQuery } from '@/hooks/data/briefing/use-briefing-query';
 import { useConfirmationMutation } from '@/hooks/data/conversation/use-confirmation-mutation';
-import { type Conversation, useConversationQuery } from '@/hooks/data/conversation/use-conversation-query';
+import {
+  type Conversation,
+  type ConversationItem,
+  useConversationQuery,
+} from '@/hooks/data/conversation/use-conversation-query';
 import { useSendMessageMutation } from '@/hooks/data/conversation/use-send-message-mutation';
+import { useSuggestionMutation } from '@/hooks/data/conversation/use-suggestion-mutation';
 import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
 import { type Assistant, useTeamQuery } from '@/hooks/data/team/use-team-query';
+
+type Suggestion = Extract<ConversationItem, { type: 'suggestion' }>;
+type BookVisit = Extract<Suggestion, { action: 'book_visit' }>;
+// What the Professional tapped before the AI consent sheet, done on the way back if allowed.
+type AfterConsent = { type: 'send' } | { type: 'accept'; suggestion: BookVisit } | { type: 'record'; visitId: string };
 
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -55,10 +67,11 @@ function Chat({
   const send = useSendMessageMutation(assistant.id);
   const decide = useConfirmationMutation(assistant.id);
   const answer = useAnswerMutation(assistant.id);
+  const suggest = useSuggestionMutation(assistant.id);
   const [misunderstood, setMisunderstood] = useState<string | null>(null);
   const input = useRef<TextInput>(null);
   const [text, setText] = useState('');
-  const sendAfterConsent = useRef(false);
+  const afterConsent = useRef<AfterConsent | null>(null);
   const scroll = useRef<ScrollView>(null);
   const placeholder = useCSSVariable('--color-muted-foreground') as string;
 
@@ -66,15 +79,15 @@ function Chat({
   const step = briefing?.status === 'draft' ? (briefing.steps.find((step) => !step.answer) ?? null) : null;
   const reviewing = briefing?.status === 'draft' && !step;
   const interpreting = answer.isPending && !!answer.variables && 'text' in answer.variables;
-  const working = send.isPending || decide.isPending || conversation.working || interpreting;
-  const draft = send.draft || decide.draft;
+  const working = send.isPending || decide.isPending || suggest.isPending || conversation.working || interpreting;
+  const draft = send.draft || decide.draft || suggest.draft;
   const awaiting = conversation.items.some((item) => item.type === 'confirmation' && item.status === 'pending');
   const status = working
     ? 'Trabalhando…'
     : awaiting || assistant.playbookStatus !== 'approved'
       ? 'Esperando você'
       : assistant.title;
-  const failed = (send.isError || decide.isError || answer.isError) && !working;
+  const failed = (send.isError || decide.isError || answer.isError || suggest.isError) && !working;
   const canSend = !!text.trim() && !working && !answer.isPending && !reviewing;
 
   function submit() {
@@ -82,7 +95,7 @@ function Chat({
     if (!message || !canSend) return;
     // The AI consent sheet comes up on the first real task, then the message goes out on its own.
     if (!me?.aiConsentedAt && (!step || step.usesAi)) {
-      sendAfterConsent.current = true;
+      afterConsent.current = { type: 'send' };
       router.push('/ai-consent');
       return;
     }
@@ -94,18 +107,41 @@ function Chat({
     send.mutate(message);
   }
 
+  function answerSuggestion(suggestion: BookVisit, accepted: boolean) {
+    if (accepted && !me?.aiConsentedAt) {
+      afterConsent.current = { type: 'accept', suggestion };
+      router.push('/ai-consent');
+      return;
+    }
+    suggest.mutate({ suggestionId: suggestion.id, accepted, message: suggestion.message });
+  }
+
+  // The same recording as the home's "Registrar serviço", about this Visit.
+  function recordWork(visitId: string) {
+    if (!me?.aiConsentedAt) {
+      afterConsent.current = { type: 'record', visitId };
+      router.push({ pathname: '/ai-consent', params: { purpose: 'recording' } });
+      return;
+    }
+    router.push({ pathname: '/work-records/new', params: { visitId } });
+  }
+
   function answerStep(variables: Answer) {
     setMisunderstood(null);
     answer.mutate(variables, { onSuccess: (result) => setMisunderstood(result.understood ? null : result.reply) });
   }
 
-  // Back from the consent sheet: send if the Professional allowed, forget the send if not.
+  // Back from the consent sheet: do what was tapped if the Professional allowed, forget it if not.
   useFocusEffect(
     useCallback(() => {
-      if (!sendAfterConsent.current) return;
-      sendAfterConsent.current = false;
-      if (me?.aiConsentedAt) submit();
-    }, [me?.aiConsentedAt, submit]),
+      const pending = afterConsent.current;
+      if (!pending) return;
+      afterConsent.current = null;
+      if (!me?.aiConsentedAt) return;
+      if (pending.type === 'send') submit();
+      else if (pending.type === 'accept') answerSuggestion(pending.suggestion, true);
+      else recordWork(pending.visitId);
+    }, [me?.aiConsentedAt, submit, answerSuggestion, recordWork]),
   );
 
   return (
@@ -155,6 +191,14 @@ function Chat({
             <Reply key={item.id} text={item.text} />
           ) : item.type === 'notice' ? (
             <Notice key={item.id} text={item.text} />
+          ) : item.type === 'suggestion' ? (
+            <SuggestionCard
+              key={`suggestion-${item.id}`}
+              suggestion={item}
+              disabled={working}
+              onAnswer={(accepted) => item.action === 'book_visit' && answerSuggestion(item, accepted)}
+              onRecord={() => recordWork(item.id)}
+            />
           ) : (
             <ConfirmationCard
               key={item.id}
@@ -211,6 +255,62 @@ function Chat({
         </View>
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+// A handoff between Assistants, as the prototype's question cards: one tap does it, nothing happens on its own.
+function SuggestionCard({
+  suggestion,
+  disabled,
+  onAnswer,
+  onRecord,
+}: {
+  suggestion: Suggestion;
+  disabled: boolean;
+  onAnswer: (accepted: boolean) => void;
+  onRecord: () => void;
+}) {
+  if (suggestion.action === 'book_visit' && suggestion.answer) {
+    return (
+      <View className="gap-3">
+        <Reply text={suggestion.question} />
+        {suggestion.answer === 'dismissed' && <ProfessionalBubble text="Agora não" />}
+      </View>
+    );
+  }
+  if (suggestion.action === 'record_work' && suggestion.workRecordId) {
+    return (
+      <View className="gap-3">
+        <Reply text={suggestion.question} />
+        <SystemLine>
+          <Icon name="check" size={14} color="--color-primary" strokeWidth={2.4} />
+          <Text className="font-normal text-[12.5px] text-muted-foreground">Serviço registrado</Text>
+        </SystemLine>
+      </View>
+    );
+  }
+  return (
+    <View
+      className="overflow-hidden rounded-2xl border border-border bg-card pt-3.5"
+      style={{ borderCurve: 'continuous' }}
+    >
+      <Text className="px-3.5 pb-3 font-bold text-[15px] text-foreground leading-[21px]">{suggestion.question}</Text>
+      {suggestion.action === 'book_visit' ? (
+        <>
+          <OptionRow letter="A" label="Marcar a visita" strong disabled={disabled} onPress={() => onAnswer(true)} />
+          <OptionRow letter="B" label="Agora não" disabled={disabled} onPress={() => onAnswer(false)} />
+        </>
+      ) : (
+        <OptionRow
+          letter="A"
+          label="Registrar serviço"
+          hint="Conte o que fez. A equipe cuida do resto."
+          strong
+          disabled={disabled}
+          onPress={onRecord}
+        />
+      )}
+    </View>
   );
 }
 

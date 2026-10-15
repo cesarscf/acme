@@ -228,6 +228,7 @@ onButtonClick('quote', async ({ originId, button, tx }) => {
       validUntil: quotes.validUntil,
       professionalId: quotes.professionalId,
       timezone: professionals.timezone,
+      customerId: customers.id,
       customerName: customers.name,
     })
     .from(quotes)
@@ -250,6 +251,13 @@ onButtonClick('quote', async ({ originId, button, tx }) => {
     const status = action === 'approve' ? 'approved' : 'declined';
     await tx.update(quotes).set({ status }).where(eq(quotes.id, quote.id));
     text = `${quote.customerName} ${action === 'approve' ? 'aprovou' : 'recusou'} o orçamento de ${total}.`;
+    // The handoff: an approved Quote is the scheduling Assistant's cue to offer booking the Visit.
+    if (status === 'approved') {
+      await addNotice(tx, quote.professionalId, 'scheduling', text, {
+        suggestion: 'book_visit',
+        customerId: quote.customerId,
+      });
+    }
   }
 
   await addNotice(tx, quote.professionalId, 'quotes', text);

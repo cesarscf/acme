@@ -2,15 +2,19 @@ import {
   assistantMessages,
   assistantNotices,
   assistants,
+  customers,
   db,
   llmUsages,
   professionals,
   toolConfirmations,
+  visits,
+  workRecords,
 } from '@acme/db';
 import Anthropic from '@anthropic-ai/sdk';
 import { runRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { AssistantRole } from '../team/catalog';
+import { formatLocalDateTime } from '../visits/time';
 import { type PromptContext, systemPrompt } from './prompts';
 import { type AssistantTool, assistantTools, type ConfirmationCard } from './tools';
 
@@ -32,7 +36,18 @@ export type ConversationItem =
   | { id: string; type: 'professional'; text: string }
   | { id: string; type: 'assistant'; text: string }
   | { id: string; type: 'notice'; text: string }
-  | ({ id: string; type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard);
+  | ({ id: string; type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard)
+  | {
+      id: string;
+      type: 'suggestion';
+      action: 'book_visit';
+      question: string;
+      message: string;
+      answer: 'accepted' | 'dismissed' | null;
+    }
+  | { id: string; type: 'suggestion'; action: 'record_work'; question: string; workRecordId: string | null };
+
+type Suggestion = { suggestion: 'book_visit'; customerId: string };
 
 // Haiku 5.5 by default to keep the M1 bill low; CLAUDE_MODEL=claude-opus-5-5 switches to the model of ADR 0006.
 const defaultModel = 'claude-haiku-5-5';
@@ -42,6 +57,8 @@ const refusalText = 'Não posso ajudar com esse pedido.';
 const truncatedText = 'Me perdi no meio dessa tarefa. Pode pedir de novo?';
 const cancelledResult = 'O profissional cancelou. Nada foi enviado ao cliente.';
 const abandonedResult = 'Não executado: o profissional mandou outra mensagem antes.';
+// Same window as the Visits a WorkRecord can be about.
+const endedVisitDays = 7;
 
 // One turn at a time per Assistant; the API runs as a single process in M1 and M2.
 const working = new Set<string>();
@@ -76,7 +93,7 @@ export function isWorking(assistantId: string) {
 
 export async function getConversation(assistant: Assistant) {
   const messages = await loadMessages(assistant.id);
-  const notices = await loadNotices(assistant.id);
+  const timed = await loadTimedItems(assistant);
   const confirmations = await db
     .select()
     .from(toolConfirmations)
@@ -84,10 +101,7 @@ export async function getConversation(assistant: Assistant) {
   const tools = assistantTools(assistant);
   const items: ConversationItem[] = [];
   const pushNoticesBefore = (createdAt?: Date) => {
-    while (notices[0] && (!createdAt || notices[0].createdAt < createdAt)) {
-      const { id, text } = notices.shift()!;
-      items.push({ id, type: 'notice', text });
-    }
+    while (timed[0] && (!createdAt || timed[0].at < createdAt)) items.push(...timed.shift()!.items);
   };
   for (const message of messages) {
     pushNoticesBefore(message.createdAt);
@@ -114,15 +128,136 @@ export async function getConversation(assistant: Assistant) {
   return { working: isWorking(assistant.id), items };
 }
 
+// What happened outside the conversation, at the time it happened: notices, with the suggestion each offers, and the scheduling Assistant's ended Visits.
+async function loadTimedItems(assistant: Assistant) {
+  const notices = await db
+    .select({
+      id: assistantNotices.id,
+      text: assistantNotices.text,
+      createdAt: assistantNotices.createdAt,
+      suggestion: assistantNotices.suggestion,
+      suggestionAnswer: assistantNotices.suggestionAnswer,
+      customerName: customers.name,
+    })
+    .from(assistantNotices)
+    .leftJoin(customers, eq(customers.id, assistantNotices.customerId))
+    .where(eq(assistantNotices.assistantId, assistant.id))
+    .orderBy(asc(assistantNotices.createdAt));
+  const timed = notices.map(({ id, text, createdAt, suggestion, suggestionAnswer, customerName }) => {
+    const items: ConversationItem[] = [{ id, type: 'notice', text }];
+    if (suggestion === 'book_visit' && customerName) {
+      items.push({
+        id,
+        type: 'suggestion',
+        action: 'book_visit',
+        question: `Quer que eu marque a visita de ${customerName}?`,
+        message: bookVisitMessage(customerName),
+        answer: suggestionAnswer,
+      });
+    }
+    return { at: createdAt, items };
+  });
+  if (assistant.role === 'scheduling') timed.push(...(await loadEndedVisits(assistant.professional)));
+  return timed.sort((a, b) => a.at.getTime() - b.at.getTime());
+}
+
+function bookVisitMessage(customerName: string) {
+  return `Marcar a visita de ${customerName}`;
+}
+
+// A Visit whose time has passed offers "Registrar serviço" where it ended, until a WorkRecord is about it.
+async function loadEndedVisits(professional: Assistant['professional']) {
+  const now = new Date();
+  const endsAt = sql<Date>`${visits.scheduledAt} + make_interval(mins => ${visits.durationMinutes})`;
+  const ended = await db
+    .select({
+      id: visits.id,
+      scheduledAt: visits.scheduledAt,
+      endsAt: endsAt.mapWith((value: string) => new Date(value)),
+      customerName: customers.name,
+    })
+    .from(visits)
+    .innerJoin(customers, eq(customers.id, visits.customerId))
+    .where(
+      and(
+        eq(visits.professionalId, professional.id),
+        inArray(visits.status, ['scheduled', 'confirmed']),
+        gte(visits.scheduledAt, new Date(now.getTime() - endedVisitDays * 86_400_000)),
+        sql`${endsAt} <= ${now.toISOString()}`,
+      ),
+    );
+  const recorded = ended.length
+    ? await db
+        .select({ id: workRecords.id, visitId: workRecords.visitId })
+        .from(workRecords)
+        .where(
+          inArray(
+            workRecords.visitId,
+            ended.map(({ id }) => id),
+          ),
+        )
+    : [];
+  return ended.map((visit) => ({
+    at: visit.endsAt,
+    items: [
+      {
+        id: visit.id,
+        type: 'suggestion' as const,
+        action: 'record_work' as const,
+        question: `Terminou a visita de ${visit.customerName}, ${formatLocalDateTime(visit.scheduledAt, professional.timezone)}?`,
+        workRecordId: recorded.find(({ visitId }) => visitId === visit.id)?.id ?? null,
+      },
+    ],
+  }));
+}
+
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // Notices go to the Professional's Assistant with that Role; without one, nobody is there to tell.
-export async function addNotice(tx: Transaction, professionalId: string, role: AssistantRole, text: string) {
+export async function addNotice(
+  tx: Transaction,
+  professionalId: string,
+  role: AssistantRole,
+  text: string,
+  suggestion?: Suggestion,
+) {
   const [assistant] = await tx
     .select({ id: assistants.id })
     .from(assistants)
     .where(and(eq(assistants.professionalId, professionalId), eq(assistants.role, role)));
-  if (assistant) await tx.insert(assistantNotices).values({ assistantId: assistant.id, text });
+  if (assistant) await tx.insert(assistantNotices).values({ assistantId: assistant.id, text, ...suggestion });
+}
+
+export async function findOpenSuggestion(assistantId: string, id: string) {
+  const [suggestion] = await db
+    .select({ id: assistantNotices.id, customerName: customers.name })
+    .from(assistantNotices)
+    .innerJoin(customers, eq(customers.id, assistantNotices.customerId))
+    .where(
+      and(
+        eq(assistantNotices.id, id),
+        eq(assistantNotices.assistantId, assistantId),
+        isNotNull(assistantNotices.suggestion),
+        isNull(assistantNotices.suggestionAnswer),
+      ),
+    );
+  return suggestion;
+}
+
+// The suggestion's one tap: accepting it is the Professional asking the Assistant, as if typed; nothing else happens on its own.
+export async function answerSuggestion(
+  assistant: Assistant,
+  suggestion: { id: string; customerName: string },
+  accepted: boolean,
+  emit: (event: TurnEvent) => void,
+): Promise<TurnEvent> {
+  const [answered] = await db
+    .update(assistantNotices)
+    .set({ suggestionAnswer: accepted ? 'accepted' : 'dismissed' })
+    .where(and(eq(assistantNotices.id, suggestion.id), isNull(assistantNotices.suggestionAnswer)))
+    .returning({ id: assistantNotices.id });
+  if (!answered || !accepted) return { type: 'done' };
+  return sendText(assistant, bookVisitMessage(suggestion.customerName), emit);
 }
 
 export function findPendingConfirmation(assistantId: string, id: string) {

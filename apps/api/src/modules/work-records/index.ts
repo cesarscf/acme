@@ -39,9 +39,11 @@ export const workRecords = new Elysia()
   )
   .post(
     '/work-records',
-    async ({ professional, body: { transcript } }) => {
+    async ({ professional, body: { transcript, visitId } }) => {
       if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
-      return createWorkRecord(professional.id, transcript);
+      const workRecord = await createWorkRecord(professional.id, transcript, visitId);
+      if (!workRecord) throw status(404, 'Visit not found');
+      return workRecord;
     },
     { auth: true, body: 'workRecords.New' },
   )

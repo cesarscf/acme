@@ -233,6 +233,9 @@ export const audioUsages = pgTable(
   (table) => [index().on(table.professionalId, table.createdAt)],
 );
 
+export const noticeSuggestion = pgEnum('notice_suggestion', ['book_visit']);
+export const suggestionAnswer = pgEnum('suggestion_answer', ['accepted', 'dismissed']);
+
 // App-side notices in an Assistant's conversation (a Customer tapped a button); Claude reads them with the next message.
 export const assistantNotices = pgTable(
   'assistant_notices',
@@ -242,6 +245,10 @@ export const assistantNotices = pgTable(
       .notNull()
       .references(() => assistants.id, { onDelete: 'cascade' }),
     text: text().notNull(),
+    // A next step offered with the notice, done only when the Professional taps it (a handoff between Assistants).
+    suggestion: noticeSuggestion(),
+    customerId: uuid().references(() => customers.id, { onDelete: 'cascade' }),
+    suggestionAnswer: suggestionAnswer(),
     createdAt: timestamp({ withTimezone: true }).notNull().default(sql`clock_timestamp()`),
   },
   (table) => [index().on(table.assistantId, table.createdAt)],

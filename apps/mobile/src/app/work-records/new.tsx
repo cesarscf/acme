@@ -5,7 +5,7 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -23,8 +23,9 @@ export default function RecordWorkRecord() {
   const { top, bottom } = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recording = useAudioRecorderState(recorder, 250);
+  const { visitId } = useLocalSearchParams<{ visitId?: string }>();
   const transcription = useTranscriptionMutation();
-  const create = useCreateWorkRecordMutation();
+  const create = useCreateWorkRecordMutation(visitId);
   const [startedAt] = useState(() => new Date());
   const [uri, setUri] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);

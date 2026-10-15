@@ -13,7 +13,7 @@ import {
 } from '../charges/service';
 import { addNotice } from '../conversations/service';
 import { createCustomer, findCustomer, toPhoneNumber } from '../customers/service';
-import { listVisits } from '../visits/service';
+import { findVisit, listVisits } from '../visits/service';
 import { addDays, formatLocalDateTime, localDate } from '../visits/time';
 import { type Extraction, extractWorkRecord } from './extract';
 
@@ -95,15 +95,19 @@ async function extract(professionalId: string, transcript: string) {
   );
 }
 
-export async function createWorkRecord(professionalId: string, transcript: string) {
+// From an ended Visit's "Registrar serviço", the WorkRecord is about that Visit and its Customer, whatever the audio says.
+export async function createWorkRecord(professionalId: string, transcript: string, visitId?: string) {
+  const visit = visitId ? await findVisit(professionalId, visitId) : undefined;
+  if (visitId && !visit) return undefined;
   const text = transcript.trim();
   const extraction = await extract(professionalId, text);
   const { cashReceived, paymentMethod, newCustomer, ...fields } = extraction;
-  const { customerId } = await resolveCustomer(professionalId, extraction);
+  const { customerId } = visit ? { customerId: visit.customer.id } : await resolveCustomer(professionalId, extraction);
   const [workRecord] = await db
     .insert(workRecords)
     .values({
       ...fields,
+      ...(visit && { visitId: visit.id }),
       customerId,
       professionalId,
       paymentMethod: paymentMethod ?? (await findPaymentMethods(professionalId)).default,

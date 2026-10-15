@@ -1,22 +1,39 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { Icon } from '@/components/icons';
 import { useAiConsentMutation } from '@/hooks/data/professional/use-ai-consent-mutation';
 
-const terms = [
-  'Os assistentes usam IA de parceiros para entender e escrever.',
-  'Os dados, inclusive dos seus clientes, podem ser processados fora do Brasil.',
-];
+const variants = {
+  task: {
+    title: 'Usar IA nas tarefas?',
+    terms: [
+      'Os assistentes usam IA de parceiros para entender e escrever.',
+      'Os dados, inclusive dos seus clientes, podem ser processados fora do Brasil.',
+    ],
+    allow: 'Permitir',
+  },
+  // "Registrar serviço" asks before the first recording.
+  recording: {
+    title: 'Antes de gravar',
+    terms: [
+      'Conte o que você fez: o serviço, o material e o valor. Se o cliente estiver perto, avise que vai gravar.',
+      'O áudio é transcrito e resumido por IA, fora do Brasil.',
+    ],
+    allow: 'Permitir e gravar',
+  },
+};
 
 export default function AiConsent() {
   const { bottom } = useSafeAreaInsets();
   const consent = useAiConsentMutation();
+  const { purpose } = useLocalSearchParams<{ purpose?: string }>();
+  const { title, terms, allow } = purpose === 'recording' ? variants.recording : variants.task;
 
   return (
     <View className="bg-card px-5 pt-6" style={{ paddingBottom: bottom + 8 }}>
-      <Text className="font-extrabold text-[22px] text-foreground">Usar IA nas tarefas?</Text>
+      <Text className="font-extrabold text-[22px] text-foreground">{title}</Text>
       <View className="mt-4 gap-3.5">
         {terms.map((term) => (
           <View key={term} className="flex-row items-start gap-3">
@@ -34,7 +51,7 @@ export default function AiConsent() {
       )}
       <Button
         className="mt-[22px]"
-        label="Permitir"
+        label={allow}
         loading={consent.isPending}
         onPress={() => consent.mutate(undefined, { onSuccess: () => router.back() })}
       />

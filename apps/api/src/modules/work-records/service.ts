@@ -1,27 +1,21 @@
-import { assistants, audioUsages, charges, customers, db, professionals, visits, workRecords } from '@acme/db';
-import { and, asc, eq } from 'drizzle-orm';
+import { assistants, audioUsages, charges, customers, db, professionals, workRecords } from '@acme/db';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { paymentMethods } from '../briefing/scripts';
 import { findCustomer } from '../customers/service';
 import { listVisits } from '../visits/service';
 import { addDays, formatLocalDateTime, localDate } from '../visits/time';
+import { type Extraction, extractWorkRecord } from './extract';
 
 export type PaymentMethod = (typeof workRecords.$inferInsert)['paymentMethod'];
 export type PaymentMethods = { accepted: PaymentMethod[]; default: PaymentMethod };
-export type NewWorkRecord = {
-  customerId: string;
-  visitId: string | null;
-  description: string;
-  materials: string | null;
-  amountCents: number;
-  paymentMethod: PaymentMethod;
-  received?: boolean;
-};
+type WorkRecord = typeof workRecords.$inferSelect;
 
 // Before the billing Assistant's Briefing there is no Playbook to read, so both PaymentMethods are offered with Pix marked.
 const fallbackPaymentMethods: PaymentMethods = { accepted: ['pix', 'cash'], default: 'pix' };
 const recentVisitDays = 7;
+const customerOptionCount = 3;
 
-export async function findProfessional(id: string) {
+async function findProfessional(id: string) {
   const [professional] = await db
     .select({ id: professionals.id, timezone: professionals.timezone })
     .from(professionals)
@@ -38,7 +32,7 @@ export async function findBillingAssistant(professionalId: string) {
   return billingAssistant;
 }
 
-export async function findPaymentMethods(professionalId: string): Promise<PaymentMethods> {
+async function findPaymentMethods(professionalId: string): Promise<PaymentMethods> {
   const billingAssistant = await findBillingAssistant(professionalId);
   const parsed = paymentMethods.safeParse(
     (billingAssistant?.playbook as Record<string, unknown> | undefined)?.paymentMethods,
@@ -46,8 +40,8 @@ export async function findPaymentMethods(professionalId: string): Promise<Paymen
   return parsed.success ? parsed.data : fallbackPaymentMethods;
 }
 
-// The Visits a WorkRecord can be about: the last week up to the end of today.
-export async function listRecentVisits(professional: { id: string; timezone: string }) {
+// The Visits a WorkRecord can be about: the last week up to the end of today, newest first.
+async function listRecentVisits(professional: { id: string; timezone: string }) {
   const today = localDate(new Date(), professional.timezone);
   const recent = await listVisits(professional.id, professional.timezone, addDays(today, -recentVisitDays), today);
   return recent.reverse().map((visit) => ({
@@ -58,15 +52,7 @@ export async function listRecentVisits(professional: { id: string; timezone: str
   }));
 }
 
-export async function getWorkRecordForm(professionalId: string) {
-  const professional = await findProfessional(professionalId);
-  return {
-    paymentMethods: await findPaymentMethods(professionalId),
-    visits: await listRecentVisits(professional),
-  };
-}
-
-export function listCustomerNames(professionalId: string) {
+function listCustomerNames(professionalId: string) {
   return db
     .select({ id: customers.id, name: customers.name })
     .from(customers)
@@ -83,50 +69,179 @@ export async function recordAudioUsage(
   await db.insert(audioUsages).values({ professionalId, assistantId, seconds, model });
 }
 
-type Refused = { refused: 'customer_not_found' | 'visit_not_found' | 'payment_method_not_accepted' };
+async function extract(professionalId: string, transcript: string) {
+  const billingAssistant = await findBillingAssistant(professionalId);
+  const professional = await findProfessional(professionalId);
+  return extractWorkRecord(
+    {
+      professionalId,
+      assistantId: billingAssistant?.id ?? null,
+      customers: await listCustomerNames(professionalId),
+      visits: await listRecentVisits(professional),
+      paymentMethods: await findPaymentMethods(professionalId),
+    },
+    transcript,
+  );
+}
 
-// Cash already received becomes a paid Charge right away; nothing goes to the Customer.
-export async function createWorkRecord(
-  professionalId: string,
-  { received, ...record }: NewWorkRecord,
-): Promise<Refused | { workRecord: typeof workRecords.$inferSelect; charge: typeof charges.$inferSelect | null }> {
-  if (!(await findCustomer(professionalId, record.customerId))) return { refused: 'customer_not_found' };
-  if (record.visitId) {
-    const visit = await db.query.visits.findFirst({
-      where: and(
-        eq(visits.id, record.visitId),
-        eq(visits.professionalId, professionalId),
-        eq(visits.customerId, record.customerId),
-      ),
-    });
-    if (!visit) return { refused: 'visit_not_found' };
-  }
-  const { accepted } = await findPaymentMethods(professionalId);
-  if (!accepted.includes(record.paymentMethod)) return { refused: 'payment_method_not_accepted' };
+export async function createWorkRecord(professionalId: string, transcript: string) {
+  const text = transcript.trim();
+  const { cashReceived, paymentMethod, ...fields } = await extract(professionalId, text);
+  const [workRecord] = await db
+    .insert(workRecords)
+    .values({
+      ...fields,
+      professionalId,
+      paymentMethod: paymentMethod ?? (await findPaymentMethods(professionalId)).default,
+      cashReceived: paymentMethod === 'cash' ? cashReceived : null,
+      transcript: text,
+    })
+    .returning();
+  await settleCash(workRecord!);
+  return viewWorkRecord(workRecord!);
+}
 
-  return db.transaction(async (tx) => {
-    const [workRecord] = await tx
-      .insert(workRecords)
-      .values({
-        ...record,
-        professionalId,
-        description: record.description.trim(),
-        materials: record.materials?.trim() || null,
-      })
-      .returning();
-    if (record.paymentMethod !== 'cash' || !received) return { workRecord: workRecord!, charge: null };
-    const [charge] = await tx
-      .insert(charges)
-      .values({
-        professionalId,
-        workRecordId: workRecord!.id,
-        customerId: workRecord!.customerId,
-        amountCents: workRecord!.amountCents,
-        paymentMethod: 'cash',
-        status: 'paid',
-        paidAt: new Date(),
-      })
-      .returning();
-    return { workRecord: workRecord!, charge: charge! };
+// A message in the service thread completes or corrects the account: Claude reads it all again.
+export async function addMessage(professionalId: string, id: string, text: string) {
+  const current = await findWorkRecord(professionalId, id);
+  if (!current) return;
+  const transcript = `${current.transcript}\n${text.trim()}`;
+  const extraction = await extract(professionalId, transcript);
+  const customerId = extraction.customerId ?? current.customerId;
+  const [workRecord] = await db
+    .update(workRecords)
+    .set({
+      ...merge(current, extraction),
+      customerId,
+      visitId: extraction.visitId ?? (customerId === current.customerId ? current.visitId : null),
+      transcript,
+    })
+    .where(eq(workRecords.id, id))
+    .returning();
+  await settleCash(workRecord!);
+  return viewWorkRecord(workRecord!);
+}
+
+function merge(current: WorkRecord, extraction: Extraction) {
+  const paymentMethod = extraction.paymentMethod ?? current.paymentMethod;
+  return {
+    title: extraction.title ?? current.title,
+    description: extraction.description ?? current.description,
+    materials: extraction.materials ?? current.materials,
+    amountCents: extraction.amountCents ?? current.amountCents,
+    paymentMethod,
+    cashReceived: paymentMethod === 'cash' ? (extraction.cashReceived ?? current.cashReceived) : null,
+  };
+}
+
+export async function chooseCustomer(professionalId: string, id: string, customerId: string) {
+  const current = await findWorkRecord(professionalId, id);
+  if (!current) return { refused: 'work_record_not_found' as const };
+  if (!(await findCustomer(professionalId, customerId))) return { refused: 'customer_not_found' as const };
+  const [workRecord] = await db
+    .update(workRecords)
+    .set({ customerId, visitId: customerId === current.customerId ? current.visitId : null })
+    .where(eq(workRecords.id, id))
+    .returning();
+  await settleCash(workRecord!);
+  return { workRecord: await viewWorkRecord(workRecord!) };
+}
+
+// Cash already received becomes a paid Charge once the Customer and the amount are known; nothing goes to the Customer.
+async function settleCash(workRecord: WorkRecord) {
+  const { id, professionalId, customerId, amountCents, paymentMethod, cashReceived } = workRecord;
+  if (paymentMethod !== 'cash' || !cashReceived || !customerId || !amountCents) return;
+  const existing = await db.query.charges.findFirst({ where: eq(charges.workRecordId, id) });
+  if (existing) return;
+  await db.insert(charges).values({
+    professionalId,
+    workRecordId: id,
+    customerId,
+    amountCents,
+    paymentMethod: 'cash',
+    status: 'paid',
+    paidAt: new Date(),
   });
+}
+
+function findWorkRecord(professionalId: string, id: string) {
+  return db.query.workRecords.findFirst({
+    where: and(eq(workRecords.id, id), eq(workRecords.professionalId, professionalId)),
+  });
+}
+
+export async function getWorkRecord(professionalId: string, id: string) {
+  const workRecord = await findWorkRecord(professionalId, id);
+  return workRecord && viewWorkRecord(workRecord);
+}
+
+async function viewWorkRecord(workRecord: WorkRecord) {
+  const customer = workRecord.customerId
+    ? await findCustomer(workRecord.professionalId, workRecord.customerId)
+    : undefined;
+  const paidCharge = await db.query.charges.findFirst({
+    where: and(eq(charges.workRecordId, workRecord.id), eq(charges.status, 'paid')),
+  });
+  return {
+    id: workRecord.id,
+    createdAt: workRecord.createdAt,
+    customer: customer ? { id: customer.id, name: customer.name } : null,
+    title: workRecord.title,
+    description: workRecord.description,
+    materials: workRecord.materials,
+    amountCents: workRecord.amountCents,
+    paymentMethod: workRecord.paymentMethod,
+    paid: !!paidCharge,
+    transcript: workRecord.transcript,
+    customerOptions: customer ? [] : await listCustomerOptions(workRecord.professionalId),
+  };
+}
+
+// Who the service is most likely for: Customers with a recent Visit, then the newest Customers.
+async function listCustomerOptions(professionalId: string) {
+  const professional = await findProfessional(professionalId);
+  const visited = (await listRecentVisits(professional)).map(({ customerId, customerName }) => ({
+    id: customerId,
+    name: customerName,
+  }));
+  const newest = await db
+    .select({ id: customers.id, name: customers.name })
+    .from(customers)
+    .where(eq(customers.professionalId, professionalId))
+    .orderBy(desc(customers.createdAt))
+    .limit(customerOptionCount);
+  const unique = new Map([...visited, ...newest].map((customer) => [customer.id, customer]));
+  return [...unique.values()].slice(0, customerOptionCount);
+}
+
+export async function listWorkRecords(professionalId: string) {
+  const rows = await db
+    .select({
+      id: workRecords.id,
+      createdAt: workRecords.createdAt,
+      title: workRecords.title,
+      amountCents: workRecords.amountCents,
+      customerName: customers.name,
+    })
+    .from(workRecords)
+    .leftJoin(customers, eq(customers.id, workRecords.customerId))
+    .where(eq(workRecords.professionalId, professionalId))
+    .orderBy(desc(workRecords.createdAt))
+    .limit(100);
+  const paid = rows.length
+    ? await db
+        .select({ workRecordId: charges.workRecordId })
+        .from(charges)
+        .where(
+          and(
+            inArray(
+              charges.workRecordId,
+              rows.map(({ id }) => id),
+            ),
+            eq(charges.status, 'paid'),
+          ),
+        )
+    : [];
+  const paidIds = new Set(paid.map(({ workRecordId }) => workRecordId));
+  return rows.map((row) => ({ ...row, paid: paidIds.has(row.id) }));
 }

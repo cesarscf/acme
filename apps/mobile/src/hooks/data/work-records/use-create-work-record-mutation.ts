@@ -1,8 +1,14 @@
 import { useMutation } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
-
-export type NewWorkRecord = Parameters<(typeof api)['work-records']['post']>[0];
+import { queryClient } from '@/lib/query-client';
+import { workRecordKeys } from './keys';
 
 export function useCreateWorkRecordMutation() {
-  return useMutation({ mutationFn: (record: NewWorkRecord) => unwrap(api['work-records'].post(record)) });
+  return useMutation({
+    mutationFn: (transcript: string) => unwrap(api['work-records'].post({ transcript })),
+    onSuccess: (workRecord) => {
+      queryClient.setQueryData(workRecordKeys.detail(workRecord.id), workRecord);
+      queryClient.invalidateQueries({ queryKey: workRecordKeys.list });
+    },
+  });
 }

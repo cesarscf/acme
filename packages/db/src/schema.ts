@@ -364,15 +364,19 @@ export const workRecords = pgTable(
     professionalId: uuid()
       .notNull()
       .references(() => professionals.id, { onDelete: 'cascade' }),
-    customerId: uuid()
-      .notNull()
-      .references(() => customers.id, { onDelete: 'cascade' }),
+    // Saved straight from the audio: what Claude could not tell stays null and is asked in the service thread.
+    customerId: uuid().references(() => customers.id, { onDelete: 'cascade' }),
     visitId: uuid().references(() => visits.id, { onDelete: 'set null' }),
-    description: text().notNull(),
+    title: text(),
+    description: text(),
     materials: text(),
-    amountCents: integer().notNull(),
+    amountCents: integer(),
     // How the Customer pays; the Charge, when there is one, carries the same PaymentMethod.
     paymentMethod: paymentMethod().notNull(),
+    // Cash only: whether the Customer already paid, which makes the Charge paid on the spot.
+    cashReceived: boolean(),
+    // What the Professional said: the audio's transcript, then each message in the service thread, one per line.
+    transcript: text().notNull().default(''),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })
       .notNull()

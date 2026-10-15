@@ -2,28 +2,25 @@ import { Elysia, status } from 'elysia';
 import { auth } from '../auth';
 import { hasAiConsent } from '../conversations/service';
 import { transcribe } from '../transcription/transcribe';
-import { draftWorkRecord } from './draft';
 import { WorkRecordsModel } from './model';
 import {
+  addMessage,
+  chooseCustomer,
   createWorkRecord,
   findBillingAssistant,
-  findPaymentMethods,
-  findProfessional,
-  getWorkRecordForm,
-  listCustomerNames,
-  listRecentVisits,
+  getWorkRecord,
+  listWorkRecords,
   recordAudioUsage,
 } from './service';
 
 export const workRecords = new Elysia()
   .use(auth)
   .model(WorkRecordsModel)
-  .get('/work-records/new', ({ professional }) => getWorkRecordForm(professional.id), { auth: true })
+  .get('/work-records', ({ professional }) => listWorkRecords(professional.id), { auth: true })
   .post(
-    '/work-records/draft',
+    '/work-records/transcription',
     async ({ professional, body: { audio } }) => {
       if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
-      const billingAssistant = await findBillingAssistant(professional.id);
       let transcription: Awaited<ReturnType<typeof transcribe>>;
       try {
         transcription = await transcribe(audio);
@@ -31,32 +28,48 @@ export const workRecords = new Elysia()
         console.error('Work record transcription failed', error);
         throw status(502, 'Transcription failed');
       }
+      const billingAssistant = await findBillingAssistant(professional.id);
       await recordAudioUsage(professional.id, billingAssistant?.id ?? null, transcription);
       if (!transcription.text) throw status(422, 'Nothing heard');
-      const draft = await draftWorkRecord(
-        {
-          professionalId: professional.id,
-          assistantId: billingAssistant?.id ?? null,
-          customers: await listCustomerNames(professional.id),
-          visits: await listRecentVisits(await findProfessional(professional.id)),
-          paymentMethods: await findPaymentMethods(professional.id),
-        },
-        transcription.text,
-      );
-      return { transcript: transcription.text, draft };
+      return { transcript: transcription.text };
     },
     { auth: true, body: 'workRecords.Audio' },
   )
   .post(
     '/work-records',
-    async ({ professional, body }) => {
-      const result = await createWorkRecord(professional.id, body);
-      if ('refused' in result) {
-        if (result.refused === 'customer_not_found') throw status(404, 'Customer not found');
-        if (result.refused === 'visit_not_found') throw status(404, 'Visit not found');
-        throw status(422, 'PaymentMethod not accepted');
-      }
-      return result;
+    async ({ professional, body: { transcript } }) => {
+      if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
+      return createWorkRecord(professional.id, transcript);
     },
     { auth: true, body: 'workRecords.New' },
+  )
+  .get(
+    '/work-records/:id',
+    async ({ professional, params: { id } }) => {
+      const workRecord = await getWorkRecord(professional.id, id);
+      if (!workRecord) throw status(404, 'Work record not found');
+      return workRecord;
+    },
+    { auth: true, params: 'workRecords.WorkRecord' },
+  )
+  .post(
+    '/work-records/:id/messages',
+    async ({ professional, params: { id }, body: { text } }) => {
+      if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
+      const workRecord = await addMessage(professional.id, id, text);
+      if (!workRecord) throw status(404, 'Work record not found');
+      return workRecord;
+    },
+    { auth: true, params: 'workRecords.WorkRecord', body: 'workRecords.Message' },
+  )
+  .patch(
+    '/work-records/:id',
+    async ({ professional, params: { id }, body: { customerId } }) => {
+      const result = await chooseCustomer(professional.id, id, customerId);
+      if ('refused' in result) {
+        throw status(404, result.refused === 'customer_not_found' ? 'Customer not found' : 'Work record not found');
+      }
+      return result.workRecord;
+    },
+    { auth: true, params: 'workRecords.WorkRecord', body: 'workRecords.Customer' },
   );

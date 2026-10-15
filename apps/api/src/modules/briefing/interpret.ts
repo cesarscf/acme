@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import * as z from 'zod';
-import { modelParams, recordUsage } from '../conversations/service';
+import { claude, modelParams, recordUsage } from '../conversations/service';
 import type { BriefingStep } from './scripts';
 
 type Interpretation = { value: unknown; reply: string } | { value: null; reply: string };
@@ -25,7 +25,7 @@ export async function interpret(
     .flatMap((option) => ('value' in option ? [`- ${option.label}: ${JSON.stringify(option.value)}`] : []))
     .join('\n');
   const format = betaZodOutputFormat(schema);
-  const message = await new Anthropic().beta.messages.create({
+  const message = await claude().beta.messages.create({
     ...modelParams(),
     max_tokens: 2000,
     output_config: { effort: 'low', format },

@@ -212,7 +212,7 @@ export async function decide(
 
 async function converse(assistant: Assistant, emit: (event: TurnEvent) => void): Promise<TurnEvent> {
   const tools = assistantTools(assistant);
-  const runner = new Anthropic().beta.messages.toolRunner({
+  const runner = claude().beta.messages.toolRunner({
     ...modelParams(),
     max_tokens: 16000,
     stream: true,
@@ -261,6 +261,12 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
     }
   }
   return { type: 'done' };
+}
+
+// The SDK reads ANTHROPIC_WORKSPACE_ID only for OIDC federation; an API key outside a workspace needs the header.
+export function claude() {
+  const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID;
+  return new Anthropic(workspaceId ? { defaultHeaders: { 'anthropic-workspace-id': workspaceId } } : {});
 }
 
 export function modelParams() {

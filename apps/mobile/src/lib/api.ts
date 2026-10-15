@@ -1,8 +1,10 @@
 import type { App } from '@acme/api/app';
 import { treaty } from '@elysia/eden';
-import Constants from 'expo-constants';
-import { apiUrl } from './api-url';
+import { authClient } from './auth-client';
+import { baseUrl } from './base-url';
 
 export const api = treaty<App>(
-  apiUrl({ explicit: process.env.EXPO_PUBLIC_API_URL, metroHost: Constants.expoConfig?.hostUri }),
+  baseUrl,
+  // The session cookie lives in SecureStore, so it is sent by hand; `include` would clash with it.
+  { headers: async () => ({ cookie: await authClient.getCookie() }), fetch: { credentials: 'omit' } },
 );

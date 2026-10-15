@@ -18,7 +18,15 @@ export type ButtonClick = {
 type TextParameter = { type: 'text'; text: string };
 type TemplateComponent =
   | { type: 'header' | 'body'; parameters: TextParameter[] }
-  | { type: 'button'; sub_type: 'quick_reply'; index: string; parameters: { type: 'payload'; payload: string }[] };
+  | { type: 'button'; sub_type: 'quick_reply'; index: string; parameters: { type: 'payload'; payload: string }[] }
+  | { type: 'button'; sub_type: 'url'; index: string; parameters: TextParameter[] };
+
+export type TemplateDefinition = {
+  name: string;
+  language: string;
+  category: 'UTILITY' | 'MARKETING' | 'AUTHENTICATION';
+  components: readonly object[];
+};
 
 export type OutboundMessage =
   | { type: 'text'; text: { body: string; preview_url?: boolean } }
@@ -56,16 +64,10 @@ export async function sendMessage({
   message: OutboundMessage;
   origin?: Origin;
 }) {
-  const response = await fetch(`${env('META_GRAPH_URL')}/${from}/messages`, {
+  const { contacts, messages } = await graph<GraphSendResult>(`/${from}/messages`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('META_ACCESS_TOKEN')}` },
     body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to, ...message }),
   });
-  if (!response.ok) {
-    const { error } = (await response.json().catch(() => ({}))) as { error?: { message: string } };
-    throw new Error(`WhatsApp send failed: ${error?.message ?? response.status}`);
-  }
-  const { contacts, messages } = (await response.json()) as GraphSendResult;
 
   const [stored] = await db
     .insert(whatsappMessages)
@@ -88,6 +90,15 @@ export async function sendMessage({
     })
     .returning();
   return stored!;
+}
+
+// The Graph API refuses a second template with the same name and language, so it is created only when missing.
+export async function ensureTemplate(wabaId: string, template: TemplateDefinition) {
+  const existing = await graph<{ data: { language: string }[] }>(
+    `/${wabaId}/message_templates?name=${encodeURIComponent(template.name)}`,
+  );
+  if (existing.data.some(({ language }) => language === template.language)) return;
+  await graph(`/${wabaId}/message_templates`, { method: 'POST', body: JSON.stringify(template) });
 }
 
 export function listMessages({ phoneNumberId, waId }: { phoneNumberId: string; waId: string }) {
@@ -165,6 +176,18 @@ function clickedButton({ button, interactive }: InboundMessage) {
   if (button) return { payload: button.payload, text: button.text };
   const reply = interactive?.button_reply;
   if (reply) return { payload: reply.id, text: reply.title };
+}
+
+async function graph<T>(path: string, init?: RequestInit) {
+  const response = await fetch(`${env('META_GRAPH_URL')}${path}`, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('META_ACCESS_TOKEN')}` },
+  });
+  if (!response.ok) {
+    const { error } = (await response.json().catch(() => ({}))) as { error?: { message: string } };
+    throw new Error(`Graph API ${init?.method ?? 'GET'} ${path} failed: ${error?.message ?? response.status}`);
+  }
+  return (await response.json()) as T;
 }
 
 function env(name: string) {

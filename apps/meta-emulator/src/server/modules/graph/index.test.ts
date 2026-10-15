@@ -195,3 +195,30 @@ test('the recipient comes back as a digits-only wa_id', async () => {
 
   expect((await response.json()).contacts).toEqual([{ input: '+55 11 98765-4321', wa_id: '5511987654321' }]);
 });
+
+test('templates are listed per WABA and can be filtered by name like the Graph API', async () => {
+  const app = createApp(config);
+  await graph(app, '/2001/message_templates', quoteTemplate);
+  await graph(app, '/2001/message_templates', { ...quoteTemplate, name: 'visit_confirmation' });
+  await graph(app, '/3001/message_templates', quoteTemplate);
+
+  const response = await app.handle(
+    new Request('http://localhost/2001/message_templates?name=quote_sent', {
+      headers: { Authorization: 'Bearer token' },
+    }),
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    data: [
+      {
+        id: expect.any(String),
+        name: 'quote_sent',
+        language: 'pt_BR',
+        category: 'UTILITY',
+        status: 'APPROVED',
+        components: quoteTemplate.components,
+      },
+    ],
+  });
+});

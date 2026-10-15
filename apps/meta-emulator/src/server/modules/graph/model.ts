@@ -78,6 +78,7 @@ export const GraphModel = {
       }),
     ),
   }),
+  'graph.ListTemplates': t.Object({ name: t.Optional(t.String()) }),
 };
 
 export type SendMessage = (typeof GraphModel)['graph.SendMessage']['static'];

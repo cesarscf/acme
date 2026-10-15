@@ -2,7 +2,7 @@ import { Elysia, status } from 'elysia';
 import type { Store } from '../../store';
 import type { Webhooks } from '../../webhooks';
 import { GraphModel } from './model';
-import { createTemplate, graphError, sendMessage } from './service';
+import { createTemplate, graphError, listTemplates, sendMessage } from './service';
 
 export const graph = (store: Store, webhooks: Webhooks) =>
   new Elysia()
@@ -25,4 +25,7 @@ export const graph = (store: Store, webhooks: Webhooks) =>
     )
     .post('/:id/message_templates', ({ params: { id }, body }) => createTemplate(store, id, body), {
       body: 'graph.CreateTemplate',
+    })
+    .get('/:id/message_templates', ({ params: { id }, query: { name } }) => listTemplates(store, id, name), {
+      query: 'graph.ListTemplates',
     });

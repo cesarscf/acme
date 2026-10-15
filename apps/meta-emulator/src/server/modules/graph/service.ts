@@ -53,6 +53,13 @@ export function createTemplate(store: Store, wabaId: string, definition: CreateT
   return { id: template.id, status: template.status, category: template.category };
 }
 
+export function listTemplates(store: Store, wabaId: string, name?: string) {
+  const templates = store.templates.filter(
+    (template) => template.wabaId === wabaId && (!name || template.name === name),
+  );
+  return { data: templates.map(({ wabaId: _, ...template }) => template) };
+}
+
 function renderMessage(send: Exclude<SendMessage, { type: 'template' }>): Content {
   if (send.type === 'text') return { body: send.text.body, buttons: [] };
   const { header, body, footer, action } = send.interactive;

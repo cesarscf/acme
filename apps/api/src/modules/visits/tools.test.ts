@@ -173,3 +173,15 @@ test('createVisit refuses a date that does not exist instead of rolling it over'
   expect(isError).toBe(true);
   expect(await visitsOf(lia)).toEqual([]);
 });
+
+test('createVisit refuses a duration that is not a whole number of minutes', async () => {
+  const lia = await newAssistant();
+  const joao = await newCustomer(lia);
+
+  const fractional = await createVisit(lia, { customerId: joao.id, durationMinutes: 45.5 });
+  const negative = await createVisit(lia, { customerId: joao.id, durationMinutes: -30 });
+
+  expect(fractional.isError).toBe(true);
+  expect(negative.isError).toBe(true);
+  expect(await visitsOf(lia)).toEqual([]);
+});

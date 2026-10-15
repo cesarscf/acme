@@ -86,9 +86,9 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
             customerId: z.string().describe('id do cliente.'),
             date: date.describe('Dia da visita, AAAA-MM-DD, no fuso do profissional.'),
             time: time.describe('Hora de início, HH:MM.'),
+            // A plain number: strict tools reject the bounds that z.int() adds to the schema.
             durationMinutes: z
-              .int()
-              .positive()
+              .number()
               .nullable()
               .describe(`Duração em minutos, se o profissional disser. Vazio usa ${defaultDurationMinutes}.`),
             allowConflict,
@@ -96,6 +96,10 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
           run: async (input) => {
             const customer = await findCustomer(professional.id, input.customerId);
             if (!customer) throw new ToolError(`Cliente ${input.customerId} não encontrado. Use findCustomer.`);
+            const { durationMinutes } = input;
+            if (durationMinutes !== null && (!Number.isInteger(durationMinutes) || durationMinutes <= 0)) {
+              throw new ToolError(`Duração inválida: ${durationMinutes}. Use minutos inteiros.`);
+            }
             const timing = {
               scheduledAt: futureInstant(input.date, input.time),
               durationMinutes: input.durationMinutes ?? defaultDurationMinutes,

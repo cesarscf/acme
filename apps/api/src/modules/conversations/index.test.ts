@@ -150,6 +150,8 @@ test('the prompt is cached, names the Assistant, and the tools are strict', asyn
   expect(assistant!.text).toContain('Ana');
   expect(assistant!.text).toContain('Agenda');
   expect(request.tools).toContainEqual(expect.objectContaining({ name: 'sendVisitConfirmation', strict: true }));
+  // Strict tools reject numeric bounds on integers (the real API answers 400; the fake Claude does not check).
+  expect(JSON.stringify(request.tools)).not.toMatch(/"(minimum|maximum|exclusiveMinimum|exclusiveMaximum)"/);
   expect(request.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: 'Oi' }] }]);
 });
 

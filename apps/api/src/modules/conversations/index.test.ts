@@ -284,6 +284,163 @@ test('a refusal ends the turn without running tools and says so in the conversat
   ]);
 });
 
+const fallbackBlock = {
+  type: 'fallback' as const,
+  from: { model: 'claude-opus-5-5' },
+  to: { model: 'claude-opus-5' },
+  trigger: { type: 'refusal' as const, category: null },
+};
+
+async function withModel<T>(model: string, run: () => Promise<T>) {
+  process.env.CLAUDE_MODEL = model;
+  try {
+    return await run();
+  } finally {
+    delete process.env.CLAUDE_MODEL;
+  }
+}
+
+test('after a fallback mid-reply, a call of the model that declined never runs', async () => {
+  const { professional, headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const { customer, visitId } = await bookVisit(professional.id, schedulingAssistant.id);
+  claude.reply({
+    content: [
+      sendVisitConfirmationCall(`toolu_${randomUUID()}`, visitId),
+      fallbackBlock,
+      { type: 'text', text: 'Não consigo fazer isso agora.' },
+    ],
+    stop_reason: 'end_turn',
+  });
+
+  const events = await withModel('claude-opus-5-5', () =>
+    drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Avisa o João' }, { headers })),
+  );
+
+  expect(events.at(-1)).toEqual({ type: 'done' });
+  expect(await listMessages({ phoneNumberId: process.env.META_PLATFORM_PHONE_NUMBER_ID!, waId: customer })).toEqual([]);
+  const { data } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
+  expect(data!.items.map(({ type }) => type)).toEqual(['professional', 'assistant']);
+});
+
+test('after a fallback mid-reply, only the calls of the model that answered go back to Claude', async () => {
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const declinedId = `toolu_${randomUUID()}`;
+  const keptId = `toolu_${randomUUID()}`;
+  claude.reply(
+    {
+      content: [
+        {
+          type: 'tool_use',
+          id: declinedId,
+          name: 'createCustomer',
+          input: { name: 'Recusado', phoneNumber: newCustomerNumber() },
+        },
+        fallbackBlock,
+        { type: 'tool_use', id: keptId, name: 'findCustomer', input: { query: 'João' } },
+      ],
+    },
+    { content: [{ type: 'text', text: 'Não achei o João.' }] },
+  );
+
+  await withModel('claude-opus-5-5', () =>
+    drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Acha o João' }, { headers })),
+  );
+
+  const sent = JSON.stringify(claude.requests.at(-1)!.messages);
+  expect(sent).not.toContain(declinedId);
+  expect(sent).not.toContain('Cliente cadastrado');
+  expect(claude.requests.at(-1)!.messages.at(-1)).toMatchObject({
+    role: 'user',
+    content: [{ type: 'tool_result', tool_use_id: keptId }],
+  });
+});
+
+test('the conversation is compacted on the server, and later turns start at the summary', async () => {
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const say = (text: string) => drain(api.team({ id: schedulingAssistant.id }).messages.post({ text }, { headers }));
+  claude.reply({ content: [{ type: 'text', text: 'Oi!' }] });
+  await say('Oi');
+  claude.reply({
+    content: [
+      { type: 'compaction', content: 'Resumo: o profissional disse oi.' },
+      { type: 'text', text: 'Certo.' },
+    ],
+  });
+  await say('Anota isso');
+  claude.reply({ content: [{ type: 'text', text: 'Tudo bem.' }] });
+
+  await say('E agora?');
+
+  const request = claude.requests.at(-1)!;
+  expect(request.context_management).toEqual({
+    edits: [{ type: 'compact_20260112', trigger: { type: 'input_tokens', value: 100_000 } }],
+  });
+  expect(claude.headers.at(-1)!.get('anthropic-beta')).toContain('compact-2026-01-12');
+  expect(request.messages).toEqual([
+    {
+      role: 'assistant',
+      content: [
+        { type: 'compaction', content: 'Resumo: o profissional disse oi.', encrypted_content: null },
+        { type: 'text', text: 'Certo.' },
+      ],
+    },
+    { role: 'user', content: [{ type: 'text', text: 'E agora?' }] },
+  ]);
+  const { data } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
+  expect(data!.items.map(({ type }) => type)).toEqual([
+    'professional',
+    'assistant',
+    'professional',
+    'assistant',
+    'professional',
+    'assistant',
+  ]);
+});
+
+test('a compaction that wrote no summary keeps the whole conversation', async () => {
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const say = (text: string) => drain(api.team({ id: schedulingAssistant.id }).messages.post({ text }, { headers }));
+  claude.reply({
+    content: [
+      { type: 'compaction', content: null },
+      { type: 'text', text: 'Oi!' },
+    ],
+  });
+  await say('Oi');
+  claude.reply({ content: [{ type: 'text', text: 'Tudo bem.' }] });
+
+  await say('E agora?');
+
+  expect(claude.requests.at(-1)!.messages[0]).toEqual({ role: 'user', content: [{ type: 'text', text: 'Oi' }] });
+});
+
+test('the tokens a compaction spends are recorded too', async () => {
+  const { professional, headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const iteration = { cache_creation: null, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
+  claude.reply({
+    content: [
+      { type: 'compaction', content: 'Resumo.' },
+      { type: 'text', text: 'Oi!' },
+    ],
+    usage: {
+      input_tokens: 3000,
+      output_tokens: 50,
+      iterations: [
+        { ...iteration, type: 'compaction', input_tokens: 100_500, output_tokens: 2500 },
+        { ...iteration, type: 'message', model: 'claude-haiku-5-5', input_tokens: 3000, output_tokens: 50 },
+      ],
+    },
+  });
+
+  await drain(api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Oi' }, { headers }));
+
+  const usages = await db.select().from(llmUsages).where(eq(llmUsages.professionalId, professional.id));
+  expect(usages.map(({ inputTokens, outputTokens }) => [inputTokens, outputTokens]).sort()).toEqual([
+    [100_500, 2500],
+    [3000, 50],
+  ]);
+});
+
 test("a Professional cannot talk to someone else's Assistant", async () => {
   const { schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
   const intruder = await signInNewProfessional();

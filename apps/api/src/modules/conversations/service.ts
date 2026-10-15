@@ -333,11 +333,9 @@ export async function decide(
   const tools = assistantTools(assistant);
   const results: ToolResult[] = [];
   for (const call of toolUses(message as StoredMessage)) {
-    const entry = findTool(tools, call.name);
     const decision = siblings.find(({ toolUseId }) => toolUseId === call.id)?.status;
-    if (!entry) results.push(result(call, `Ferramenta desconhecida: ${call.name}`, true));
-    else if (entry.card && decision !== 'confirmed') results.push(result(call, cancelledResult));
-    else results.push(await run(entry, call));
+    if (findTool(tools, call.name)?.card && decision !== 'confirmed') results.push(result(call, cancelledResult));
+    else results.push(await run(tools, call));
   }
   await saveMessage(assistant.id, 'user', results);
   return converse(assistant, emit);
@@ -345,8 +343,10 @@ export async function decide(
 
 async function converse(assistant: Assistant, emit: (event: TurnEvent) => void): Promise<TurnEvent> {
   const tools = assistantTools(assistant);
+  const { betas = [], ...model } = modelParams();
   const runner = claude().beta.messages.toolRunner({
-    ...modelParams(),
+    ...model,
+    betas: [...betas, 'compact-2026-01-12'],
     max_tokens: 16000,
     stream: true,
     max_iterations: 20,
@@ -355,6 +355,8 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
     cache_control: { type: 'ephemeral' },
     system: systemPrompt(assistant),
     tools: tools.map(({ tool }) => tool),
+    // Haiku 5.5 bills prompts over 100K tokens at a higher rate, so the server summarizes the history before that.
+    context_management: { edits: [{ type: 'compact_20260112', trigger: { type: 'input_tokens', value: 100_000 } }] },
     messages: await apiMessages(assistant.id),
   });
 
@@ -372,10 +374,12 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
       return { type: 'done' };
     }
 
-    const stored = await saveMessage(assistant.id, 'assistant', echoable(message.content));
+    const stored = (await saveMessage(assistant.id, 'assistant', echoable(message.content))) as StoredMessage;
     // Calls the stored history keeps; after a fallback, the declined model's calls are not among them.
-    const kept = toolUses(stored as StoredMessage);
+    const kept = toolUses(stored);
     emit({ type: 'message' });
+
+    if (!kept.length) return { type: 'done' };
 
     const gated = kept.filter((call) => findTool(tools, call.name)?.card);
     if (gated.length) {
@@ -385,13 +389,10 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
       return { type: 'awaiting_confirmation' };
     }
 
-    const toolResponse = await runner.generateToolResponse();
-    if (toolResponse && typeof toolResponse.content !== 'string') {
-      const results = toolResponse.content.filter(
-        (block) => block.type !== 'tool_result' || kept.some(({ id }) => id === block.tool_use_id),
-      );
-      await saveMessage(assistant.id, 'user', results);
-    }
+    const results = await Promise.all(kept.map((call) => run(tools, call)));
+    await saveMessage(assistant.id, 'user', results);
+    // The runner's own copy of the reply still has the declined model's calls, so it goes on from the stored one.
+    runner.pushMessages({ role: 'assistant', content: stored.content }, { role: 'user', content: results });
   }
   return { type: 'done' };
 }
@@ -413,7 +414,9 @@ export function modelParams() {
   };
 }
 
-async function run(entry: AssistantTool, call: ToolUse): Promise<ToolResult> {
+async function run(tools: AssistantTool[], call: ToolUse): Promise<ToolResult> {
+  const entry = findTool(tools, call.name);
+  if (!entry) return result(call, `Ferramenta desconhecida: ${call.name}`, true);
   const { content, isError } = await runRunnableTool(entry.tool, call.input, { toolUse: call, toolUseBlock: call });
   return result(call, content, isError);
 }
@@ -451,7 +454,11 @@ async function loadMessages(assistantId: string) {
 async function apiMessages(assistantId: string) {
   const messages = await loadMessages(assistantId);
   const notices = await loadNotices(assistantId);
-  return messages.map(({ role, content, createdAt }) => {
+  // The API ignores what comes before a compaction summary, so it is not sent at all.
+  const summarized = messages.findLastIndex(({ content }) =>
+    content.some((block) => block.type === 'compaction' && block.content),
+  );
+  const sent = messages.map(({ role, content, createdAt }) => {
     const arrived = role === 'user' ? notices.filter((notice) => notice.createdAt < createdAt) : [];
     notices.splice(0, arrived.length);
     if (!arrived.length) return { role, content };
@@ -460,6 +467,7 @@ async function apiMessages(assistantId: string) {
     const texts = arrived.map(({ text }): Block => ({ type: 'text', text: `<aviso>${text}</aviso>` }));
     return { role, content: [...results, ...texts, ...rest] };
   });
+  return sent.slice(Math.max(summarized, 0));
 }
 
 function loadNotices(assistantId: string) {
@@ -479,9 +487,9 @@ export async function recordUsage(
   assistant: { id: string | null; professional: { id: string } },
   message: Anthropic.Beta.BetaMessage,
 ) {
-  // With a fallback, each model that ran reports its own usage in `iterations`.
+  // With a fallback or a compaction, each model run reports its own usage in `iterations`.
   const attempts = message.usage.iterations?.filter(
-    (attempt) => attempt.type === 'message' || attempt.type === 'fallback_message',
+    (attempt) => attempt.type === 'message' || attempt.type === 'fallback_message' || attempt.type === 'compaction',
   ) ?? [message.usage];
   if (!attempts.length) return;
   await db.insert(llmUsages).values(

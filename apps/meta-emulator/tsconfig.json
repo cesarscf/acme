@@ -1,0 +1,9 @@
+{
+  "extends": "@acme/typescript-config/base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "paths": { "@/*": ["./src/web/*"] }
+  },
+  "include": ["src", "vite.config.ts"]
+}

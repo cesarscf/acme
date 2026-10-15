@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { router, useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Text, View } from 'react-native';
@@ -6,8 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { Floating } from '@/components/floating';
 import { Mascot } from '@/components/mascot';
+import { useCatalogQuery } from '@/hooks/data/catalog/use-catalog-query';
 import { usePrototypeScale } from '@/lib/layout';
-import { catalogQuery } from '@/lib/queries';
 
 const spots = [
   { role: 'scheduling', left: 34, top: 64, size: 62 },
@@ -21,7 +20,7 @@ const spots = [
 export default function Welcome() {
   const { top, bottom } = useSafeAreaInsets();
   const scale = usePrototypeScale();
-  const { data: catalog } = useQuery(catalogQuery);
+  const { data: catalog } = useCatalogQuery();
   // Welcome stays mounted under sign-in, so the light status bar must leave with the focus.
   const focused = useIsFocused();
 

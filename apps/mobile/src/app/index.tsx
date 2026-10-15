@@ -1,28 +1,26 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link } from 'expo-router';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Mascot } from '@/components/mascot';
-import { authClient } from '@/lib/auth-client';
+import { useSignOutMutation } from '@/hooks/data/auth/use-sign-out-mutation';
+import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
+import { useTeamQuery } from '@/hooks/data/team/use-team-query';
 import { firstName } from '@/lib/onboarding';
-import { meQuery, queryClient, teamQuery } from '@/lib/queries';
 
 export default function Home() {
   const { top, bottom } = useSafeAreaInsets();
-  const { data: me } = useQuery(meQuery);
-  const { data: team } = useQuery(teamQuery);
+  const { data: me } = useProfessionalQuery();
+  const { data: team } = useTeamQuery();
+  const signOut = useSignOutMutation();
   const name = me && firstName(me.name);
 
-  function signOut() {
+  function confirmSignOut() {
     Alert.alert('Sair da conta?', undefined, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Sair',
         style: 'destructive',
-        onPress: async () => {
-          await authClient.signOut();
-          queryClient.clear();
-        },
+        onPress: () => signOut.mutate(),
       },
     ]);
   }
@@ -34,7 +32,7 @@ export default function Home() {
           className="size-10 items-center justify-center rounded-full border border-border active:bg-secondary"
           accessibilityRole="button"
           accessibilityLabel="Sua conta"
-          onPress={signOut}
+          onPress={confirmSignOut}
         >
           <Text className="font-bold text-muted-foreground text-sm">{name?.[0]?.toUpperCase()}</Text>
         </Pressable>

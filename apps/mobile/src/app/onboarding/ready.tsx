@@ -1,13 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { Floating } from '@/components/floating';
 import { Mascot } from '@/components/mascot';
+import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
+import { useTeamQuery } from '@/hooks/data/team/use-team-query';
 import { usePrototypeScale } from '@/lib/layout';
 import { firstName } from '@/lib/onboarding';
-import { meQuery, queryClient, teamQuery } from '@/lib/queries';
 
 const spots = [
   { left: 40, top: 120 },
@@ -18,19 +18,19 @@ const spots = [
 export default function Ready() {
   const { bottom } = useSafeAreaInsets();
   const scale = usePrototypeScale();
-  const { data: me } = useQuery(meQuery);
-  const { data: team } = useQuery(teamQuery);
+  const { data: me } = useProfessionalQuery();
+  const team = useTeamQuery();
   const name = me && firstName(me.name);
 
   async function start() {
     // Home is guarded until the root layout sees the new Team.
-    await queryClient.invalidateQueries(teamQuery);
+    await team.refetch();
     router.replace('/');
   }
 
   return (
     <View className="flex-1 bg-card">
-      {team?.slice(0, spots.length).map(({ id, mascot }, index) => (
+      {team.data?.slice(0, spots.length).map(({ id, mascot }, index) => (
         <Floating
           key={id}
           delay={index * 400}

@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -8,21 +7,15 @@ import { Button } from '@/components/button';
 import { Check } from '@/components/check';
 import { LoadError } from '@/components/load-error';
 import { Mascot } from '@/components/mascot';
-import { api } from '@/lib/api';
+import { type CatalogEntry, useCatalogQuery } from '@/hooks/data/catalog/use-catalog-query';
+import type { WorkStyle } from '@/hooks/data/professional/use-professional-query';
+import { useTeamMutation } from '@/hooks/data/team/use-team-mutation';
+import type { Role } from '@/hooks/data/team/use-team-query';
 import { selectionFeedback } from '@/lib/haptics';
 import { recommendedRoles, teamButtonLabel } from '@/lib/onboarding';
-import {
-  type CatalogEntry,
-  catalogQuery,
-  queryClient,
-  type Role,
-  teamQuery,
-  unwrap,
-  type WorkStyle,
-} from '@/lib/queries';
 
 export default function Team() {
-  const catalog = useQuery(catalogQuery);
+  const catalog = useCatalogQuery();
   if (catalog.isError) {
     return <LoadError message="Não conseguimos carregar os assistentes." onRetry={() => catalog.refetch()} />;
   }
@@ -35,13 +28,7 @@ function TeamPicker({ catalog }: { catalog: CatalogEntry[] }) {
   const { workStyle } = useLocalSearchParams<{ workStyle?: WorkStyle }>();
   const recommended = recommendedRoles(catalog, workStyle ?? null);
   const [chosen, setChosen] = useState(recommended);
-  const save = useMutation({
-    mutationFn: () => unwrap(api.team.post({ roles: chosen })),
-    onSuccess: () => {
-      router.push('/onboarding/ready');
-      queryClient.invalidateQueries(teamQuery);
-    },
-  });
+  const save = useTeamMutation();
 
   function toggle(role: Role) {
     selectionFeedback();
@@ -84,7 +71,7 @@ function TeamPicker({ catalog }: { catalog: CatalogEntry[] }) {
           label={teamButtonLabel(chosen.length)}
           disabled={!chosen.length}
           loading={save.isPending}
-          onPress={() => save.mutate()}
+          onPress={() => save.mutate(chosen, { onSuccess: () => router.push('/onboarding/ready') })}
         />
       </View>
     </View>

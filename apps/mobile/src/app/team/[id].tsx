@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -6,12 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { Field } from '@/components/field';
 import { Mascot } from '@/components/mascot';
-import { api } from '@/lib/api';
-import { type Assistant, queryClient, teamQuery, unwrap } from '@/lib/queries';
+import { useAssistantMutation } from '@/hooks/data/team/use-assistant-mutation';
+import { type Assistant, useTeamQuery } from '@/hooks/data/team/use-team-query';
 
 export default function AssistantSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: team } = useQuery(teamQuery);
+  const { data: team } = useTeamQuery();
   const assistant = team?.find((assistant) => assistant.id === id);
   if (!assistant) return null;
   return <RenameForm assistant={assistant} />;
@@ -20,14 +19,12 @@ export default function AssistantSheet() {
 function RenameForm({ assistant }: { assistant: Assistant }) {
   const { bottom } = useSafeAreaInsets();
   const [name, setName] = useState(assistant.name);
-  const rename = useMutation({
-    mutationFn: () => unwrap(api.team({ id: assistant.id }).patch({ name })),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries(teamQuery);
-      router.back();
-    },
-  });
+  const rename = useAssistantMutation(assistant.id);
   const canSave = !!name.trim() && name.trim() !== assistant.name;
+
+  function save() {
+    if (canSave && !rename.isPending) rename.mutate(name, { onSuccess: () => router.back() });
+  }
 
   return (
     <View className="bg-card px-5 pt-6" style={{ paddingBottom: bottom + 20 }}>
@@ -46,20 +43,14 @@ function RenameForm({ assistant }: { assistant: Assistant }) {
         onChangeText={setName}
         maxLength={40}
         returnKeyType="done"
-        onSubmitEditing={() => canSave && !rename.isPending && rename.mutate()}
+        onSubmitEditing={save}
       />
       {rename.isError && (
         <Text selectable className="mt-2 font-normal text-destructive text-sm">
           Não conseguimos renomear. Tente de novo.
         </Text>
       )}
-      <Button
-        className="mt-4"
-        label="Salvar"
-        disabled={!canSave}
-        loading={rename.isPending}
-        onPress={() => rename.mutate()}
-      />
+      <Button className="mt-4" label="Salvar" disabled={!canSave} loading={rename.isPending} onPress={save} />
     </View>
   );
 }

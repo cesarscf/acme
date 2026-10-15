@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import Svg, { Circle, Defs, G, Path, Polygon, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useCSSVariable } from 'uniwind';
-import type { CatalogEntry } from '@/lib/queries';
+import type { CatalogEntry } from '@/hooks/data/catalog/use-catalog-query';
 
 type Mascot = CatalogEntry['mascot'];
 

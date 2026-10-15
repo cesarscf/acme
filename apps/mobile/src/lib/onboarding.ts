@@ -1,4 +1,5 @@
-import type { CatalogEntry, Trade, WorkStyle } from './queries';
+import type { CatalogEntry } from '@/hooks/data/catalog/use-catalog-query';
+import type { Trade, WorkStyle } from '@/hooks/data/professional/use-professional-query';
 
 export const trades: { trade: Trade; label: string }[] = [
   { trade: 'hvac', label: 'Climatização e refrigeração' },

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
+import type { CatalogEntry } from '@/hooks/data/catalog/use-catalog-query';
 import { firstName, recommendedRoles, searchTrades, teamButtonLabel, tradesSummary } from './onboarding';
-import type { CatalogEntry } from './queries';
 
 const entry = {
   name: 'Lia',

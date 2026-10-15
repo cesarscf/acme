@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -6,22 +5,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
 import { Button } from '@/components/button';
 import { Check } from '@/components/check';
-import { api } from '@/lib/api';
+import { useProfessionalMutation } from '@/hooks/data/professional/use-professional-mutation';
+import { useProfessionalQuery, type WorkStyle } from '@/hooks/data/professional/use-professional-query';
 import { selectionFeedback } from '@/lib/haptics';
 import { workStyles } from '@/lib/onboarding';
-import { meQuery, queryClient, unwrap, type WorkStyle } from '@/lib/queries';
 
 export default function WorkStyleScreen() {
   const { top, bottom } = useSafeAreaInsets();
-  const { data: me } = useQuery(meQuery);
+  const { data: me } = useProfessionalQuery();
   const [chosen, setChosen] = useState(me?.workStyle ?? undefined);
-  const save = useMutation({
-    mutationFn: (workStyle: WorkStyle | null) => unwrap(api.me.patch({ workStyle })),
-    onSuccess: (_, workStyle) => {
-      queryClient.invalidateQueries(meQuery);
-      router.push({ pathname: '/onboarding/team', params: workStyle ? { workStyle } : {} });
-    },
-  });
+  const save = useProfessionalMutation();
+
+  function saveAndContinue(workStyle: WorkStyle | null) {
+    save.mutate(
+      { workStyle },
+      { onSuccess: () => router.push({ pathname: '/onboarding/team', params: workStyle ? { workStyle } : {} }) },
+    );
+  }
 
   function choose(workStyle: WorkStyle) {
     selectionFeedback();
@@ -75,14 +75,14 @@ export default function WorkStyleScreen() {
       <Button
         label="Continuar"
         disabled={!chosen}
-        loading={save.isPending && save.variables !== null}
-        onPress={() => save.mutate(chosen!)}
+        loading={save.isPending && save.variables?.workStyle !== null}
+        onPress={() => saveAndContinue(chosen!)}
       />
       <Button
         label="Pular"
         variant="link"
-        loading={save.isPending && save.variables === null}
-        onPress={() => save.mutate(null)}
+        loading={save.isPending && save.variables?.workStyle === null}
+        onPress={() => saveAndContinue(null)}
       />
     </View>
   );

@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -6,32 +5,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { Check } from '@/components/check';
 import { Field } from '@/components/field';
-import { api } from '@/lib/api';
+import { useProfessionalMutation } from '@/hooks/data/professional/use-professional-mutation';
+import { type Trade, useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
 import { selectionFeedback } from '@/lib/haptics';
 import { searchTrades, trades } from '@/lib/onboarding';
-import { meQuery, queryClient, type Trade, unwrap } from '@/lib/queries';
 
 export default function Trades() {
   const { bottom } = useSafeAreaInsets();
-  const { data: me } = useQuery(meQuery);
+  const { data: me } = useProfessionalQuery();
   const [query, setQuery] = useState('');
   const chosen = me?.trades ?? [];
   const found = searchTrades(query);
-  const save = useMutation({
-    // One PATCH at a time, so quick taps reach the API in order.
-    scope: { id: 'trades' },
-    mutationFn: (trades: Trade[]) => unwrap(api.me.patch({ trades })),
-    onMutate: (trades) => {
-      const previous = queryClient.getQueryData(meQuery.queryKey);
-      queryClient.setQueryData(meQuery.queryKey, (me) => me && { ...me, trades });
-      return { previous };
-    },
-    onError: (_error, _trades, context) => queryClient.setQueryData(meQuery.queryKey, context?.previous),
-  });
+  const save = useProfessionalMutation();
 
   function toggle(trade: Trade) {
     selectionFeedback();
-    save.mutate(chosen.includes(trade) ? chosen.filter((other) => other !== trade) : [...chosen, trade]);
+    save.mutate({ trades: chosen.includes(trade) ? chosen.filter((other) => other !== trade) : [...chosen, trade] });
   }
 
   return (

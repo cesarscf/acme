@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -8,12 +7,12 @@ import { Button } from '@/components/button';
 import { Field } from '@/components/field';
 import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
-import { api } from '@/lib/api';
+import { useProfessionalMutation } from '@/hooks/data/professional/use-professional-mutation';
+import { type Professional, useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
 import { tradesSummary } from '@/lib/onboarding';
-import { meQuery, type Professional, queryClient, unwrap } from '@/lib/queries';
 
 export default function Name() {
-  const me = useQuery(meQuery);
+  const me = useProfessionalQuery();
   if (me.isError) return <LoadError message="Não conseguimos carregar o seu perfil." onRetry={() => me.refetch()} />;
   if (!me.data) return <View className="flex-1 bg-card" />;
   return <NameForm me={me.data} />;
@@ -22,13 +21,7 @@ export default function Name() {
 function NameForm({ me }: { me: Professional }) {
   const { top, bottom } = useSafeAreaInsets();
   const [name, setName] = useState(me.name);
-  const save = useMutation({
-    mutationFn: () => unwrap(api.me.patch({ name })),
-    onSuccess: () => {
-      queryClient.invalidateQueries(meQuery);
-      router.push('/onboarding/work-style');
-    },
-  });
+  const save = useProfessionalMutation();
   // The Trades sheet saves straight to the profile, so the summary follows the cached Professional.
   const summary = tradesSummary(me.trades);
 
@@ -73,7 +66,12 @@ function NameForm({ me }: { me: Professional }) {
               Não conseguimos salvar. Tente de novo.
             </Text>
           )}
-          <Button label="Continuar" disabled={!name.trim()} loading={save.isPending} onPress={() => save.mutate()} />
+          <Button
+            label="Continuar"
+            disabled={!name.trim()}
+            loading={save.isPending}
+            onPress={() => save.mutate({ name }, { onSuccess: () => router.push('/onboarding/work-style') })}
+          />
         </View>
       </KeyboardStickyView>
     </View>

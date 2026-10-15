@@ -344,7 +344,7 @@ async function saveMessage(assistantId: string, role: 'user' | 'assistant', cont
 }
 
 export async function recordUsage(
-  assistant: { id: string; professional: { id: string } },
+  assistant: { id: string | null; professional: { id: string } },
   message: Anthropic.Beta.BetaMessage,
 ) {
   // With a fallback, each model that ran reports its own usage in `iterations`.

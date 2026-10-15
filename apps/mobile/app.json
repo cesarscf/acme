@@ -29,7 +29,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O Acme usa o microfone para você contar por áudio o serviço que fez."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

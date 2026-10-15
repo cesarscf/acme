@@ -78,6 +78,13 @@
       "when": 1792082405537,
       "tag": "0010_quotes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792084166680,
+      "tag": "0011_work-records",
+      "breakpoints": true
     }
   ]
 }

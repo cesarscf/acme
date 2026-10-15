@@ -62,6 +62,7 @@ function Routes() {
         <Stack.Screen name="index" />
         <Stack.Screen name="conversation/[id]" />
         <Stack.Screen name="customers/index" />
+        <Stack.Screen name="work-records/new" />
         <Stack.Screen
           name="customers/new"
           options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents' }}

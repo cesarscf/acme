@@ -44,7 +44,7 @@ export default function Home() {
       </View>
       <ScrollView
         className="mt-2.5 flex-1"
-        contentContainerStyle={{ paddingBottom: bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: bottom + 110 }}
         showsVerticalScrollIndicator={false}
       >
         {team?.map((assistant) => (
@@ -87,6 +87,19 @@ export default function Home() {
           </Pressable>
         </Link>
       </ScrollView>
+      <View className="absolute inset-x-0 items-center" style={{ bottom: bottom + 24 }} pointerEvents="box-none">
+        <Link href="/work-records/new" asChild>
+          <Pressable
+            className="h-14 flex-row items-center gap-2.5 rounded-full bg-primary px-[26px] active:opacity-90"
+            style={{ boxShadow: '0 10px 24px rgba(14,30,24,0.22)' }}
+            accessibilityRole="button"
+            accessibilityHint="Conte o que fez numa visita"
+          >
+            <Icon name="mic" size={20} color="--color-primary-foreground" />
+            <Text className="font-bold text-base text-primary-foreground">Registrar serviço</Text>
+          </Pressable>
+        </Link>
+      </View>
     </View>
   );
 }

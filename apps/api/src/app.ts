@@ -7,6 +7,7 @@ import { health } from './modules/health';
 import { professionals } from './modules/professionals';
 import { team } from './modules/team';
 import { whatsapp } from './modules/whatsapp';
+import { workRecords } from './modules/work-records';
 
 export const app = new Elysia()
   .use(health)
@@ -16,6 +17,7 @@ export const app = new Elysia()
   .use(team)
   .use(briefing)
   .use(customers)
-  .use(conversations);
+  .use(conversations)
+  .use(workRecords);
 
 export type App = typeof app;

@@ -354,3 +354,58 @@ export const quoteItems = pgTable(
   },
   (table) => [index().on(table.quoteId)],
 );
+
+export const paymentMethod = pgEnum('payment_method', ['pix', 'cash']);
+
+export const workRecords = pgTable(
+  'work_records',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    customerId: uuid()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    visitId: uuid().references(() => visits.id, { onDelete: 'set null' }),
+    description: text().notNull(),
+    materials: text(),
+    amountCents: integer().notNull(),
+    // How the Customer pays; the Charge, when there is one, carries the same PaymentMethod.
+    paymentMethod: paymentMethod().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index().on(table.professionalId, table.createdAt)],
+);
+
+export const chargeStatus = pgEnum('charge_status', ['pending', 'awaiting_confirmation', 'paid']);
+
+export const charges = pgTable(
+  'charges',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    workRecordId: uuid()
+      .notNull()
+      .references(() => workRecords.id, { onDelete: 'cascade' }),
+    customerId: uuid()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    amountCents: integer().notNull(),
+    paymentMethod: paymentMethod().notNull(),
+    status: chargeStatus().notNull().default('pending'),
+    paidAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index().on(table.professionalId, table.status), index().on(table.workRecordId)],
+);

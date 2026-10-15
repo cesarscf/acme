@@ -7,6 +7,7 @@ import type { PaymentMethod, PaymentMethods } from './service';
 // Null is "the Professional did not say it": the WorkRecord keeps what it had.
 export type Extraction = {
   customerId: string | null;
+  newCustomer: { name: string; phoneNumber: string | null } | null;
   visitId: string | null;
   title: string | null;
   description: string | null;
@@ -29,6 +30,7 @@ const paymentMethodNames: Record<PaymentMethod, string> = { pix: 'Pix', cash: 'd
 const system = `Você registra um serviço que um profissional acabou de fazer na casa ou na empresa de um cliente. Ele contou o serviço num áudio, que foi transcrito, e às vezes completou por mensagem depois. O registro é salvo direto, sem formulário: deixe em branco (null) o que ele não disse em vez de inventar. Se ele corrigiu algo numa mensagem, vale a correção.
 
 - customer: a referência (C1, C2…) do cliente que ele citou. Se o nome bate com mais de um cliente, prefira o que tem visita recente. Se não está na lista, null.
+- newCustomer: só quando ele citou um cliente que não está na lista: o nome como ele disse e o WhatsApp com DDD, se ele disse (senão null). Nos outros casos, null.
 - visit: a referência (V1, V2…) da visita recente desse cliente que mais combina com o relato (em geral a mais recente). Se não houver, null.
 - title: o nome curto do serviço, em 2 a 4 palavras (ex.: "Limpeza de split").
 - description: o que foi feito, numa frase clara, sem o nome do cliente, o material ou o valor (ex.: "Limpeza completa de split 12.000 BTU e troca de capacitor").
@@ -39,6 +41,7 @@ const system = `Você registra um serviço que um profissional acabou de fazer n
 
 const schema = z.strictObject({
   customer: z.string().nullable(),
+  newCustomer: z.strictObject({ name: z.string(), phoneNumber: z.string().nullable() }).nullable(),
   visit: z.string().nullable(),
   title: z.string().nullable(),
   description: z.string().nullable(),
@@ -51,6 +54,7 @@ const schema = z.strictObject({
 
 const nothing: Extraction = {
   customerId: null,
+  newCustomer: null,
   visitId: null,
   title: null,
   description: null,
@@ -97,9 +101,12 @@ export async function extractWorkRecord(context: Context, transcript: string): P
 
   const visit = parsed.visit ? visitRefs.get(parsed.visit) : undefined;
   const customerId = (parsed.customer && customerRefs.get(parsed.customer)?.id) || visit?.customerId || null;
+  const newName = parsed.newCustomer?.name.trim();
   const amount = parsed.amountCents === null ? null : Math.round(parsed.amountCents);
   return {
     customerId,
+    newCustomer:
+      !customerId && newName ? { name: newName, phoneNumber: parsed.newCustomer?.phoneNumber?.trim() || null } : null,
     visitId: visit && visit.customerId === customerId ? visit.id : null,
     title: parsed.title?.trim() || null,
     description: parsed.description?.trim() || null,

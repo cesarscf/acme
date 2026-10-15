@@ -1,5 +1,5 @@
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated from 'react-native-reanimated';
@@ -23,20 +23,11 @@ import { formatWhen } from '@/lib/when';
 const paymentMethodLabels = { pix: 'Pix', cash: 'Dinheiro' } as const;
 const letters = 'ABCDEFGH';
 
-type Exchange = { id: number; text: string; status: 'sending' | 'done' | 'failed' };
+type Exchange = { id: number; text: string; status: 'sending' | 'done' | 'failed'; newCustomerName?: string | null };
 
 export default function WorkRecordScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const workRecord = useWorkRecordQuery(id);
-  const missingCustomer = !!workRecord.data && !workRecord.data.customer;
-  const { refetch } = workRecord;
-
-  // Back from "Novo cliente", the new Customer shows up among the options.
-  useFocusEffect(
-    useCallback(() => {
-      if (missingCustomer) refetch();
-    }, [missingCustomer, refetch]),
-  );
 
   if (workRecord.isError) {
     return <LoadError message="Não conseguimos abrir o serviço." onRetry={() => workRecord.refetch()} />;
@@ -61,6 +52,7 @@ function Thread({ workRecord }: { workRecord: WorkRecord }) {
   const createdAt = new Date(workRecord.createdAt);
   const working = message.isPending || choose.isPending;
   const canSend = !!text.trim() && !working;
+  const askingWhatsApp = !workRecord.customer && !!exchanges.at(-1)?.newCustomerName;
   const status = working ? 'Trabalhando…' : `${formatWhen(createdAt)} · ${workRecord.title ?? 'Serviço'}`;
 
   function submit() {
@@ -70,9 +62,12 @@ function Thread({ workRecord }: { workRecord: WorkRecord }) {
     setTab('summary');
     const exchange: Exchange = { id: Date.now(), text: said, status: 'sending' };
     setExchanges((list) => [...list, exchange]);
-    const settle = (next: Exchange['status']) =>
-      setExchanges((list) => list.map((item) => (item.id === exchange.id ? { ...item, status: next } : item)));
-    message.mutate(said, { onSuccess: () => settle('done'), onError: () => settle('failed') });
+    const settle = (next: Partial<Exchange>) =>
+      setExchanges((list) => list.map((item) => (item.id === exchange.id ? { ...item, ...next } : item)));
+    message.mutate(said, {
+      onSuccess: ({ newCustomerName }) => settle({ status: 'done', newCustomerName }),
+      onError: () => settle({ status: 'failed' }),
+    });
   }
 
   return (
@@ -134,7 +129,16 @@ function Thread({ workRecord }: { workRecord: WorkRecord }) {
             {exchanges.map((exchange) => (
               <View key={exchange.id} className="gap-3">
                 <ProfessionalBubble text={exchange.text} />
-                {exchange.status === 'done' && <AssistantReply assistant={billing} text="Anotado neste serviço." />}
+                {exchange.status === 'done' && (
+                  <AssistantReply
+                    assistant={billing}
+                    text={
+                      exchange.newCustomerName
+                        ? `Não achei ${exchange.newCustomerName} nos seus clientes. Me passe o WhatsApp com DDD para eu cadastrar.`
+                        : 'Anotado neste serviço.'
+                    }
+                  />
+                )}
                 {exchange.status === 'failed' && (
                   <Text selectable className="font-normal text-destructive text-sm">
                     Não consegui anotar agora. Tente de novo.
@@ -143,7 +147,7 @@ function Thread({ workRecord }: { workRecord: WorkRecord }) {
               </View>
             ))}
             {working && <Thinking assistant={billing} />}
-            {!working && !workRecord.customer && (
+            {!working && !workRecord.customer && !askingWhatsApp && (
               <CustomerQuestion
                 options={workRecord.customerOptions}
                 disabled={working}
@@ -274,15 +278,8 @@ function CustomerQuestion({
       ))}
       <OptionRow
         letter={letters[options.length]!}
-        label="Novo cliente"
-        hint="Cadastre o nome e o WhatsApp"
-        disabled={disabled}
-        onPress={() => router.push('/customers/new')}
-      />
-      <OptionRow
-        letter={letters[options.length + 1]!}
         label="Outro"
-        hint="Escreva o nome aqui embaixo"
+        hint="Escreva o nome e o WhatsApp aqui embaixo"
         disabled={disabled}
         onPress={onOther}
       />

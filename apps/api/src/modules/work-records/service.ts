@@ -1,7 +1,7 @@
 import { assistants, audioUsages, charges, customers, db, professionals, workRecords } from '@acme/db';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { paymentMethods } from '../briefing/scripts';
-import { findCustomer } from '../customers/service';
+import { createCustomer, findCustomer, toPhoneNumber } from '../customers/service';
 import { listVisits } from '../visits/service';
 import { addDays, formatLocalDateTime, localDate } from '../visits/time';
 import { type Extraction, extractWorkRecord } from './extract';
@@ -86,11 +86,14 @@ async function extract(professionalId: string, transcript: string) {
 
 export async function createWorkRecord(professionalId: string, transcript: string) {
   const text = transcript.trim();
-  const { cashReceived, paymentMethod, ...fields } = await extract(professionalId, text);
+  const extraction = await extract(professionalId, text);
+  const { cashReceived, paymentMethod, newCustomer, ...fields } = extraction;
+  const { customerId } = await resolveCustomer(professionalId, extraction);
   const [workRecord] = await db
     .insert(workRecords)
     .values({
       ...fields,
+      customerId,
       professionalId,
       paymentMethod: paymentMethod ?? (await findPaymentMethods(professionalId)).default,
       cashReceived: paymentMethod === 'cash' ? cashReceived : null,
@@ -107,7 +110,8 @@ export async function addMessage(professionalId: string, id: string, text: strin
   if (!current) return;
   const transcript = `${current.transcript}\n${text.trim()}`;
   const extraction = await extract(professionalId, transcript);
-  const customerId = extraction.customerId ?? current.customerId;
+  const resolved = await resolveCustomer(professionalId, extraction);
+  const customerId = resolved.customerId ?? current.customerId;
   const [workRecord] = await db
     .update(workRecords)
     .set({
@@ -119,7 +123,18 @@ export async function addMessage(professionalId: string, id: string, text: strin
     .where(eq(workRecords.id, id))
     .returning();
   await settleCash(workRecord!);
-  return viewWorkRecord(workRecord!);
+  // Not saved: the thread asks for the WhatsApp right after, and the next message carries both again.
+  const newCustomerName = customerId ? null : resolved.newCustomerName;
+  return { ...(await viewWorkRecord(workRecord!)), newCustomerName };
+}
+
+// A Customer named in the thread is created there once the WhatsApp is known, as the Assistants do in their conversations.
+async function resolveCustomer(professionalId: string, { customerId, newCustomer }: Extraction) {
+  if (customerId || !newCustomer) return { customerId, newCustomerName: null };
+  const phoneNumber = newCustomer.phoneNumber && toPhoneNumber(newCustomer.phoneNumber);
+  if (!phoneNumber) return { customerId: null, newCustomerName: newCustomer.name };
+  const { customer } = await createCustomer(professionalId, { name: newCustomer.name, phoneNumber });
+  return { customerId: customer.id, newCustomerName: null };
 }
 
 function merge(current: WorkRecord, extraction: Extraction) {

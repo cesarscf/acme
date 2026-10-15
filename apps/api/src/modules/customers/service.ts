@@ -15,10 +15,6 @@ export function formatPhoneNumber(phoneNumber: string) {
   return match ? `(${match[1]}) ${match[2]}-${match[3]}` : phoneNumber;
 }
 
-export function listCustomers(professionalId: string) {
-  return db.select().from(customers).where(eq(customers.professionalId, professionalId)).orderBy(asc(customers.name));
-}
-
 export function findCustomers(professionalId: string, query: string) {
   const digits = query.replace(/\D/g, '');
   return db

@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from 'bun:test';
 import { randomInt } from 'node:crypto';
-import { assistants, audioUsages, charges, db, llmUsages, whatsappMessages, workRecords } from '@acme/db';
+import { assistants, audioUsages, charges, customers, db, llmUsages, whatsappMessages, workRecords } from '@acme/db';
 import type Anthropic from '@anthropic-ai/sdk';
 import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
@@ -62,6 +62,7 @@ function refOf(request: Anthropic.Beta.MessageCreateParams, line: string) {
 function filled(output: Partial<Record<string, unknown>>) {
   const empty = {
     customer: null,
+    newCustomer: null,
     visit: null,
     title: null,
     description: null,
@@ -253,6 +254,57 @@ test('a message in the thread is read with the whole account and completes what 
     paymentMethod: 'pix',
     transcript: 'Limpei o split, 350 no Pix.\nFoi na casa do João.',
   });
+});
+
+test('a Customer named in the audio who is not a Customer yet is created with the WhatsApp said', async () => {
+  const { professional, headers } = await professionalWith();
+  const phoneNumber = `119${String(randomInt(1e8)).padStart(8, '0')}`;
+  claude.reply(filled({ newCustomer: { name: 'Carlos Souza', phoneNumber }, title: 'Limpeza de split' }));
+
+  const { data } = await api['work-records'].post(
+    { transcript: `Limpei o split do Carlos Souza, o WhatsApp dele é ${phoneNumber}.` },
+    { headers },
+  );
+
+  const saved = await db.select().from(customers).where(eq(customers.professionalId, professional.id));
+  expect(saved).toEqual([expect.objectContaining({ name: 'Carlos Souza', phoneNumber: `55${phoneNumber}` })]);
+  expect(data).toMatchObject({ customer: { id: saved[0]!.id, name: 'Carlos Souza' }, customerOptions: [] });
+});
+
+test('a new Customer named in the thread is asked for the WhatsApp, then created and linked', async () => {
+  const { professional, headers } = await professionalWith();
+  const joao = await newCustomer(professional.id, 'João Pereira');
+  const phoneNumber = `119${String(randomInt(1e8)).padStart(8, '0')}`;
+  claude.reply(filled({ title: 'Limpeza de split' }));
+  const { data: created } = await api['work-records'].post({ transcript: 'Limpei o split.' }, { headers });
+  const thread = api['work-records']({ id: created!.id }).messages;
+
+  claude.reply(filled({ newCustomer: { name: 'Carlos Souza', phoneNumber: null } }));
+  const { data: named } = await thread.post({ text: 'Foi do Carlos Souza.' }, { headers });
+  claude.reply(
+    filled({
+      newCustomer: { name: 'Carlos Souza', phoneNumber: `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2)}` },
+    }),
+  );
+  const { data: linked } = await thread.post({ text: phoneNumber }, { headers });
+
+  expect(named).toMatchObject({ customer: null, newCustomerName: 'Carlos Souza' });
+  const saved = await db.select().from(customers).where(eq(customers.professionalId, professional.id));
+  expect(saved.map(({ name }) => name).sort()).toEqual(['Carlos Souza', joao.name]);
+  const carlos = saved.find(({ name }) => name === 'Carlos Souza')!;
+  expect(carlos.phoneNumber).toBe(`55${phoneNumber}`);
+  expect(linked).toMatchObject({ customer: { id: carlos.id }, newCustomerName: null, title: 'Limpeza de split' });
+});
+
+test('a WhatsApp that is already a Customer links that Customer instead of creating another', async () => {
+  const { professional, headers } = await professionalWith();
+  const joao = await newCustomer(professional.id, 'João Pereira');
+  claude.reply(filled({ newCustomer: { name: 'Seu João', phoneNumber: joao.phoneNumber } }));
+
+  const { data } = await api['work-records'].post({ transcript: `Limpei o split, ${joao.phoneNumber}.` }, { headers });
+
+  expect(data).toMatchObject({ customer: { id: joao.id, name: 'João Pereira' } });
+  expect(await db.select().from(customers).where(eq(customers.professionalId, professional.id))).toHaveLength(1);
 });
 
 test("the Serviços list shows the Professional's WorkRecords, newest first, and another Professional cannot open them", async () => {

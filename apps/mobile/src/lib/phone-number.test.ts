@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { formatPhoneNumber, toPhoneNumber } from './phone-number';
+import { toPhoneNumber } from './phone-number';
 
 test('a Brazilian number typed with area code gets the country code', () => {
   expect(toPhoneNumber('(11) 98765-4321')).toBe('5511987654321');
@@ -15,9 +15,4 @@ test('a landline with 8 digits is accepted', () => {
 
 test('a number too short is refused', () => {
   expect(toPhoneNumber('98765-4321')).toBeUndefined();
-});
-
-test('a stored number is shown with the area code in parentheses', () => {
-  expect(formatPhoneNumber('5511987654321')).toBe('(11) 98765-4321');
-  expect(formatPhoneNumber('551134567890')).toBe('(11) 3456-7890');
 });

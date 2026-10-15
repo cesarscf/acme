@@ -29,6 +29,7 @@
       "name": "@acme/meta-emulator",
       "dependencies": {
         "@acme/theme": "workspace:*",
+        "@elysia/eden": "1.4.10",
         "class-variance-authority": "0.7.1",
         "cn": "0.4.0",
         "elysia": "1.4.30",

@@ -8,4 +8,5 @@ export default defineConfig({
   build: { outDir: '../../dist', emptyOutDir: true },
   plugins: [react(), tailwindcss()],
   resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src/web') } },
+  server: { proxy: { '/emulator': { target: 'http://localhost:4000', ws: true } } },
 });

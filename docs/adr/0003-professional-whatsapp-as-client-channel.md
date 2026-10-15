@@ -4,5 +4,5 @@ Toda interação com o Cliente (aprovar Orçamento, receber Cobrança, confirmar
 
 ## Consequences
 
-- Em dev, o WhatsApp é um adaptador simulado; o código de login aparece no log da API.
+- Em dev, a API fala com o Meta Emulator em vez da Graph API (ver ADR 0004); o código de login aparece na tela do emulador.
 - Detalhes de viabilidade (Tech Provider, coexistência com o app WhatsApp Business, templates por WABA) em `docs/research/whatsapp.md`.

@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitetura dos Assistants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; the wide diagrams scroll inside their own frames. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1b2230;
+  --muted: #5d6779;
+  --line: #d6dbe4;
+  --accent: #3d6fd9;
+  --lia: #5B8DEF; --olga: #F2994A; --tina: #34B27B;
+  --lia-soft: #e3ecff; --olga-soft: #ffeedd; --tina-soft: #dcf5e9;
+  --warn: #b5590f;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161d; --surface: #1a2029; --fg: #e4e8ef; --muted: #98a2b3; --line: #2e3744; --accent: #7fa3f5;
+    --lia-soft: #1c2a47; --olga-soft: #3a2816; --tina-soft: #15342a; --warn: #f0a35e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1a2029; --fg: #e4e8ef; --muted: #98a2b3; --line: #2e3744; --accent: #7fa3f5;
+  --lia-soft: #1c2a47; --olga-soft: #3a2816; --tina-soft: #15342a; --warn: #f0a35e;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 56px; }
+header { display: grid; gap: 10px; max-width: 70ch; }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 800 clamp(30px, 5vw, 46px)/1.05 var(--font-display); margin: 0; text-wrap: balance; }
+h2 { font: 800 26px/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+h3 { font: 600 17px/1.3 var(--font-display); margin: 0; }
+p { margin: 0; max-width: 70ch; }
+.lede { color: var(--muted); font-size: 17px; }
+code, .mono { font-family: var(--font-mono); font-size: .88em; }
+section { display: grid; gap: 18px; }
+.frame { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; padding: 16px; }
+.frame svg { display: block; min-width: 920px; width: 100%; height: auto; }
+.frame.mer { padding: 20px; }
+.frame.mer pre { margin: 0; }
+
+/* overview svg */
+.g-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.g-group { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 5; }
+.g-hot { fill: var(--lia-soft); stroke: var(--accent); stroke-width: 1.5; }
+.g-t { fill: var(--fg); font: 600 14px var(--font-body); }
+.g-s { fill: var(--muted); font: 400 12px var(--font-mono); }
+.g-l { fill: var(--muted); font: 500 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.g-a { stroke: var(--muted); stroke-width: 1.6; fill: none; marker-end: url(#arr); }
+.g-a.acc { stroke: var(--accent); marker-end: url(#arr-acc); }
+.g-a.warn { stroke: var(--warn); stroke-dasharray: 6 4; marker-end: url(#arr-warn); }
+.g-al { fill: var(--muted); font: 500 11.5px var(--font-body); }
+.g-al.acc { fill: var(--accent); } .g-al.warn { fill: var(--warn); }
+.arrowhead { fill: var(--muted); } .arrowhead.acc { fill: var(--accent); } .arrowhead.warn { fill: var(--warn); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; color: var(--muted); font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend i { width: 26px; height: 0; border-top: 2px solid var(--muted); }
+.legend i.acc { border-color: var(--accent); }
+.legend i.warn { border-top: 2px dashed var(--warn); }
+
+/* assistants */
+.team { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.member { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.member-head { display: flex; gap: 12px; align-items: center; }
+.member-head svg { flex: none; }
+.member-head small { display: block; color: var(--muted); font: 400 12px var(--font-mono); }
+.tools { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tools li { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-mono); font-size: 13px; }
+.chip { font: 500 11px/1 var(--font-body); padding: 4px 7px; border-radius: 99px; white-space: nowrap; align-self: center; }
+.chip.card { background: var(--olga-soft); color: var(--warn); }
+.chip.thread { background: var(--lia-soft); color: var(--accent); }
+.member dl { margin: 0; display: grid; gap: 4px; font-size: 13px; }
+.member dt { color: var(--muted); font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: .06em; }
+.member dd { margin: 0 0 6px; }
+.lia { box-shadow: inset 0 3px 0 var(--lia); }
+.olga { box-shadow: inset 0 3px 0 var(--olga); }
+.tina { box-shadow: inset 0 3px 0 var(--tina); }
+.shared { background: transparent; border-style: dashed; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.panel ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { white-space: nowrap; }
+.files { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">apps/api · outubro 2026</div>
+    <h1>Arquitetura dos Assistants</h1>
+    <p class="lede">Como a Lia, a Olga e a Tina rodam no Claude, que tools cada uma tem, como passam pedidos umas às outras na conversa do Cliente e como o que acontece no WhatsApp volta para elas.</p>
+  </header>
+
+  <section>
+    <h2>Visão geral</h2>
+    <p>Todo turno é um loop do <code>toolRunner</code> do SDK da Anthropic em <code>conversations/turn.ts</code>. O app manda a mensagem e recebe o turno por SSE. O que chega ao Customer sai sempre por uma tool com cartão, depois do Confirmar do Professional. O que volta do Customer (toque num botão) e o que as Routines fazem viram avisos para o Assistant do Role certo.</p>
+    <div class="frame">
+      <svg viewBox="0 0 1040 640" role="img" aria-label="Diagrama da arquitetura dos Assistants">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="arr-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead acc" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="arr-warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead warn" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+
+        <!-- column A: app -->
+        <rect class="g-group" x="10" y="10" width="200" height="340" rx="10"/>
+        <text class="g-l" x="24" y="32">App do Professional</text>
+        <rect class="g-box" x="24" y="48" width="172" height="58" rx="8"/>
+        <text class="g-t" x="38" y="72">Chat do Assistant</text>
+        <text class="g-s" x="38" y="92">1 Assistant, 1 conversa</text>
+        <rect class="g-box" x="24" y="120" width="172" height="58" rx="8"/>
+        <text class="g-t" x="38" y="144">Thread do Customer</text>
+        <text class="g-s" x="38" y="164">a equipe toda junta</text>
+        <rect class="g-box" x="24" y="192" width="172" height="58" rx="8"/>
+        <text class="g-t" x="38" y="216">Briefing</text>
+        <text class="g-s" x="38" y="236">5 passos → Playbook</text>
+        <rect class="g-box" x="24" y="264" width="172" height="70" rx="8"/>
+        <text class="g-t" x="38" y="288">Registrar serviço</text>
+        <text class="g-s" x="38" y="308">áudio → WorkRecord</text>
+        <text class="g-s" x="38" y="324">Whisper + Claude</text>
+
+        <!-- column B: routes -->
+        <rect class="g-group" x="250" y="10" width="240" height="340" rx="10"/>
+        <text class="g-l" x="264" y="32">API · rotas (SSE)</text>
+        <rect class="g-box" x="264" y="48" width="212" height="58" rx="8"/>
+        <text class="g-s" x="278" y="72">POST /team/:id/messages</text>
+        <text class="g-s" x="278" y="90">  …/confirmations · …/suggestions</text>
+        <rect class="g-hot" x="264" y="120" width="212" height="128" rx="8"/>
+        <text class="g-s" x="278" y="142">POST /customers/:id/messages</text>
+        <text class="g-t" x="278" y="168">claimCustomerThread</text>
+        <text class="g-s" x="278" y="186">um turno por thread (409)</text>
+        <text class="g-t" x="278" y="212">chooseAssistant</text>
+        <text class="g-s" x="278" y="230">router: Claude → role</text>
+        <rect class="g-box" x="264" y="264" width="212" height="70" rx="8"/>
+        <text class="g-t" x="278" y="288">interpret · extract</text>
+        <text class="g-s" x="278" y="308">chamadas únicas ao Claude</text>
+        <text class="g-s" x="278" y="324">saída estruturada, sem tools</text>
+
+        <!-- column C: engine -->
+        <rect class="g-group" x="530" y="10" width="250" height="340" rx="10"/>
+        <text class="g-l" x="544" y="32">Motor do turno</text>
+        <rect class="g-box" x="544" y="48" width="222" height="50" rx="8"/>
+        <text class="g-t" x="558" y="70">startTurn</text>
+        <text class="g-s" x="558" y="88">stream de TurnEvents</text>
+        <rect class="g-hot" x="544" y="110" width="222" height="58" rx="8"/>
+        <text class="g-t" x="558" y="134">runTeam</text>
+        <text class="g-s" x="558" y="154">fila de handoffs · máx 4</text>
+        <rect class="g-box" x="544" y="180" width="222" height="68" rx="8"/>
+        <text class="g-t" x="558" y="204">converse (toolRunner)</text>
+        <text class="g-s" x="558" y="222">systemPrompt + tools</text>
+        <text class="g-s" x="558" y="238">por Role, até 20 iterações</text>
+        <rect class="g-box" x="544" y="262" width="222" height="72" rx="8"/>
+        <text class="g-t" x="558" y="286">Executa tools</text>
+        <text class="g-s" x="558" y="306">com cartão → espera</text>
+        <text class="g-s" x="558" y="322">Confirmar (decide)</text>
+
+        <!-- column D: claude + db -->
+        <rect class="g-box" x="820" y="48" width="210" height="120" rx="8"/>
+        <text class="g-l" x="834" y="70">Claude API</text>
+        <text class="g-t" x="834" y="94">Haiku 5.5 (padrão)</text>
+        <text class="g-s" x="834" y="114">effort low · cache</text>
+        <text class="g-s" x="834" y="132">compaction 100K</text>
+        <text class="g-s" x="834" y="156">+ router, interpret, extract</text>
+        <rect class="g-box" x="820" y="184" width="210" height="150" rx="8"/>
+        <text class="g-l" x="834" y="202">Postgres</text>
+        <text class="g-s" x="834" y="226">assistant_messages</text>
+        <text class="g-s" x="834" y="246">tool_confirmations</text>
+        <text class="g-s" x="834" y="266">assistant_notices</text>
+        <text class="g-s" x="834" y="286">llm_usages · running_turns</text>
+        <text class="g-s" x="834" y="306">visits · quotes · charges</text>
+        <text class="g-s" x="834" y="326">jobs · work_records</text>
+
+        <!-- bottom row -->
+        <rect class="g-box" x="10" y="440" width="200" height="110" rx="8"/>
+        <text class="g-l" x="24" y="462">Customer</text>
+        <text class="g-t" x="24" y="486">WhatsApp</text>
+        <text class="g-s" x="24" y="506">nunca usa o app</text>
+        <text class="g-s" x="24" y="524">toca nos botões</text>
+
+        <rect class="g-box" x="250" y="440" width="240" height="110" rx="8"/>
+        <text class="g-l" x="264" y="462">Meta</text>
+        <text class="g-t" x="264" y="486">Meta Emulator (dev)</text>
+        <text class="g-s" x="264" y="506">Graph API em produção</text>
+        <text class="g-s" x="264" y="524">número do Professional</text>
+
+        <rect class="g-box" x="530" y="440" width="250" height="110" rx="8"/>
+        <text class="g-l" x="544" y="462">whatsapp/service.ts</text>
+        <text class="g-t" x="544" y="486">sendMessage (templates)</text>
+        <text class="g-t" x="544" y="510">receiveWebhook</text>
+        <text class="g-s" x="544" y="530">→ onButtonClick(visit|quote|charge)</text>
+
+        <rect class="g-box" x="820" y="440" width="210" height="110" rx="8"/>
+        <text class="g-l" x="834" y="462">Routines</text>
+        <text class="g-t" x="834" y="486">pg-boss (cron)</text>
+        <text class="g-s" x="834" y="506">1 entrada por Assistant</text>
+        <text class="g-s" x="834" y="524">horário vem do Playbook</text>
+
+        <!-- arrows: app -> routes -->
+        <path class="g-a acc" d="M196 77 H262"/>
+        <path class="g-a acc" d="M196 149 H262"/>
+        <path class="g-a" d="M196 221 Q230 221 230 290 T262 300"/>
+        <path class="g-a" d="M196 299 H262"/>
+        <!-- routes -> engine -->
+        <path class="g-a acc" d="M476 73 H542"/>
+        <path class="g-a acc" d="M476 184 Q510 184 510 139 T542 139"/>
+        <!-- engine internal -->
+        <path class="g-a" d="M655 98 V108"/>
+        <path class="g-a" d="M655 168 V178"/>
+        <path class="g-a" d="M655 248 V260"/>
+        <!-- engine <-> claude -->
+        <path class="g-a acc" d="M766 205 Q795 205 795 120 T818 96"/>
+        <text class="g-al acc" x="772" y="176">stream</text>
+        <!-- engine -> db -->
+        <path class="g-a" d="M766 300 H818"/>
+        <text class="g-al" x="772" y="292">grava</text>
+
+        <!-- send tools -> whatsapp -->
+        <path class="g-a warn" d="M610 334 V438"/>
+        <text class="g-al warn" x="602" y="392" text-anchor="end">sendVisitConfirmation</text>
+        <text class="g-al warn" x="602" y="406" text-anchor="end">sendQuote · sendCharge</text>
+        <path class="g-a warn" d="M530 500 H492"/>
+        <path class="g-a warn" d="M250 495 H212"/>
+        <!-- customer taps back -->
+        <path class="g-a acc" d="M120 550 Q120 600 370 600 T640 552"/>
+        <text class="g-al acc" x="270" y="620">toque no botão → webhook → onButtonClick</text>
+        <!-- whatsapp -> notices -->
+        <path class="g-a acc" d="M760 440 Q760 400 820 380 T880 336"/>
+        <text class="g-al acc" x="800" y="398">addNotice(role)</text>
+        <!-- routines -> whatsapp, notices -->
+        <path class="g-a warn" d="M820 520 H782"/>
+        <path class="g-a" d="M960 440 V336"/>
+        <text class="g-al" x="966" y="400">aviso</text>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i class="acc"></i>pedido do Professional ou evento do Customer</span>
+      <span><i></i>chamada interna</span>
+      <span><i class="warn"></i>sai para o Customer (só depois do Confirmar, ou pela Routine)</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>A equipe e as tools</h2>
+    <p>O Catalog é código (<code>team/catalog.ts</code>, ADR 0007) e guarda nome e mascote. Todo o resto de um Role fica no módulo dele (<code>visits/role.ts</code>, <code>quotes/role.ts</code>, <code>charges/role.ts</code>): o trecho do system prompt, o escopo para o router, as tools, o roteiro do Briefing e a Routine; <code>team/roles.ts</code> junta os três. <code>assistantTools()</code> monta as tools: as comuns, as do Role e, na thread do Customer, <code>askTeammate</code>. Todas são <code>strict: true</code>. As que mandam algo ao Customer são criadas com <code>confirmed()</code> e só rodam depois do Confirmar.</p>
+    <div class="team">
+      <article class="member lia">
+        <div class="member-head">
+          <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><path d="M22 4 C34 4 40 12 39 23 C38 35 30 40 21 40 C11 40 5 33 5 23 C5 12 11 4 22 4 Z" fill="#5B8DEF"/><circle cx="17" cy="20" r="2.4" fill="#fff"/><circle cx="27" cy="20" r="2.4" fill="#fff"/></svg>
+          <div><h3>Lia</h3><small>scheduling · Agenda</small></div>
+        </div>
+        <ul class="tools">
+          <li>listVisits</li><li>createVisit</li><li>rescheduleVisit</li><li>cancelVisit</li>
+          <li>sendVisitConfirmation <span class="chip card">cartão</span></li>
+        </ul>
+        <dl>
+          <dt>Routine</dt><dd>Pede confirmação das visitas no horário da ficha (véspera ou no dia).</dd>
+          <dt>Recebe avisos</dt><dd>Botões da confirmação de visita; Orçamento aprovado, com a sugestão de marcar a visita.</dd>
+        </dl>
+      </article>
+      <article class="member olga">
+        <div class="member-head">
+          <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><path d="M22 5 L40 38 H4 Z" fill="#F2994A" stroke-linejoin="round"/><circle cx="18" cy="27" r="2.4" fill="#fff"/><circle cx="26" cy="27" r="2.4" fill="#fff"/></svg>
+          <div><h3>Olga</h3><small>quotes · Orçamentos</small></div>
+        </div>
+        <ul class="tools">
+          <li>listPriceItems</li><li>upsertPriceItem</li><li>createQuote</li>
+          <li>sendQuote <span class="chip card">cartão</span></li>
+        </ul>
+        <dl>
+          <dt>Routine</dt><dd>Follow-up de Orçamentos sem resposta, se a ficha pedir (lembrar o Customer ou avisar o Professional).</dd>
+          <dt>Recebe avisos</dt><dd>Aprovar ou Recusar no WhatsApp.</dd>
+        </dl>
+      </article>
+      <article class="member tina">
+        <div class="member-head">
+          <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><path d="M22 4 L38 13 V31 L22 40 L6 31 V13 Z" fill="#34B27B"/><circle cx="17" cy="21" r="2.4" fill="#fff"/><circle cx="27" cy="21" r="2.4" fill="#fff"/></svg>
+          <div><h3>Tina</h3><small>billing · Cobrança</small></div>
+        </div>
+        <ul class="tools">
+          <li>listCharges</li><li>createCharge</li>
+          <li>sendCharge <span class="chip card">cartão</span></li>
+          <li>confirmChargePaid</li>
+        </ul>
+        <dl>
+          <dt>Routine</dt><dd>Lembrete de Cobranças em aberto (padrão para toda ficha aprovada).</dd>
+          <dt>Recebe avisos</dt><dd>“Já paguei” no WhatsApp; serviço registrado com valor.</dd>
+        </dl>
+      </article>
+      <article class="member shared">
+        <h3>Comuns a todos</h3>
+        <ul class="tools">
+          <li>findCustomer</li><li>createCustomer</li>
+          <li>askTeammate <span class="chip thread">só na thread</span></li>
+        </ul>
+        <p class="files"><code>customers/tools.ts</code>. O <code>askTeammate</code> só existe quando o Assistant está na thread de um Customer e há colegas na equipe; o <code>role</code> é um enum dos colegas.</p>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Dois lugares para conversar</h2>
+    <div class="two">
+      <div class="panel">
+        <h3>Chat do Assistant</h3>
+        <ul>
+          <li>Professional e um Assistant, a sós. Mensagens com <code>customer_id</code> nulo.</li>
+          <li>Os avisos (<code>assistant_notices</code>) entram no histórico como <code>&lt;aviso&gt;…&lt;/aviso&gt;</code> antes da mensagem seguinte do Professional.</li>
+          <li>Sugestões de um toque: “Quer que eu marque a visita?” (Lia, após Orçamento aprovado) e “Terminou a visita?” (registrar serviço).</li>
+          <li>Um turno por Assistant e por thread, guardado em <code>running_turns</code> no Postgres e renovado enquanto roda, para valer entre processos da API.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Thread do Customer</h3>
+        <ul>
+          <li>A equipe toda numa conversa só, como um grupo. O Professional fala com a equipe, nunca com o Customer.</li>
+          <li>Um router (Claude com saída estruturada) escolhe quem responde. Com um só Assistant na equipe, não chama o Claude.</li>
+          <li>O histórico do Customer (Job, Visits, Quotes, Pix, WhatsApp) vai no system prompt, com os ids que as tools usam.</li>
+          <li>Os Assistants se chamam com <code>askTeammate</code>; o colega recebe <code>&lt;colega nome="…"&gt;</code> e responde logo depois.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Como os Assistants se chamam</h2>
+    <p><code>runTeam</code> (<code>customers/team-messages.ts</code>) roda o primeiro Assistant; cada <code>askTeammate</code> do turno entra numa fila, e o próximo da fila responde na mesma thread. Um pedido pode voltar, então uma mensagem move a equipe no máximo 4 vezes.</p>
+    <div class="frame mer">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor P as Professional
+  participant R as Router
+  participant O as Olga (quotes)
+  participant L as Lia (scheduling)
+  participant C as Claude API
+  P->>R: "O João aprovou. Marca a troca pra semana que vem"
+  R->>C: equipe + últimas 6 mensagens
+  C-->>R: { role: "quotes" }
+  R->>O: runTeam(Olga)
+  O->>C: converse (tools da Olga + askTeammate)
+  C-->>O: askTeammate(scheduling, "@Lia, ...")
+  Note over O: handoff vai para a fila
+  O-->>P: resposta curta da Olga
+  O->>L: sendText("&lt;colega nome='Olga'&gt;...")
+  L->>C: converse (tools da Lia)
+  C-->>L: listVisits, createVisit
+  C-->>L: sendVisitConfirmation
+  L-->>P: cartão com Confirmar e Cancelar
+  Note over L: turno pausa em awaiting_confirmation
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>O portão do Confirmar</h2>
+    <p>Dentro de <code>converse</code>, cada resposta do Claude é salva antes de qualquer tool rodar. Se alguma chamada tem cartão, todas as chamadas daquela resposta esperam; as sem cartão só rodam junto, quando o Professional decide.</p>
+    <div class="frame mer">
+<pre class="mermaid">
+sequenceDiagram
+  participant E as converse
+  participant C as Claude API
+  participant DB as Postgres
+  actor P as Professional
+  participant W as WhatsApp
+  E->>C: toolRunner (stream)
+  C-->>E: tool_use: sendQuote
+  E->>DB: salva mensagem + tool_confirmations (pending)
+  E-->>P: awaiting_confirmation (cartão)
+  alt Confirmar
+    P->>E: decide(confirmed)
+    E->>W: template com Aprovar / Recusar
+    E->>C: tool_result → continua o turno
+  else Cancelar ou outra mensagem
+    P->>E: decide(cancelled) ou sendText
+    E->>C: "O profissional cancelou. Nada foi enviado ao cliente."
+  end
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Chamadas ao Claude fora do turno</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Onde</th><th>O que faz</th><th>Formato</th></tr></thead>
+        <tbody>
+          <tr><td><code>customers/team-messages.ts</code> · route</td><td>Escolhe o Role que responde na thread do Customer</td><td>JSON <code>{ role }</code>, <code>max_tokens</code> 200</td></tr>
+          <tr><td><code>briefing/interpret.ts</code></td><td>Encaixa a resposta livre do Professional num campo do Playbook</td><td>JSON <code>{ understood, value, reply }</code></td></tr>
+          <tr><td><code>work-records/extract.ts</code></td><td>Tira do áudio transcrito o Customer, a Visit, o valor e a forma de pagamento</td><td>JSON, refs curtas (C1, V1)</td></tr>
+          <tr><td><code>transcription/transcribe.ts</code></td><td>Áudio para texto, antes do extract</td><td>Whisper via OpenRouter, não é Claude</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Modelo e custo</h2>
+    <div class="two">
+      <div class="panel">
+        <h3>Parâmetros do turno</h3>
+        <ul>
+          <li><code>CLAUDE_MODEL</code>, padrão <code>claude-haiku-5-5</code>; Opus 5.5 volta com a variável (ADR 0006).</li>
+          <li><code>effort: low</code>, <code>max_tokens</code> 16000, <code>max_iterations</code> 20.</li>
+          <li>O system prompt fixo (base + Role) é cacheado; nome, data, ficha e thread vêm depois do breakpoint.</li>
+          <li>Compaction no servidor a partir de 100K tokens de entrada.</li>
+          <li>Fallback no servidor só para modelos que aceitam (não o Haiku).</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>O que protege o histórico</h3>
+        <ul>
+          <li>Recusa ou corte em <code>max_tokens</code> com tool pela metade: nenhuma tool roda, o Assistant diz que se perdeu.</li>
+          <li>Mensagem nova com cartão pendente: as chamadas pausadas recebem “Não executado” e os cartões são cancelados.</li>
+          <li>Todo uso vai para <code>llm_usages</code> por Professional e Assistant, incluindo router e extract.</li>
+          <li>Testes usam <code>fake-claude.ts</code>; <code>bun run evals</code> roda as conversas roteirizadas contra o modelo real.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });</script>
+</body>
+</html>

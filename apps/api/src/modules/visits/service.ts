@@ -206,6 +206,7 @@ export async function requestDueVisitConfirmations(
         professional.id,
         'scheduling',
         `Rotina: pedi para ${visit.customer.name} confirmar a visita de ${when}.`,
+        { customerId: visit.customer.id },
       ),
     );
   }

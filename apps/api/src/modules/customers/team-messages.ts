@@ -175,6 +175,7 @@ function describeItem(item: ThreadItem): string {
     case 'handoff':
       return `${item.assistant.name} para ${item.to.name}: ${item.text}`;
     case 'line':
+    case 'notice':
       return item.text;
     case 'question':
       return `${item.assistant.name} perguntou: ${item.text} [${item.options.map(({ label }) => label).join(' / ')}]`;

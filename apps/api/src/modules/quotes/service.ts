@@ -192,7 +192,6 @@ export async function followUpDueQuotes(
     if (!claimed) continue;
     const quote = (await findQuote(professional.id, id))!;
     const total = formatMoney(quote.totalCents);
-    let text: string;
     if (action === 'remind') {
       try {
         await sendTemplate(quoteReminderTemplate.name, quote, [
@@ -205,11 +204,12 @@ export async function followUpDueQuotes(
         await db.update(quotes).set({ followedUpAt: null }).where(eq(quotes.id, id));
         throw error;
       }
-      text = `Rotina: lembrei ${quote.customer.name} do orçamento de ${total}.`;
+      const text = `Rotina: lembrei ${quote.customer.name} do orçamento de ${total}.`;
+      await db.transaction((tx) => addNotice(tx, professional.id, 'quotes', text, { customerId: quote.customer.id }));
     } else {
-      text = `${quote.customer.name} ainda não respondeu o orçamento de ${total}. Quer que eu mande de novo?`;
+      const text = `${quote.customer.name} ainda não respondeu o orçamento de ${total}. Quer que eu mande de novo?`;
+      await db.transaction((tx) => addNotice(tx, professional.id, 'quotes', text));
     }
-    await db.transaction((tx) => addNotice(tx, professional.id, 'quotes', text));
   }
 }
 

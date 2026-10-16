@@ -1,11 +1,11 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Fragment, useCallback, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, type TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssistantChip, MentionText } from '@/components/assistant-mention';
 import { BackButton } from '@/components/back-button';
-import { ProfessionalBubble } from '@/components/chat-messages';
+import { Notice, ProfessionalBubble } from '@/components/chat-messages';
 import { Composer } from '@/components/composer';
 import { ConfirmationCard } from '@/components/confirmation-card';
 import { CustomerAvatar } from '@/components/customer-avatar';
@@ -32,7 +32,8 @@ type Speaker = Item<'assistant'>['assistant'];
 type Message = Parameters<ReturnType<typeof useSendCustomerMessageMutation>['mutate']>[0];
 
 export default function CustomerScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // focus: the item an Assistant's activity card points at, opened highlighted.
+  const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
   const thread = useCustomerThreadQuery(id);
   const { refetch } = thread;
 
@@ -46,10 +47,12 @@ export default function CustomerScreen() {
     return <LoadError message="Não conseguimos abrir a conversa do cliente." onRetry={() => thread.refetch()} />;
   }
   if (!thread.data) return <View className="flex-1 bg-background" />;
-  return <Thread thread={thread.data} />;
+  return <Thread thread={thread.data} focus={focus} />;
 }
 
-function Thread({ thread }: { thread: CustomerThread }) {
+const highlightMs = 3000;
+
+function Thread({ thread, focus }: { thread: CustomerThread; focus?: string }) {
   const { top, bottom } = useSafeAreaInsets();
   const scroll = useRef<ScrollView>(null);
   const { customer, pinned, items } = thread;
@@ -61,6 +64,15 @@ function Thread({ thread }: { thread: CustomerThread }) {
   const [text, setText] = useState('');
   const input = useRef<TextInput>(null);
   const afterConsent = useRef<Message | null>(null);
+  // Opened on an item, the thread stays there instead of following the newest message until the Professional writes.
+  const followEnd = useRef(!focus);
+  const [highlighted, setHighlighted] = useState(focus ?? null);
+
+  useEffect(() => {
+    if (!focus) return;
+    const timer = setTimeout(() => setHighlighted(null), highlightMs);
+    return () => clearTimeout(timer);
+  }, [focus]);
 
   const working = send.isPending || decide.isPending || thread.working;
   const draft = send.draft || decide.draft;
@@ -80,6 +92,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
       return;
     }
     setText('');
+    followEnd.current = true;
     send.mutate(message);
   }
 
@@ -97,6 +110,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
       router.push('/ai-consent');
       return;
     }
+    followEnd.current = true;
     send.mutate(message);
   }
 
@@ -135,28 +149,40 @@ function Thread({ thread }: { thread: CustomerThread }) {
         className="flex-1"
         contentContainerClassName="gap-3 px-[18px] pt-2 pb-4"
         keyboardDismissMode="interactive"
-        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}
+        onContentSizeChange={() => followEnd.current && scroll.current?.scrollToEnd({ animated: false })}
       >
-        {items.map((item) =>
-          item.type === 'confirmation' ? (
-            <ConfirmationCard
-              key={item.id}
-              confirmation={item}
-              disabled={working}
-              onDecide={(confirmed) => decide.mutate({ confirmationId: item.id, confirmed })}
-            />
-          ) : item.type === 'question' ? (
-            <Question
-              key={item.id}
-              item={item}
-              disabled={working}
-              onAnswer={(answer) => act({ text: answer, role: item.role })}
-              onOther={() => input.current?.focus()}
-            />
-          ) : (
-            <ItemView key={item.id} item={item} customerId={customer.id} team={speakers} />
-          ),
-        )}
+        {items.map((item) => (
+          <View
+            key={item.id}
+            className={item.id === highlighted ? '-m-2 rounded-[14px] bg-highlight p-2' : undefined}
+            onLayout={
+              item.id === focus
+                ? (event) =>
+                    scroll.current?.scrollTo({ y: Math.max(0, event.nativeEvent.layout.y - 80), animated: false })
+                : undefined
+            }
+          >
+            {item.type === 'confirmation' ? (
+              <ConfirmationCard
+                confirmation={item}
+                disabled={working}
+                onDecide={(confirmed) => {
+                  followEnd.current = true;
+                  decide.mutate({ confirmationId: item.id, confirmed });
+                }}
+              />
+            ) : item.type === 'question' ? (
+              <Question
+                item={item}
+                disabled={working}
+                onAnswer={(answer) => act({ text: answer, role: item.role })}
+                onOther={() => input.current?.focus()}
+              />
+            ) : (
+              <ItemView item={item} customerId={customer.id} team={speakers} />
+            )}
+          </View>
+        ))}
         {!!draft && <AssistantReply assistant={answeredBy} text={draft} team={speakers} />}
         {working && !draft && (
           <View
@@ -360,6 +386,8 @@ function ItemView({
   switch (item.type) {
     case 'line':
       return <Line text={item.text} />;
+    case 'notice':
+      return <Notice text={item.text} />;
     case 'professional':
       return <ProfessionalBubble text={item.text} />;
     case 'assistant':

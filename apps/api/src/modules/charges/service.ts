@@ -283,7 +283,7 @@ export async function remindDueCharges(professional: Professional, now: Date) {
       throw error;
     }
     const text = `Rotina: lembrei ${charge.customer.name} do Pix de ${formatMoney(charge.amountCents)}.`;
-    await db.transaction((tx) => addNotice(tx, professional.id, 'billing', text));
+    await db.transaction((tx) => addNotice(tx, professional.id, 'billing', text, { customerId: charge.customer.id }));
   }
 }
 

@@ -1,5 +1,5 @@
 import { assistantMessages, assistantNotices, assistants, db } from '@acme/db';
-import { type AnyColumn, and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { type AnyColumn, and, asc, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { type AssistantRole, catalogEntry } from './catalog';
 
 type LastMessage = { from: 'professional' | 'assistant' | 'notice'; text: string; at: Date };
@@ -45,7 +45,8 @@ async function loadLastMessages(professionalId: string) {
     .where(
       and(
         eq(assistants.professionalId, professionalId),
-        isNull(assistantMessages.customerId),
+        // In a Customer's thread only what the Assistant said is its activity; the Professional spoke to the team.
+        or(isNull(assistantMessages.customerId), eq(assistantMessages.role, 'assistant')),
         sql`${assistantMessages.content} @> '[{"type":"text"}]'::jsonb`,
       ),
     )

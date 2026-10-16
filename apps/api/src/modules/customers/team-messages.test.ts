@@ -112,12 +112,16 @@ test('what the Professional writes stays in the thread, tied to the open Job, an
   expect(system).toContain(joao.id);
   expect(system).toContain(visit.id);
   expect(system).toContain('Ar da sala não gela');
-  // Nothing reaches the Customer, and the Assistant's own chat stays as it was.
+  // Nothing reaches the Customer, and the Assistant's own chat only links to what it said there.
   expect(await listMessages({ phoneNumberId: platformNumber, waId: joao.phoneNumber })).toEqual([]);
   const { data: chat } = await api.team({ id: lia.id }).messages.get({ headers });
-  expect(chat!.items).toEqual([]);
+  expect(chat!.items.map(({ type }) => type)).toEqual(['activity']);
   const { data: team } = await api.team.get({ headers });
-  expect(team!.find(({ id }) => id === lia.id)!.lastMessage).toBeNull();
+  // The Lia's preview shows her last activity, never what the Professional wrote in the thread.
+  expect(team!.find(({ id }) => id === lia.id)!.lastMessage).toMatchObject({
+    from: 'assistant',
+    text: 'Anotado. O João tem visita marcada, quer que eu peça a confirmação?',
+  });
 });
 
 test('"Manda um orçamento" goes to the quotes Assistant, whose card shows in the thread and sends only when confirmed', async () => {
@@ -173,9 +177,9 @@ test('"Manda um orçamento" goes to the quotes Assistant, whose card shows in th
     text: 'Mandei. Te aviso quando ele responder.',
     assistant: { id: olga.id },
   });
-  // The Olga's own chat has none of it.
+  // The Olga's own chat only links to what she said there.
   const { data: chat } = await api.team({ id: olga.id }).messages.get({ headers });
-  expect(chat!.items).toEqual([]);
+  expect(chat!.items.map(({ type }) => type)).toEqual(['activity']);
 });
 
 test('a card from a Customer thread is not decided from the Assistant chat or from another Customer', async () => {

@@ -1,5 +1,5 @@
-import { assistants, db, professionals, whatsappMessages } from '@acme/db';
-import { asc, eq } from 'drizzle-orm';
+import { assistantNotices, assistants, db, professionals, whatsappMessages } from '@acme/db';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { formatMoney } from '../briefing/scripts';
 import { chargePixCode, findPixAccount } from '../charges/service';
 import { messageItems } from '../conversations/history';
@@ -24,6 +24,7 @@ type Item = { id: string; at: Date } & (
   | { type: 'pix'; chargeId: string; amount: string; detail: string; status: Pill; pixCode: string | null }
   | { type: 'whatsapp'; direction: 'outbound' | 'inbound'; label: string; text: string; buttons: string[] }
   | { type: 'line'; text: string }
+  | { type: 'notice'; text: string }
   | {
       type: 'question';
       text: string;
@@ -85,6 +86,7 @@ export async function getCustomerThread(professionalId: string, customerId: stri
     if (question) items.push(question);
   }
   items.push(...(await teamItems(professionalId, customer.id, team, details, current)));
+  items.push(...(await noticeItems(professionalId, customer.id, details, current)));
   // The Job starts at its first record when that came before the Job row (the migration's older records).
   const rank = { past_job: 0, job_start: 1 } as Partial<Record<Item['type'], number>>;
   items.sort((a, b) => a.at.getTime() - b.at.getTime() || (rank[a.type] ?? 2) - (rank[b.type] ?? 2));
@@ -395,6 +397,25 @@ async function teamItems(
     }
   }
   return items;
+}
+
+// What the Assistants' Routines did for this Customer; what belongs to an earlier Job stays inside its card.
+async function noticeItems(professionalId: string, customerId: string, details: JobDetail[], current?: JobDetail) {
+  const since = current?.job.openedAt ?? details.at(-1)?.job.closedAt;
+  const notices = await db
+    .select({ id: assistantNotices.id, text: assistantNotices.text, createdAt: assistantNotices.createdAt })
+    .from(assistantNotices)
+    .innerJoin(assistants, eq(assistants.id, assistantNotices.assistantId))
+    .where(
+      and(
+        eq(assistantNotices.customerId, customerId),
+        isNull(assistantNotices.suggestion),
+        eq(assistants.professionalId, professionalId),
+      ),
+    );
+  return notices
+    .filter(({ createdAt }) => !since || createdAt >= since)
+    .map(({ id, text, createdAt }): Item => ({ type: 'notice', id: `notice:${id}`, at: createdAt, text }));
 }
 
 // A day divider before the first item of each day; the Job cards and dividers do not start a day.

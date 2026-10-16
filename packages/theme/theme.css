@@ -36,6 +36,8 @@
   --whatsapp: #eaf7f0;
   --whatsapp-border: #cbe7d8;
   --mention: #2563eb;
+  /* A message opened from an Assistant's activity card, for a few seconds. */
+  --highlight: #fff4cc;
 }
 
 @theme inline {
@@ -73,6 +75,7 @@
   --color-whatsapp: var(--whatsapp);
   --color-whatsapp-border: var(--whatsapp-border);
   --color-mention: var(--mention);
+  --color-highlight: var(--highlight);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

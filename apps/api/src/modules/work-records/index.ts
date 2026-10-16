@@ -2,6 +2,7 @@ import { Elysia, status } from 'elysia';
 import { auth } from '../auth';
 import { hasAiConsent } from '../conversations/service';
 import { transcribe } from '../transcription/transcribe';
+import { matchVisit } from './match';
 import { WorkRecordsModel } from './model';
 import { addMessage, chooseCustomer, createWorkRecord, findBillingAssistant, recordAudioUsage } from './service';
 
@@ -25,6 +26,17 @@ export const workRecords = new Elysia()
       return { transcript: transcription.text };
     },
     { auth: true, body: 'workRecords.Audio' },
+  )
+  .post(
+    '/work-records/match',
+    async ({ professional, body: { transcript, visitId } }) => {
+      if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
+      const billingAssistant = await findBillingAssistant(professional.id);
+      const matched = await matchVisit(professional.id, billingAssistant?.id ?? null, transcript.trim(), visitId);
+      if (!matched) throw status(404, 'Visit not found');
+      return matched;
+    },
+    { auth: true, body: 'workRecords.Match' },
   )
   .post(
     '/work-records',

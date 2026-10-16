@@ -22,6 +22,7 @@ export async function endedVisitSuggestions({ professional }: Assistant): Promis
       id: visits.id,
       scheduledAt: visits.scheduledAt,
       endsAt: endsAt.mapWith((value: string) => new Date(value)),
+      customerId: customers.id,
       customerName: customers.name,
     })
     .from(visits)
@@ -55,6 +56,7 @@ export async function endedVisitSuggestions({ professional }: Assistant): Promis
         action: 'record_work' as const,
         question: `Terminou a visita de ${visit.customerName}, ${formatLocalDateTime(visit.scheduledAt, professional.timezone)}?`,
         workRecordId: recorded.find(({ visitId }) => visitId === visit.id)?.id ?? null,
+        customerId: visit.customerId,
       },
     ],
   }));

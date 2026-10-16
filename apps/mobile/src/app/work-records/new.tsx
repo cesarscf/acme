@@ -15,11 +15,13 @@ import { BackButton } from '@/components/back-button';
 import { Reply } from '@/components/chat-messages';
 import { Composer } from '@/components/composer';
 import { CustomerQuestion } from '@/components/customer-question';
+import { OptionRow } from '@/components/option-row';
 import { useChooseCustomerMutation } from '@/hooks/data/work-records/use-choose-customer-mutation';
 import {
   useCreateWorkRecordMutation,
   type WorkRecord,
 } from '@/hooks/data/work-records/use-create-work-record-mutation';
+import { useMatchVisitMutation, type VisitMatch } from '@/hooks/data/work-records/use-match-visit-mutation';
 import { useTranscriptionMutation } from '@/hooks/data/work-records/use-transcription-mutation';
 import { useWorkRecordMessageMutation } from '@/hooks/data/work-records/use-work-record-message-mutation';
 import { transcriptLines } from '@/lib/transcript';
@@ -34,16 +36,21 @@ export default function RecordWorkRecord() {
   const recording = useAudioRecorderState(recorder, 250);
   const { visitId } = useLocalSearchParams<{ visitId?: string }>();
   const transcription = useTranscriptionMutation();
-  const create = useCreateWorkRecordMutation(visitId);
+  const match = useMatchVisitMutation();
+  const create = useCreateWorkRecordMutation();
   const [startedAt] = useState(() => new Date());
   const [uri, setUri] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
 
-  const lines = transcription.data ? transcriptLines(transcription.data.transcript) : [];
+  const transcript = transcription.data?.transcript;
+  const lines = transcript ? transcriptLines(transcript) : [];
   const listening = !uri && !denied;
   // Without a Customer the screen asks who it is for; with one, it is already opening the Customer's thread.
   const unknownCustomer = create.data && !create.data.customer ? create.data : null;
-  const summarizing = transcription.isPending || create.isPending || (create.isSuccess && !unknownCustomer);
+  // Nothing is saved until the Professional says which Visit the account is about.
+  const choosing = match.data && !create.isPending && !create.isSuccess ? match.data : null;
+  const searching = transcription.isPending || match.isPending;
+  const summarizing = create.isPending || (create.isSuccess && !unknownCustomer);
   const talking = recording.durationMillis >= talkingAfterMillis;
   const nothingHeard = (transcription.error as { status?: number } | null)?.status === 422;
 
@@ -53,6 +60,7 @@ export default function RecordWorkRecord() {
     if (!granted) return;
     setUri(null);
     transcription.reset();
+    match.reset();
     create.reset();
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
     await recorder.prepareToRecordAsync();
@@ -72,13 +80,22 @@ export default function RecordWorkRecord() {
   }
 
   function send(recorded: string) {
-    transcription.mutate(recorded, { onSuccess: ({ transcript }) => summarize(transcript) });
+    transcription.mutate(recorded, { onSuccess: ({ transcript: said }) => findVisit(said) });
   }
 
-  function summarize(transcript: string) {
-    create.mutate(transcript, {
-      onSuccess: ({ customer }) => customer && openThread(customer.id),
-    });
+  function findVisit(said: string) {
+    match.mutate(
+      { transcript: said, visitId },
+      // With no Visit to tell, the account goes straight to "De qual cliente é este serviço?".
+      { onSuccess: ({ suggested, others }) => !suggested && !others.length && save(said) },
+    );
+  }
+
+  function save(said: string, chosenVisitId?: string) {
+    create.mutate(
+      { transcript: said, visitId: chosenVisitId },
+      { onSuccess: ({ customer }) => customer && openThread(customer.id) },
+    );
   }
 
   useEffect(() => {
@@ -102,12 +119,11 @@ export default function RecordWorkRecord() {
         <BackButton onPress={cancel} />
       </View>
       <Text className="mt-[22px] font-extrabold text-[29px] text-foreground leading-[33px] tracking-[-0.58px]">
-        Novo serviço
+        Conte como foi
       </Text>
       <View className="mt-3 flex-row gap-2">
         <Pill text={formatWhen(startedAt)} />
         {listening && recording.isRecording && <ListeningPill />}
-        {summarizing && <Pill text="Resumindo…" />}
       </View>
 
       <ScrollView className="mt-[22px] flex-1" contentContainerClassName="gap-4" showsVerticalScrollIndicator={false}>
@@ -115,7 +131,7 @@ export default function RecordWorkRecord() {
           <Text className="font-normal text-[15px] text-muted-foreground leading-[22px]">
             {denied
               ? 'Para gravar, permita o microfone nas configurações do celular.'
-              : 'Conte o que você fez: o serviço, o material que usou e o valor. A transcrição aparece aqui quando você terminar.'}
+              : 'Conte como foi: de qual cliente é, o que você fez, o material, o valor e se precisa de orçamento. A transcrição aparece aqui quando você terminar.'}
           </Text>
         )}
         {lines.map((line, index) => (
@@ -126,6 +142,13 @@ export default function RecordWorkRecord() {
             </Text>
           </View>
         ))}
+        {choosing && transcript && (choosing.suggested || choosing.others.length > 0) && (
+          <VisitQuestion
+            match={choosing}
+            onPick={(chosen) => save(transcript, chosen)}
+            onOtherCustomer={() => save(transcript)}
+          />
+        )}
         {transcription.isError && (
           <Text selectable className="font-normal text-[15px] text-destructive leading-[22px]">
             {nothingHeard
@@ -133,9 +156,9 @@ export default function RecordWorkRecord() {
               : 'Não consegui entender o áudio agora. Tente de novo.'}
           </Text>
         )}
-        {create.isError && (
+        {(match.isError || create.isError) && (
           <Text selectable className="font-normal text-[15px] text-destructive leading-[22px]">
-            Não consegui resumir o serviço agora. Tente de novo.
+            Não consegui organizar o que você contou agora. Tente de novo.
           </Text>
         )}
       </ScrollView>
@@ -145,20 +168,24 @@ export default function RecordWorkRecord() {
           Toque em Finalizar quando terminar de contar.
         </Text>
       )}
-      {summarizing ? (
+      {searching || summarizing ? (
         <View className="h-[58px] items-center justify-center rounded-full bg-secondary">
-          <Text className="font-semibold text-foreground text-sm">Separando serviço, material e valor…</Text>
+          <Text className="font-semibold text-foreground text-sm">
+            {searching ? 'Procurando a visita na agenda…' : 'Separando serviço, material e valor…'}
+          </Text>
         </View>
       ) : transcription.isError ? (
         <BarButton
           label={nothingHeard ? 'Gravar de novo' : 'Tentar de novo'}
           onPress={() => (nothingHeard || !uri ? start() : send(uri))}
         />
-      ) : create.isError && transcription.data ? (
-        <BarButton label="Tentar de novo" onPress={() => summarize(transcription.data.transcript)} />
+      ) : match.isError && transcript ? (
+        <BarButton label="Tentar de novo" onPress={() => findVisit(transcript)} />
+      ) : create.isError && transcript ? (
+        <BarButton label="Tentar de novo" onPress={() => save(transcript, create.variables?.visitId)} />
       ) : denied ? (
         <BarButton label="Tentar de novo" onPress={start} />
-      ) : (
+      ) : choosing ? null : (
         <RecordingBar
           millis={recording.durationMillis}
           talking={talking}
@@ -167,6 +194,54 @@ export default function RecordWorkRecord() {
           disabled={!recording.isRecording}
         />
       )}
+    </View>
+  );
+}
+
+// "Pelo que você contou, é do João Pereira?": the suggested Visit, the others that can be told, or another Customer.
+function VisitQuestion({
+  match,
+  onPick,
+  onOtherCustomer,
+}: {
+  match: VisitMatch;
+  onPick: (visitId: string) => void;
+  onOtherCustomer: () => void;
+}) {
+  const { suggested, others } = match;
+  const letters = 'ABCDEFGH';
+  const offset = suggested ? 1 : 0;
+  return (
+    <View
+      className="overflow-hidden rounded-2xl border border-border bg-card pt-3.5"
+      style={{ borderCurve: 'continuous' }}
+    >
+      <View className="px-3.5 pb-3">
+        <Text className="font-bold text-[15px] text-foreground leading-[21px]">
+          {suggested ? suggested.question : 'De qual visita é o que você contou?'}
+        </Text>
+        {suggested && <Text className="mt-0.5 font-normal text-[13px] text-muted-foreground">{suggested.detail}</Text>}
+      </View>
+      {suggested && (
+        <OptionRow letter="A" label="Sim, é essa" strong disabled={false} onPress={() => onPick(suggested.visitId)} />
+      )}
+      {others.map((other, index) => (
+        <OptionRow
+          key={other.visitId}
+          letter={letters[index + offset]!}
+          label={other.customerName}
+          hint={other.detail}
+          disabled={false}
+          onPress={() => onPick(other.visitId)}
+        />
+      ))}
+      <OptionRow
+        letter={letters[others.length + offset]!}
+        label="Outro cliente"
+        hint="Sem visita marcada, ou cliente novo"
+        disabled={false}
+        onPress={onOtherCustomer}
+      />
     </View>
   );
 }
@@ -200,7 +275,7 @@ function CustomerStep({ workRecord, lines, bottom }: { workRecord: WorkRecord; l
         keyboardDismissMode="interactive"
       >
         <Text className="font-extrabold text-[29px] text-foreground leading-[33px] tracking-[-0.58px]">
-          Novo serviço
+          Conte como foi
         </Text>
         {lines.map((line, index) => (
           <View key={`${index}-${line}`}>

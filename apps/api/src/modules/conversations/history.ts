@@ -26,7 +26,14 @@ export type ConversationItem =
       message: string;
       answer: 'accepted' | 'dismissed' | null;
     }
-  | { id: string; type: 'suggestion'; action: 'record_work'; question: string; workRecordId: string | null };
+  | {
+      id: string;
+      type: 'suggestion';
+      action: 'record_work';
+      question: string;
+      workRecordId: string | null;
+      customerId: string;
+    };
 
 export async function getConversation(assistant: Assistant, working: boolean) {
   const timed = await loadTimedItems(assistant);

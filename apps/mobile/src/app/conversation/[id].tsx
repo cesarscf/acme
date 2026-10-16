@@ -5,12 +5,10 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
-import { SystemLine } from '@/components/briefing-cards';
 import { BirthLine, BriefingProgress, BriefingThread } from '@/components/briefing-thread';
 import { Notice, ProfessionalBubble, Reply } from '@/components/chat-messages';
 import { Composer } from '@/components/composer';
 import { ConfirmationCard } from '@/components/confirmation-card';
-import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
 import { Mascot } from '@/components/mascot';
 import { OptionRow } from '@/components/option-row';
@@ -272,10 +270,7 @@ function SuggestionCard({
     return (
       <View className="gap-3">
         <Reply text={suggestion.question} />
-        <SystemLine>
-          <Icon name="check" size={14} color="--color-primary" strokeWidth={2.4} />
-          <Text className="font-normal text-[12.5px] text-muted-foreground">Serviço registrado</Text>
-        </SystemLine>
+        <Reply text="Já está na conversa do cliente, em Clientes." />
       </View>
     );
   }
@@ -291,14 +286,23 @@ function SuggestionCard({
           <OptionRow letter="B" label="Agora não" disabled={disabled} onPress={() => onAnswer(false)} />
         </>
       ) : (
-        <OptionRow
-          letter="A"
-          label="Registrar serviço"
-          hint="Conte o que fez. A equipe cuida do resto."
-          strong
-          disabled={disabled}
-          onPress={onRecord}
-        />
+        <>
+          <OptionRow
+            letter="A"
+            label="Contar como foi"
+            hint="Conte o que fez. A equipe cuida do resto."
+            strong
+            disabled={disabled}
+            onPress={onRecord}
+          />
+          <OptionRow
+            letter="B"
+            label="Abrir a conversa do cliente"
+            hint="O histórico com o cliente, num lugar só"
+            disabled={disabled}
+            onPress={() => router.push({ pathname: '/customers/[id]', params: { id: suggestion.customerId } })}
+          />
+        </>
       )}
     </View>
   );

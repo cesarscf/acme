@@ -218,6 +218,7 @@ test('a Visit past its time offers "Registrar serviço" in the scheduling conver
       action: 'record_work',
       question: expect.stringMatching(/^Terminou a visita de João Pereira, .+, \d\d\/\d\d, às \d\d:\d\d\?$/),
       workRecordId: null,
+      customerId: team.joao.id,
     },
   ]);
   expect(await itemsOf(team.quotes, team.headers)).toEqual([]);

@@ -4,18 +4,18 @@ import { queryClient } from '@/lib/query-client';
 import { conversationKeys } from '../conversation/keys';
 import { customerKeys } from '../customers/keys';
 
-function createWorkRecord(transcript: string, visitId?: string) {
-  return unwrap(api['work-records'].post({ transcript, visitId }));
+function createWorkRecord(variables: { transcript: string; visitId?: string }) {
+  return unwrap(api['work-records'].post(variables));
 }
 
 export type WorkRecord = Awaited<ReturnType<typeof createWorkRecord>>;
 
-export function useCreateWorkRecordMutation(visitId?: string) {
+export function useCreateWorkRecordMutation() {
   return useMutation({
-    mutationFn: (transcript: string) => createWorkRecord(transcript, visitId),
+    mutationFn: createWorkRecord,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
-      if (visitId) queryClient.invalidateQueries({ queryKey: conversationKeys.all });
+      queryClient.invalidateQueries({ queryKey: conversationKeys.all });
     },
   });
 }

@@ -8,6 +8,7 @@
   "scripts": {
     "db:generate": "bun --env-file=../../.env run drizzle-kit generate",
     "db:migrate": "bun --env-file=../../.env run drizzle-kit migrate",
+    "db:migrate:deploy": "bun src/migrate.ts",
     "db:studio": "bun --env-file=../../.env run drizzle-kit studio",
     "check-types": "tsc",
     "test": "bun --env-file=../../.env test"

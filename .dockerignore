@@ -1,0 +1,7 @@
+# Each Dockerfile builds from the repo root and copies only what its service needs.
+**/node_modules
+**/dist
+**/.turbo
+.env*
+.git
+.scratch

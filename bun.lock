@@ -17,6 +17,7 @@
         "@better-auth/expo": "1.7.10",
         "@sinclair/typebox": "0.34.52",
         "better-auth": "1.7.10",
+        "drizzle-orm": "0.45.4",
         "elysia": "1.4.30",
         "exact-mirror": "1.2.6",
         "file-type": "22.2.0",

@@ -7,9 +7,10 @@ import { ensureVisitConfirmationTemplate } from './modules/visits/service';
 
 // Before listening, so no request starts the Routines' pg-boss on its own.
 await startRoutines();
-app.listen(Number(process.env.PORT ?? 3000));
+// :: also accepts IPv4; Railway's private network may be IPv6 only.
+app.listen({ port: Number(process.env.PORT ?? 3000), hostname: '::' });
 
-console.log(`API on http://${app.server?.hostname}:${app.server?.port}`);
+console.log(`API on http://localhost:${app.server?.port}`);
 
 // In dev the Meta Emulator may start after the API and keeps templates only in memory, so this retries until it answers.
 for (;;) {

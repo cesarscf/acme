@@ -9,6 +9,7 @@
     "dev": "bun run --parallel dev:server dev:web",
     "dev:server": "bun --env-file=../../.env --watch src/server/index.ts",
     "dev:web": "vite",
+    "build": "vite build",
     "check-types": "tsc",
     "test": "bun test"
   },

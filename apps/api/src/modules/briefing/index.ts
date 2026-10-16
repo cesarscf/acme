@@ -20,9 +20,7 @@ export const briefing = new Elysia()
     async ({ professional, params: { id } }) => {
       const assistant = await findBriefingAssistant(professional.id, id);
       if (!assistant) throw status(404, 'Assistant not found');
-      const briefing = getBriefing(assistant);
-      if (!briefing) throw status(404, 'No Briefing for this Role');
-      return briefing;
+      return getBriefing(assistant);
     },
     { auth: true, params: 'briefing.Assistant' },
   )

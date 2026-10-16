@@ -1,6 +1,5 @@
 import { assistantMessages, assistantNotices, assistants, db } from '@acme/db';
 import { type AnyColumn, and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
-import { briefingScripts } from '../briefing/scripts';
 import { type AssistantRole, catalogEntry } from './catalog';
 
 type LastMessage = { from: 'professional' | 'assistant' | 'notice'; text: string; at: Date };
@@ -25,7 +24,7 @@ export async function listTeam(professionalId: string) {
       title,
       tagline,
       mascot,
-      hasBriefing: assistant.role in briefingScripts,
+      hasBriefing: true,
       lastMessage: lastMessages.get(assistant.id) ?? null,
     };
   });

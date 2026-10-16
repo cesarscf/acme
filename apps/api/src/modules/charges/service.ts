@@ -1,11 +1,12 @@
 import { assistants, charges, customers, db, workRecords } from '@acme/db';
 import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
-import { formatMoney, pixCity, pixKey, pixName } from '../briefing/scripts';
+import { formatMoney } from '../briefing/scripts';
 import { addNotice } from '../conversations/service';
 import type { ConfirmationCard } from '../conversations/tools';
 import { concludeJob } from '../jobs/service';
 import { pixBrCode } from '../pix/br-code';
 import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
+import { pixCity, pixKey, pixName } from './briefing';
 
 type Professional = { id: string; name: string; timezone: string };
 export type ChargeWithCustomer = NonNullable<Awaited<ReturnType<typeof findCharge>>>;

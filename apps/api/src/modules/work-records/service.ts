@@ -1,6 +1,6 @@
 import { assistants, audioUsages, charges, customers, db, professionals, workRecords } from '@acme/db';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
-import { paymentMethods } from '../briefing/scripts';
+import { paymentMethods } from '../charges/briefing';
 import {
   chargeCard,
   chargePixCode,

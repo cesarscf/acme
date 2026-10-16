@@ -1,6 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { describePlaybook } from '../briefing/service';
 import { type AssistantRole, catalogEntry } from '../team/catalog';
+import { roles } from '../team/roles';
 import { localDate } from '../visits/time';
 
 export type PromptContext = {
@@ -42,15 +43,6 @@ O que vem entre <aviso> e </aviso> é um aviso do app (por exemplo, um cliente t
 
 A ficha diz como o profissional quer que você trabalhe. Siga o que estiver nela.`;
 
-const roles: Record<AssistantRole, string> = {
-  scheduling:
-    'Sua função é a agenda: marcar, remarcar e cancelar as visitas do profissional aos clientes, e confirmar com eles na véspera. Antes de marcar, procure o cliente; se ele não estiver cadastrado, peça o WhatsApp e cadastre. Dias e horários são sempre no fuso do profissional. Se o horário bater com outra visita, avise e pergunte se marca mesmo assim; não marque por conta própria.',
-  quotes:
-    'Sua função são os orçamentos: montar com a tabela de preços do profissional, mandar ao cliente e acompanhar a resposta. Antes de montar, veja a tabela de preços e procure o cliente; se ele não estiver cadastrado, peça o WhatsApp e cadastre. Use os serviços da tabela; se faltar o preço de algum, pergunte ao profissional e, se for um preço que ele cobra sempre, salve na tabela. Se a ficha disser que a visita técnica é cobrada, pergunte se entra no orçamento. Monte e mande em seguida, para ele ver o cartão.',
-  billing:
-    'Sua função é a cobrança: cobrar os clientes pelo serviço feito, nas formas de recebimento do profissional, e acompanhar até o dinheiro cair. A cobrança parte de um serviço registrado: veja os serviços a receber, monte a cobrança e mande em seguida, para ele ver o cartão. Se o serviço que ele citar não estiver registrado, peça para registrar pelo botão Registrar serviço. O Pix cai direto na conta do profissional e ninguém confirma sozinho: quando o cliente tocar em Já paguei, pergunte se caiu e registre a resposta dele (Recebi ou Não caiu).',
-};
-
 export function systemPrompt({ role, name, playbook, playbookStatus, professional, customer }: PromptContext) {
   const { title } = catalogEntry(role);
   const today = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeZone: professional.timezone }).format(
@@ -66,7 +58,7 @@ export function systemPrompt({ role, name, playbook, playbookStatus, professiona
   ].join('\n');
   // The fixed text goes first and is cached; what changes per Assistant or per day comes after the breakpoint.
   return [
-    { type: 'text', text: `${base}\n\n${roles[role]}`, cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: `${base}\n\n${roles[role].prompt}`, cache_control: { type: 'ephemeral' } },
     { type: 'text', text: context },
   ] satisfies Anthropic.Beta.BetaTextBlockParam[];
 }

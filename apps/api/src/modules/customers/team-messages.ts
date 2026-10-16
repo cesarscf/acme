@@ -14,6 +14,7 @@ import {
   type TurnEvent,
 } from '../conversations/service';
 import { catalogEntry } from '../team/catalog';
+import { roles } from '../team/roles';
 import { type CustomerThread, getCustomerThread } from './thread';
 
 type ThreadItem = CustomerThread['items'][number];
@@ -83,10 +84,10 @@ async function route(
   thread: CustomerThread,
   text: string,
 ) {
-  const roles = team.map(({ role }) => role) as [Assistant['role'], ...Assistant['role'][]];
-  const format = betaZodOutputFormat(z.strictObject({ role: z.enum(roles) }));
+  const teamRoles = team.map(({ role }) => role) as [Assistant['role'], ...Assistant['role'][]];
+  const format = betaZodOutputFormat(z.strictObject({ role: z.enum(teamRoles) }));
   const teamList = team
-    .map(({ role, name }) => `- ${role}: ${name}, ${catalogEntry(role).title}. ${roleScopes[role]}`)
+    .map(({ role, name }) => `- ${role}: ${name}, ${catalogEntry(role).title}. ${roles[role].scope}`)
     .join('\n');
   const recent = thread.items
     .filter((item) => ['professional', 'assistant', 'handoff', 'confirmation'].includes(item.type))
@@ -115,12 +116,6 @@ async function route(
     throw error;
   }
 }
-
-const roleScopes: Record<Assistant['role'], string> = {
-  scheduling: 'Marca, remarca e cancela visitas e pede a confirmação ao cliente.',
-  quotes: 'Monta e manda orçamentos, com a tabela de preços, e acompanha a resposta.',
-  billing: 'Cobra o serviço feito (Pix ou dinheiro) e acompanha o pagamento.',
-};
 
 export async function findThreadConfirmation(professionalId: string, customerId: string, id: string) {
   const [row] = await db

@@ -3,8 +3,9 @@ import { and, eq, sql } from 'drizzle-orm';
 import { hasAiConsent } from '../conversations/service';
 import { syncRoutines } from '../routines/service';
 import type { AssistantRole } from '../team/catalog';
+import { roles } from '../team/roles';
 import { interpret } from './interpret';
-import { type BriefingScript, type BriefingStep, briefingScripts } from './scripts';
+import type { BriefingScript, BriefingStep } from './scripts';
 
 type Answer = { said: string; ack: string };
 type Progress = { connect?: 'later'; answers?: Record<string, Answer> };
@@ -29,12 +30,11 @@ export async function findBriefingAssistant(professionalId: string, id: string) 
 }
 
 export function findStep(role: AssistantRole, key: string) {
-  return briefingScripts[role]?.steps.find((step) => step.key === key);
+  return roles[role].briefing.steps.find((step) => step.key === key);
 }
 
 export function getBriefing(assistant: BriefingAssistant) {
-  const script = briefingScripts[assistant.role];
-  if (!script) return null;
+  const script = roles[assistant.role].briefing;
   const answers = assistant.briefing.answers ?? {};
   const firstName = assistant.professional.name.trim().split(/\s+/)[0];
   return {
@@ -72,8 +72,7 @@ export function playbookRows(script: BriefingScript, playbook: Record<string, un
 }
 
 export function describePlaybook(role: AssistantRole, playbook: unknown) {
-  const script = briefingScripts[role];
-  const rows = script && playbookRows(script, playbook as Record<string, unknown>);
+  const rows = playbookRows(roles[role].briefing, playbook as Record<string, unknown>);
   if (!rows) return JSON.stringify(playbook);
   return rows.map(({ label, value }) => `${label}: ${value}`).join('\n');
 }
@@ -130,8 +129,7 @@ async function interpretAnswer(assistant: BriefingAssistant, step: BriefingStep,
 }
 
 export async function approve(assistant: BriefingAssistant) {
-  const script = briefingScripts[assistant.role];
-  if (!script || !playbookRows(script, assistant.playbook)) return false;
+  if (!playbookRows(roles[assistant.role].briefing, assistant.playbook)) return false;
   await db.update(assistants).set({ playbookStatus: 'approved' }).where(eq(assistants.id, assistant.id));
   await syncRoutines(assistant.id);
   return true;

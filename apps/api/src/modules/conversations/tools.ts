@@ -1,8 +1,6 @@
 import type { BetaRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
-import { chargeTools } from '../charges/tools';
 import { customerTools, threadTools } from '../customers/tools';
-import { quoteTools } from '../quotes/tools';
-import { visitTools } from '../visits/tools';
+import { roles } from '../team/roles';
 import type { Assistant } from './service';
 
 export type ConfirmationCard = {
@@ -30,12 +28,6 @@ export function confirmed<Input>(
   return { tool: strict(tool), card: (input) => card(tool.parse(input)) };
 }
 
-const roleTools: Partial<Record<Assistant['role'], (assistant: Assistant) => AssistantTool[]>> = {
-  scheduling: visitTools,
-  quotes: quoteTools,
-  billing: chargeTools,
-};
-
 export function assistantTools(assistant: Assistant): AssistantTool[] {
-  return [...customerTools(assistant), ...(roleTools[assistant.role]?.(assistant) ?? []), ...threadTools(assistant)];
+  return [...customerTools(assistant), ...roles[assistant.role].tools(assistant), ...threadTools(assistant)];
 }

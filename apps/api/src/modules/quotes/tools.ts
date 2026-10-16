@@ -1,11 +1,12 @@
 import { betaZodTool } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { ToolError } from '@anthropic-ai/sdk/lib/tools/ToolError';
 import * as z from 'zod';
-import { formatMoney, quoteValidity } from '../briefing/scripts';
+import { formatMoney } from '../briefing/scripts';
 import type { Assistant } from '../conversations/service';
 import { type AssistantTool, confirmed, strict } from '../conversations/tools';
 import { findCustomer, formatPhoneNumber } from '../customers/service';
 import { addDays, localDate } from '../visits/time';
+import { quoteValidity } from './briefing';
 import {
   createQuote,
   describeItem,

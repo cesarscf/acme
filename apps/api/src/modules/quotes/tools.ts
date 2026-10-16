@@ -5,7 +5,7 @@ import { formatMoney } from '../briefing/scripts';
 import type { Assistant } from '../conversations/service';
 import { type AssistantTool, confirmed, strict } from '../conversations/tools';
 import { findCustomer, formatPhoneNumber } from '../customers/service';
-import { addDays, localDate } from '../visits/time';
+import { addDays, localDate } from '../time/time';
 import { quoteValidity } from './briefing';
 import {
   createQuote,

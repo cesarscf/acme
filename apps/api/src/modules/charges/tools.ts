@@ -4,7 +4,7 @@ import * as z from 'zod';
 import { formatMoney } from '../briefing/scripts';
 import type { Assistant } from '../conversations/service';
 import { type AssistantTool, confirmed, strict } from '../conversations/tools';
-import { formatLocalDateTime } from '../visits/time';
+import { formatLocalDateTime } from '../time/time';
 import {
   type ChargeWithCustomer,
   chargeCard,

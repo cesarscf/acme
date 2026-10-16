@@ -8,8 +8,8 @@ import { TestClock } from 'pg-boss';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
 import { openJob } from '../jobs/service';
+import { toInstant } from '../time/time';
 import { ensureVisitConfirmationTemplate, requestDueVisitConfirmations } from '../visits/service';
-import { toInstant } from '../visits/time';
 import { findRoutine, startRoutines, stopRoutines } from './service';
 
 const api = treaty(app);

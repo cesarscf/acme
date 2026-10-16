@@ -1,8 +1,8 @@
 import type { RoleDefinition } from '../team/roles';
+import { localDate, nextDay, toInstant } from '../time/time';
 import { confirmations, schedulingBriefing } from './briefing';
 import { requestDueVisitConfirmations } from './service';
 import { bookVisitSuggestion, endedVisitSuggestions } from './suggestions';
-import { localDate, nextDay, toInstant } from './time';
 import { visitTools } from './tools';
 
 export const schedulingRole: RoleDefinition = {

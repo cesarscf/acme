@@ -7,8 +7,8 @@ import {
   say,
   scriptedAssistant,
 } from '../conversations/scripted-conversation';
+import { addDays, localDate, toInstant } from '../time/time';
 import { createVisit } from './service';
-import { addDays, localDate, toInstant } from './time';
 
 // Real model, real tokens: run with `bun run evals`, never in `bun run test`.
 const timeZone = 'America/Sao_Paulo';

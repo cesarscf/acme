@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import type { Assistant } from '../conversations/service';
 import { newAssistant, runTool } from '../conversations/test-tools';
 import { customerTools } from '../customers/tools';
-import { localDate } from './time';
+import { localDate } from '../time/time';
 import { visitTools } from './tools';
 
 function newPhoneNumber() {

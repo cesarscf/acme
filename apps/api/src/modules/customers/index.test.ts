@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
 import { openJob } from '../jobs/service';
-import { addDays, localDate, toInstant } from '../visits/time';
+import { addDays, localDate, toInstant } from '../time/time';
 import { createCustomer } from './service';
 
 const api = treaty(app);

@@ -1,4 +1,4 @@
-// Visits are stored in UTC and spoken in the Professional's time zone (no Temporal in Bun yet).
+// Visits, Quotes and Charges are stored in UTC and spoken in the Professional's time zone (no Temporal in Bun yet).
 
 export function toInstant(date: string, time: string, timeZone: string) {
   const [year, month, day] = date.split('-').map(Number);

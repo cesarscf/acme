@@ -2,7 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { describePlaybook } from '../briefing/service';
 import { type AssistantRole, catalogEntry } from '../team/catalog';
 import { roles } from '../team/roles';
-import { localDate } from '../visits/time';
+import { localDate } from '../time/time';
 
 export type PromptContext = {
   role: AssistantRole;

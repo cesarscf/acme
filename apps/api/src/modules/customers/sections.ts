@@ -11,7 +11,7 @@ import {
   relativeDay,
   waitingFor,
 } from '../jobs/progress';
-import { daysAgo, localTime, shortDay } from '../visits/time';
+import { daysAgo, localTime, shortDay } from '../time/time';
 import { findCustomers, formatPhoneNumber } from './service';
 
 type Row = { id: string; name: string; when: string; detail: string; status: Pill | null };

@@ -1,7 +1,7 @@
 import { charges, db, jobs, quotes, visits, workRecords } from '@acme/db';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { formatWholeMoney } from '../charges/service';
-import { daysAgo, localDate } from '../visits/time';
+import { daysAgo, localDate } from '../time/time';
 
 export type Tone = 'ok' | 'wait' | 'none' | 'sent';
 export type Pill = { label: string; tone: Tone };

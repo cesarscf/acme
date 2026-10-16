@@ -6,7 +6,7 @@ import { isCustomerWorking } from '../conversations/running-turns';
 import { listThreadAssistants, speaker } from '../conversations/service';
 import type { ConfirmationCard } from '../conversations/tools';
 import { hasEnded, type JobDetail, jobStatus, jobSteps, listJobs, type Pill } from '../jobs/progress';
-import { daysAgo, localTime, shortDate, shortDay } from '../visits/time';
+import { daysAgo, localTime, shortDate, shortDay } from '../time/time';
 import { readMessage } from '../whatsapp/service';
 import { type Customer, findCustomer, formatPhoneNumber } from './service';
 

@@ -3,7 +3,7 @@ import { and, asc, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 import { formatMoney } from '../briefing/scripts';
 import { addNotice } from '../conversations/notices';
 import { declineJob, openJob } from '../jobs/service';
-import { addDays, localDate } from '../visits/time';
+import { addDays, localDate } from '../time/time';
 import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 
 type Professional = { id: string; name: string; timezone: string };

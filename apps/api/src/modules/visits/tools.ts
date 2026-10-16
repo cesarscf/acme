@@ -4,6 +4,7 @@ import * as z from 'zod';
 import type { Assistant } from '../conversations/service';
 import { type AssistantTool, confirmed, strict } from '../conversations/tools';
 import { findCustomer, formatPhoneNumber } from '../customers/service';
+import { formatLocalDateTime, localDate, toInstant } from '../time/time';
 import {
   cancelVisit,
   createVisit,
@@ -14,7 +15,6 @@ import {
   sendVisitConfirmation,
   type VisitWithCustomer,
 } from './service';
-import { formatLocalDateTime, localDate, toInstant } from './time';
 
 const defaultDurationMinutes = 60;
 

@@ -15,8 +15,8 @@ import {
 import { addNotice } from '../conversations/notices';
 import { createCustomer, findCustomer, toPhoneNumber } from '../customers/service';
 import { concludeJob, openJob } from '../jobs/service';
+import { addDays, formatLocalDateTime, localDate } from '../time/time';
 import { findVisit, listVisits } from '../visits/service';
-import { addDays, formatLocalDateTime, localDate } from '../visits/time';
 import { type Extraction, extractWorkRecord } from './extract';
 
 export type PaymentMethod = (typeof workRecords.$inferInsert)['paymentMethod'];

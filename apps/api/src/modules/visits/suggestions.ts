@@ -2,7 +2,7 @@ import { customers, db, visits, workRecords } from '@acme/db';
 import { and, eq, gte, inArray, sql } from 'drizzle-orm';
 import type { TimedItems } from '../conversations/history';
 import type { Assistant } from '../conversations/service';
-import { formatLocalDateTime } from './time';
+import { formatLocalDateTime } from '../time/time';
 
 // Same window as the Visits a WorkRecord can be about.
 const endedVisitDays = 7;

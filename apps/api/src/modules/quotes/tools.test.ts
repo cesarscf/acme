@@ -7,7 +7,7 @@ import { asc, eq } from 'drizzle-orm';
 import { type Assistant, findAssistant } from '../conversations/service';
 import { newAssistant, runTool } from '../conversations/test-tools';
 import { customerTools } from '../customers/tools';
-import { localDate } from '../visits/time';
+import { localDate } from '../time/time';
 import { listMessages } from '../whatsapp/service';
 import { ensureQuoteTemplates } from './service';
 import { quoteTools } from './tools';

@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { called, customerOf, sayInThread, scriptedTeam } from '../conversations/scripted-conversation';
 import { upsertPriceItem } from '../quotes/service';
+import { addDays, localDate, toInstant } from '../time/time';
 import { createVisit } from '../visits/service';
-import { addDays, localDate, toInstant } from '../visits/time';
 
 // Real model, real tokens: run with `bun run evals`, never in `bun run test`.
 const timeZone = 'America/Sao_Paulo';

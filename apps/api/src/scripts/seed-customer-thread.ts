@@ -2,8 +2,8 @@ import { customers, db, jobs, professionals, visits } from '@acme/db';
 import { and, eq, gt, ne } from 'drizzle-orm';
 import { createCustomer } from '../modules/customers/service';
 import { upsertPriceItem } from '../modules/quotes/service';
+import { addDays, localDate, toInstant } from '../modules/time/time';
 import { createVisit } from '../modules/visits/service';
-import { addDays, localDate, toInstant } from '../modules/visits/time';
 
 // Gives a Professional a João Pereira with an open Job and a Visit tomorrow at 14:00, to try the team in his thread:
 // "Manda um orçamento de troca do compressor…" and "Remarca para segunda às 10h". Running it again changes nothing.

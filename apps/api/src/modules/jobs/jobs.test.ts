@@ -13,7 +13,7 @@ import { runTool } from '../conversations/test-tools';
 import { createCustomer } from '../customers/service';
 import { ensureQuoteTemplates, findQuote, sendQuote } from '../quotes/service';
 import { quoteTools } from '../quotes/tools';
-import { addDays, localDate } from '../visits/time';
+import { addDays, localDate } from '../time/time';
 import { visitTools } from '../visits/tools';
 import { listMessages } from '../whatsapp/service';
 

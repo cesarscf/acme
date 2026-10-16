@@ -11,9 +11,9 @@ import { startFakeClaude } from '../conversations/fake-claude';
 import { findAssistant } from '../conversations/service';
 import { runTool } from '../conversations/test-tools';
 import { customerTools } from '../customers/tools';
+import { localDate } from '../time/time';
 import { listMessages } from '../whatsapp/service';
 import { ensureVisitConfirmationTemplate } from './service';
-import { localDate } from './time';
 import { visitTools } from './tools';
 
 const api = treaty(app);

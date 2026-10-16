@@ -35,6 +35,7 @@
   --teal-foreground: #0e6b75;
   --whatsapp: #eaf7f0;
   --whatsapp-border: #cbe7d8;
+  --mention: #2563eb;
 }
 
 @theme inline {
@@ -71,6 +72,7 @@
   --color-teal-foreground: var(--teal-foreground);
   --color-whatsapp: var(--whatsapp);
   --color-whatsapp-border: var(--whatsapp-border);
+  --color-mention: var(--mention);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

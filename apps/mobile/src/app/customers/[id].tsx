@@ -3,8 +3,9 @@ import { Fragment, useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AssistantChip, MentionText } from '@/components/assistant-mention';
 import { BackButton } from '@/components/back-button';
-import { ProfessionalBubble, Reply } from '@/components/chat-messages';
+import { ProfessionalBubble } from '@/components/chat-messages';
 import { Composer } from '@/components/composer';
 import { ConfirmationCard } from '@/components/confirmation-card';
 import { CustomerAvatar } from '@/components/customer-avatar';
@@ -21,6 +22,7 @@ import {
 import { useSendCustomerMessageMutation } from '@/hooks/data/customers/use-send-customer-message-mutation';
 import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
 import { useTeamQuery } from '@/hooks/data/team/use-team-query';
+import { withoutOpeningMention } from '@/lib/mentions';
 
 type Pinned = NonNullable<CustomerThread['pinned']>;
 type Item<Type extends ThreadItem['type']> = Extract<ThreadItem, { type: Type }>;
@@ -50,6 +52,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
   const { customer, pinned, items } = thread;
   const { data: me } = useProfessionalQuery();
   const { data: team } = useTeamQuery();
+  const speakers: Speaker[] = (team ?? []).map(({ id, name, title, mascot }) => ({ id, name, title, mascot }));
   const send = useSendCustomerMessageMutation(customer.id);
   const decide = useCustomerConfirmationMutation(customer.id);
   const [text, setText] = useState('');
@@ -117,14 +120,17 @@ function Thread({ thread }: { thread: CustomerThread }) {
               onDecide={(confirmed) => decide.mutate({ confirmationId: item.id, confirmed })}
             />
           ) : (
-            <ItemView key={item.id} item={item} />
+            <ItemView key={item.id} item={item} team={speakers} />
           ),
         )}
-        {!!draft && <AssistantReply assistant={answeredBy} text={draft} />}
+        {!!draft && <AssistantReply assistant={answeredBy} text={draft} team={speakers} />}
         {working && !draft && (
-          <Text className="font-normal text-muted-foreground text-sm">
-            {answeredBy ? `${answeredBy.name} está pensando` : 'Chamando a equipe'}
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            {answeredBy && <AssistantChip assistant={answeredBy} />}
+            <Text className="font-normal text-muted-foreground text-sm">
+              {answeredBy ? 'está pensando' : 'Chamando a equipe'}
+            </Text>
+          </View>
         )}
         {failed && (
           <Text selectable className="font-normal text-destructive text-sm">
@@ -150,7 +156,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
   );
 }
 
-function AssistantReply({ assistant, text }: { assistant?: Pick<Speaker, 'name' | 'title' | 'mascot'>; text: string }) {
+function AssistantReply({ assistant, text, team }: { assistant?: Speaker; text: string; team: Speaker[] }) {
   return (
     <View>
       {assistant && (
@@ -160,7 +166,30 @@ function AssistantReply({ assistant, text }: { assistant?: Pick<Speaker, 'name' 
           <Text className="font-normal text-[12.5px] text-muted-foreground">{assistant.title}</Text>
         </View>
       )}
-      <Reply text={text} />
+      <MentionText text={text} team={team} className="font-normal text-[15.5px] text-foreground leading-[23px]" />
+    </View>
+  );
+}
+
+// One Assistant calling a teammate into the thread; the header already names who was called.
+function Handoff({ item, team }: { item: Item<'handoff'>; team: Speaker[] }) {
+  const request = withoutOpeningMention(
+    item.text,
+    item.to.name,
+    team.map(({ name }) => name),
+  );
+  return (
+    <View className="flex-row gap-2.5">
+      <View className="ml-2 w-0.5 rounded-full bg-mention/30" />
+      <View className="flex-1 gap-1.5 py-0.5">
+        <View className="flex-row flex-wrap items-center gap-1.5">
+          <Mascot mascot={item.assistant.mascot} size={18} />
+          <Text className="font-bold text-[12.5px] text-foreground">{item.assistant.name}</Text>
+          <Text className="font-normal text-[12.5px] text-muted-foreground">chamou</Text>
+          <AssistantChip assistant={item.to} />
+        </View>
+        <MentionText text={request} team={team} className="font-normal text-[14.5px] text-foreground leading-[21px]" />
+      </View>
     </View>
   );
 }
@@ -244,12 +273,14 @@ function StepDot({ state }: { state: Pinned['steps'][number]['state'] }) {
   );
 }
 
-function ItemView({ item }: { item: Exclude<ThreadItem, { type: 'confirmation' }> }) {
+function ItemView({ item, team }: { item: Exclude<ThreadItem, { type: 'confirmation' }>; team: Speaker[] }) {
   switch (item.type) {
     case 'professional':
       return <ProfessionalBubble text={item.text} />;
     case 'assistant':
-      return <AssistantReply assistant={item.assistant} text={item.text} />;
+      return <AssistantReply assistant={item.assistant} text={item.text} team={team} />;
+    case 'handoff':
+      return <Handoff item={item} team={team} />;
     case 'day':
       return <DayDivider label={item.label} />;
     case 'job_start':

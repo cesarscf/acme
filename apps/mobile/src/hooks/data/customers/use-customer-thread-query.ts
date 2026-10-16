@@ -13,7 +13,7 @@ export function useCustomerThreadQuery(id: string) {
   return useQuery({
     queryKey: customerKeys.thread(id),
     queryFn: () => getCustomerThread(id),
-    // A turn goes on when the app leaves the thread, so a reopened one polls until the team is done.
-    refetchInterval: (query) => (query.state.data?.working ? 1500 : false),
+    // The team's turn goes on when the app leaves the thread; the Customer answers on WhatsApp at any time.
+    refetchInterval: (query) => (query.state.data?.working ? 1500 : 5000),
   });
 }

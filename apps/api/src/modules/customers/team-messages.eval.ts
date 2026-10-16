@@ -33,6 +33,23 @@ function totalOf(call: { input: Record<string, unknown> } | undefined) {
 }
 
 describe('the team in a Customer thread', () => {
+  test('a request with a quote and a schedule part gets both done by the team, without the Professional relaying', async () => {
+    const { professionalId, joao } = await teamWithJoaosVisit();
+
+    const turn = await sayInThread(
+      professionalId,
+      joao.id,
+      'Lia consegui adiantar a visita, e foi acordado troca de compressor por 2000 reais sendo 200 de mão de obra, envie o orçamento para o cliente confirmar e envie opções de data para o agendamento do serviço',
+    );
+
+    expect(turn.answered).toContain('quotes');
+    expect(totalOf(turn.calls.find(({ name }) => name === 'createQuote'))).toBe(200000);
+    expect(turn.calls).toContainEqual(called('sendQuote'));
+    // Nobody sends the Professional to another Assistant, and nobody promises a message the tools cannot send.
+    expect(turn.reply).not.toMatch(/acionad|pe[çc]a (a|à|para a) (Lia|Olga|Tina)|fale com a/i);
+    expect(turn.reply).not.toMatch(/envio (as|os) (op[çc][õo]es|hor[áa]rios)/i);
+  });
+
   test('"Manda um orçamento de troca do compressor…" makes the quotes Assistant quote João and show the card', async () => {
     const { professionalId, joao } = await teamWithJoaosVisit();
 

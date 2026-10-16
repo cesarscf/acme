@@ -5,7 +5,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { asc, eq } from 'drizzle-orm';
 import { signInNewProfessional } from '../auth/test-auth';
 import { createCustomer } from '../customers/service';
-import { chooseAssistant, inCustomerThread } from '../customers/team-messages';
+import { chooseAssistant, inCustomerThread, runTeam } from '../customers/team-messages';
 import { getCustomerThread } from '../customers/thread';
 import type { AssistantRole } from '../team/catalog';
 import { type Assistant, answerSuggestion, findAssistant, sendText, type TurnEvent } from './service';
@@ -52,11 +52,40 @@ export function say(assistant: Assistant, text: string) {
 }
 
 // The Professional writes in the Customer's thread; the team picks who answers.
+// role is who the message went to; calls and replies cover every teammate that answered after them.
 export async function sayInThread(professionalId: string, customerId: string, text: string) {
   const thread = (await getCustomerThread(professionalId, customerId))!;
   const chosen = (await chooseAssistant(professionalId, thread, text))!;
-  const assistant = inCustomerThread(chosen, thread);
-  return { role: assistant.role, ...(await turn(assistant, (emit) => sendText(assistant, text, emit))) };
+  const first = await inCustomerThread(chosen, thread);
+  const before = (await threadMessagesOf(customerId)).length;
+  const end = await runTeam(
+    first,
+    (assistant, emit) => sendText(assistant, text, emit),
+    () => {},
+  );
+  const said = (await threadMessagesOf(customerId)).slice(before).filter(({ role }) => role === 'assistant');
+  const blocks = said.flatMap(({ content }) => content as Block[]);
+  return {
+    role: first.role,
+    answered: [...new Set(said.map(({ assistantRole }) => assistantRole))],
+    calls: blocks.flatMap((block) =>
+      block.type === 'tool_use' ? [{ name: block.name, input: block.input as Record<string, unknown> }] : [],
+    ),
+    reply: blocks
+      .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+      .join('\n')
+      .trim(),
+    end,
+  };
+}
+
+function threadMessagesOf(customerId: string) {
+  return db
+    .select({ role: assistantMessages.role, content: assistantMessages.content, assistantRole: assistants.role })
+    .from(assistantMessages)
+    .innerJoin(assistants, eq(assistants.id, assistantMessages.assistantId))
+    .where(eq(assistantMessages.customerId, customerId))
+    .orderBy(asc(assistantMessages.createdAt));
 }
 
 export function acceptSuggestion(assistant: Assistant, suggestion: { id: string; customerName: string }) {

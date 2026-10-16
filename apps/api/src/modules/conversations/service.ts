@@ -40,6 +40,7 @@ export type ConversationItem =
   | { id: string; type: 'professional'; text: string }
   | { id: string; type: 'assistant'; text: string }
   | { id: string; type: 'notice'; text: string }
+  | { id: string; type: 'handoff'; role: AssistantRole; text: string }
   | ({ id: string; type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard)
   | {
       id: string;
@@ -114,13 +115,17 @@ export function releaseCustomerThread(customerId: string) {
 
 export async function getConversation(assistant: Assistant) {
   const timed = await loadTimedItems(assistant);
-  const items: ConversationItem[] = [];
+  // Handoffs happen only in a Customer's thread.
+  const items: Exclude<ConversationItem, { type: 'handoff' }>[] = [];
+  const push = (more: ConversationItem[]) => {
+    for (const item of more) if (item.type !== 'handoff') items.push(item);
+  };
   const pushNoticesBefore = (createdAt?: Date) => {
-    while (timed[0] && (!createdAt || timed[0].at < createdAt)) items.push(...timed.shift()!.items);
+    while (timed[0] && (!createdAt || timed[0].at < createdAt)) push(timed.shift()!.items);
   };
   for (const message of await messageItems(assistant, null)) {
     pushNoticesBefore(message.at);
-    items.push(...message.items);
+    push(message.items);
   }
   pushNoticesBefore();
   return { working: isWorking(assistant.id), items };
@@ -136,13 +141,19 @@ export async function messageItems(assistant: Assistant, customerId: string | nu
   const timed: TimedItems[] = [];
   for (const message of messages) {
     const items: ConversationItem[] = [];
+    // A teammate's request shows as the handoff of whoever asked, not as the Professional's words.
     const text = message.content
-      .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+      .flatMap((block) => (block.type === 'text' && !block.text.startsWith('<colega') ? [block.text] : []))
       .join('\n\n')
       .trim();
     if (text) items.push({ id: message.id, type: message.role === 'user' ? 'professional' : 'assistant', text });
     for (const block of message.content) {
       if (block.type !== 'tool_use') continue;
+      if (block.name === 'askTeammate') {
+        const { role, message: request } = block.input as { role: AssistantRole; message: string };
+        items.push({ id: block.id, type: 'handoff', role, text: request });
+        continue;
+      }
       const confirmation = confirmations.find(({ toolUseId }) => toolUseId === block.id);
       const card = findTool(tools, block.name)?.card;
       if (confirmation && card) {
@@ -169,7 +180,7 @@ export async function listThreadAssistants(professionalId: string, customerId: s
   return found.filter((assistant) => !!assistant);
 }
 
-export function speaker({ id, name, role }: Assistant) {
+export function speaker({ id, name, role }: Pick<Assistant, 'id' | 'name' | 'role'>) {
   const { title, mascot } = catalogEntry(role);
   return { id, name, title, mascot };
 }

@@ -275,3 +275,60 @@ test('a Job the Assistant opens during the turn holds the rest of that turn', as
     .orderBy(assistantMessages.createdAt);
   expect(saved.map(({ jobId }) => jobId)).toEqual([null, null, job!.id, job!.id]);
 });
+
+test('an Assistant asks a teammate in the thread, and the teammate answers right after, without the Professional relaying', async () => {
+  const { headers, assistantWith, thread } = await professionalWith(['scheduling', 'quotes', 'billing']);
+  claude.reply(
+    routeTo('quotes'),
+    {
+      content: [
+        call('askTeammate', { role: 'scheduling', message: 'Lia, veja um horário para a troca do compressor.' }),
+      ],
+    },
+    say('Pedi para a Lia ver o horário.'),
+    say('Tenho segunda às 10h ou terça às 14h. Qual prefere?'),
+  );
+
+  const events = await drain(
+    thread.messages.post({ text: 'Orçamento aprovado, já vê um horário para a troca' }, { headers }),
+  );
+
+  const olga = assistantWith('quotes');
+  const lia = assistantWith('scheduling');
+  expect(events.filter(({ type }) => type === 'assistant')).toEqual([
+    { type: 'assistant', assistantId: olga.id },
+    { type: 'assistant', assistantId: lia.id },
+  ]);
+  // Lia gets the request as a teammate's, with the thread's history in her prompt.
+  const asked = claude.requests.at(-1)!;
+  expect(JSON.stringify(asked.messages.at(-1))).toContain('<colega nome=\\"Olga\\">Lia, veja um horário');
+  expect(systemText(asked)).toContain('Orçamento aprovado, já vê um horário para a troca');
+  const { data } = await thread.thread.get({ headers });
+  expect(data!.items.slice(-4)).toEqual([
+    expect.objectContaining({ type: 'professional', text: 'Orçamento aprovado, já vê um horário para a troca' }),
+    expect.objectContaining({
+      type: 'handoff',
+      text: 'Lia, veja um horário para a troca do compressor.',
+      assistant: expect.objectContaining({ id: olga.id }),
+      to: expect.objectContaining({ id: lia.id }),
+    }),
+    expect.objectContaining({ type: 'assistant', text: 'Pedi para a Lia ver o horário.' }),
+    expect.objectContaining({
+      type: 'assistant',
+      text: 'Tenho segunda às 10h ou terça às 14h. Qual prefere?',
+      assistant: expect.objectContaining({ id: lia.id }),
+    }),
+  ]);
+});
+
+test('Assistants asking each other stop after a few hops', async () => {
+  const { headers, thread } = await professionalWith(['scheduling', 'quotes']);
+  const askBack = (role: string) => ({ content: [call('askTeammate', { role, message: 'Veja isso.' })] });
+  claude.reply(routeTo('quotes'));
+  for (let hop = 0; hop < 5; hop++) claude.reply(askBack(hop % 2 ? 'quotes' : 'scheduling'), say('Ok.'));
+
+  const events = await drain(thread.messages.post({ text: 'Vejam isso' }, { headers }));
+
+  expect(events.filter(({ type }) => type === 'assistant')).toHaveLength(5);
+  expect(events.at(-1)).toEqual({ type: 'done' });
+});

@@ -3,9 +3,18 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { and, asc, eq } from 'drizzle-orm';
 import * as z from 'zod';
-import { type Assistant, claude, findAssistant, modelParams, recordUsage } from '../conversations/service';
+import type { Handoff } from '../conversations/prompts';
+import {
+  type Assistant,
+  claude,
+  findAssistant,
+  modelParams,
+  recordUsage,
+  sendText,
+  type TurnEvent,
+} from '../conversations/service';
 import { catalogEntry } from '../team/catalog';
-import type { CustomerThread } from './thread';
+import { type CustomerThread, getCustomerThread } from './thread';
 
 type ThreadItem = CustomerThread['items'][number];
 
@@ -14,16 +23,52 @@ const routerSystem = `Você encaminha a mensagem que um profissional escreveu na
 - Se a mensagem responde a uma pergunta ou a um cartão do último assistente que falou, é dele.
 - Se não der para saber, é de quem falou por último; se ninguém falou ainda, do primeiro da lista.`;
 
-export function inCustomerThread(assistant: Assistant, thread: CustomerThread): Assistant {
-  return { ...assistant, customer: { ...thread.customer, history: describeThread(thread) } };
-}
+// A request passed along can come back, so a message moves the team at most this many times.
+const maxHandoffs = 4;
 
-export async function chooseAssistant(professionalId: string, thread: CustomerThread, text: string) {
-  const team = await db
+function listTeam(professionalId: string) {
+  return db
     .select({ id: assistants.id, role: assistants.role, name: assistants.name })
     .from(assistants)
     .where(eq(assistants.professionalId, professionalId))
     .orderBy(asc(assistants.createdAt), asc(assistants.role));
+}
+
+export async function inCustomerThread(assistant: Assistant, thread: CustomerThread): Promise<Assistant> {
+  const team = await listTeam(assistant.professional.id);
+  return {
+    ...assistant,
+    customer: { ...thread.customer, history: describeThread(thread), team, handoffs: [] },
+  };
+}
+
+// The Professional's message starts with one Assistant; each teammate it asks answers right after, in the same thread.
+export async function runTeam(
+  first: Assistant,
+  step: (assistant: Assistant, emit: (event: TurnEvent) => void) => Promise<TurnEvent>,
+  emit: (event: TurnEvent) => void,
+) {
+  const professionalId = first.professional.id;
+  const customerId = first.customer!.id;
+  const queue: (Handoff & { from: string })[] = [];
+  let assistant = first;
+  let run = step;
+  for (let hop = 0; ; hop++) {
+    emit({ type: 'assistant', assistantId: assistant.id });
+    const end = await run(assistant, emit);
+    queue.push(...assistant.customer!.handoffs.map((handoff) => ({ ...handoff, from: assistant.name })));
+    const next = queue.shift();
+    if (!next || end.type === 'error' || hop === maxHandoffs) return end;
+    const teammate = (await listTeam(professionalId)).find(({ role }) => role === next.role);
+    const found = teammate && (await findAssistant(professionalId, teammate.id));
+    if (!found) return end;
+    assistant = await inCustomerThread(found, (await getCustomerThread(professionalId, customerId))!);
+    run = (asked, emitTo) => sendText(asked, `<colega nome="${next.from}">${next.message}</colega>`, emitTo);
+  }
+}
+
+export async function chooseAssistant(professionalId: string, thread: CustomerThread, text: string) {
+  const team = await listTeam(professionalId);
   if (!team.length) return undefined;
   const lastSpeaker = thread.items.findLast((item) => item.type === 'assistant')?.assistant.id;
   const fallback = team.find(({ id }) => id === lastSpeaker) ?? team[0]!;
@@ -44,7 +89,7 @@ async function route(
     .map(({ role, name }) => `- ${role}: ${name}, ${catalogEntry(role).title}. ${roleScopes[role]}`)
     .join('\n');
   const recent = thread.items
-    .filter((item) => item.type === 'professional' || item.type === 'assistant' || item.type === 'confirmation')
+    .filter((item) => ['professional', 'assistant', 'handoff', 'confirmation'].includes(item.type))
     .slice(-6)
     .map(describeItem)
     .join('\n');
@@ -133,6 +178,8 @@ function describeItem(item: ThreadItem): string {
       return `Profissional para a equipe: ${item.text}`;
     case 'assistant':
       return `${item.assistant.name} (${item.assistant.title}): ${item.text}`;
+    case 'handoff':
+      return `${item.assistant.name} para ${item.to.name}: ${item.text}`;
     case 'confirmation':
       return `Cartão "${item.title}": ${decisionNames[item.status]}`;
   }

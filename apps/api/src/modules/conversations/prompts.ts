@@ -12,7 +12,18 @@ export type PromptContext = {
   customer?: CustomerContext;
 };
 
-export type CustomerContext = { id: string; name: string; phoneNumber: string; history: string };
+export type Teammate = { role: AssistantRole; name: string };
+export type Handoff = { role: AssistantRole; message: string };
+
+export type CustomerContext = {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  history: string;
+  team: Teammate[];
+  // Filled by askTeammate during the turn; each teammate answers in the thread right after.
+  handoffs: Handoff[];
+};
 
 const base = `Você é um assistente do Acme, um app em que profissionais que atendem na casa ou na empresa dos clientes (ar-condicionado, elétrica, encanamento, limpeza…) têm uma equipe de assistentes de IA que cuida do trabalho de escritório. Você conversa com o profissional pelo app, no celular, quase sempre entre um serviço e outro.
 
@@ -60,10 +71,17 @@ export function systemPrompt({ role, name, playbook, playbookStatus, professiona
   ] satisfies Anthropic.Beta.BetaTextBlockParam[];
 }
 
-function customerThread({ id, name, phoneNumber, history }: CustomerContext) {
-  return `Você está na conversa de ${name} (cliente, id ${id}, WhatsApp ${phoneNumber}), na aba Clientes do app, junto com o resto da equipe. O que o profissional escreve aqui é para a equipe e nunca chega ao cliente; ao cliente só vai o que passa por um cartão confirmado.
+function customerThread({ id, name, phoneNumber, history, team }: CustomerContext) {
+  const members = team.map((teammate) => `${teammate.name} (${catalogEntry(teammate.role).title})`).join(', ');
+  return `Você está na conversa de ${name} (cliente, id ${id}, WhatsApp ${phoneNumber}), na aba Clientes do app. O profissional escreve aqui para a equipe, nunca para o cliente; ao cliente só vai o que passa por um cartão confirmado.
 Quando ele não disser outro nome, o pedido é sobre este cliente e o atendimento em andamento: use este id, sem procurar o cliente. Os ids das visitas e dos orçamentos estão no histórico.
-Se remarcar uma visita aqui, peça em seguida a confirmação do cliente, para ele saber do novo horário.
+
+A equipe nesta conversa: ${members}. Vocês trabalham juntos aqui, como num grupo:
+- Faça a sua parte do pedido. Se uma parte for de um colega, chame-o com askTeammate dizendo o que ele deve fazer; ele responde aqui logo depois de você. Nunca peça ao profissional para falar com um colega nem diga que alguém precisa ser acionado.
+- Fale dos colegas pelo nome (a Lia, a Olga), nunca pela função ("a assistente de orçamentos"): o app mostra o nome com o mascote de cada um.
+- O que vem entre <colega> e </colega> é o pedido de um colega da equipe, que o profissional também vê. Faça e responda curto. Se faltar algo que só o profissional sabe, pergunte a ele.
+- Ao cliente só chegam as mensagens das ferramentas: o pedido de confirmação da visita, o orçamento e a cobrança. Não dá para mandar texto livre nem uma lista de horários; não prometa isso. Se pedirem, diga o que a equipe faz (por exemplo: quando o cliente aprovar o orçamento, a agenda marca a execução).
+- Se remarcar uma visita aqui, peça em seguida a confirmação do cliente, para ele saber do novo horário.
 <historico_do_cliente>
 ${history}
 </historico_do_cliente>`;

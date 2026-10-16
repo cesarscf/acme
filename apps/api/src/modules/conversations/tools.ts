@@ -1,6 +1,6 @@
 import type { BetaRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
 import { chargeTools } from '../charges/tools';
-import { customerTools } from '../customers/tools';
+import { customerTools, threadTools } from '../customers/tools';
 import { quoteTools } from '../quotes/tools';
 import { visitTools } from '../visits/tools';
 import type { Assistant } from './service';
@@ -37,5 +37,5 @@ const roleTools: Partial<Record<Assistant['role'], (assistant: Assistant) => Ass
 };
 
 export function assistantTools(assistant: Assistant): AssistantTool[] {
-  return [...customerTools(assistant), ...(roleTools[assistant.role]?.(assistant) ?? [])];
+  return [...customerTools(assistant), ...(roleTools[assistant.role]?.(assistant) ?? []), ...threadTools(assistant)];
 }

@@ -13,7 +13,7 @@ import {
 } from '../conversations/service';
 import { CustomersModel } from './model';
 import { listCustomerSections } from './sections';
-import { chooseAssistant, findThreadConfirmation, inCustomerThread } from './team-messages';
+import { chooseAssistant, findThreadConfirmation, inCustomerThread, runTeam } from './team-messages';
 import { getCustomerThread } from './thread';
 
 export const customers = new Elysia()
@@ -44,11 +44,8 @@ export const customers = new Elysia()
         const chosen = await chooseAssistant(professional.id, thread, text);
         if (!chosen) throw status(409, 'No Assistant on the team');
         if (isWorking(chosen.id)) throw status(409, 'Assistant is working');
-        const assistant = inCustomerThread(chosen, thread);
-        turn = withSpeaker(
-          assistant,
-          startTurn(assistant, (emit) => sendText(assistant, text, emit)),
-        );
+        const assistant = await inCustomerThread(chosen, thread);
+        turn = startTurn(assistant, (emit) => runTeam(assistant, (first, to) => sendText(first, text, to), emit));
       } finally {
         releaseCustomerThread(id);
       }
@@ -67,10 +64,9 @@ export const customers = new Elysia()
         const thread = await getCustomerThread(professional.id, id);
         const owner = await findAssistant(professional.id, confirmation.assistantId);
         if (!thread || !owner) throw status(404, 'No pending confirmation');
-        const assistant = inCustomerThread(owner, thread);
-        turn = withSpeaker(
-          assistant,
-          startTurn(assistant, (emit) => decide(assistant, confirmation, confirmed, emit)),
+        const assistant = await inCustomerThread(owner, thread);
+        turn = startTurn(assistant, (emit) =>
+          runTeam(assistant, (first, to) => decide(first, confirmation, confirmed, to), emit),
         );
       } finally {
         releaseCustomerThread(id);
@@ -79,9 +75,3 @@ export const customers = new Elysia()
     },
     { auth: true, params: 'customers.Confirmation', body: 'customers.Decision' },
   );
-
-// The thread shows who answers before the first word arrives.
-async function* withSpeaker(assistant: { id: string }, turn: AsyncGenerator<TurnEvent>): AsyncGenerator<TurnEvent> {
-  yield { type: 'assistant', assistantId: assistant.id };
-  yield* turn;
-}

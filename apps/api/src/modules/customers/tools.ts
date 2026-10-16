@@ -3,6 +3,7 @@ import { ToolError } from '@anthropic-ai/sdk/lib/tools/ToolError';
 import * as z from 'zod';
 import type { Assistant } from '../conversations/service';
 import { type AssistantTool, strict } from '../conversations/tools';
+import { catalogEntry } from '../team/catalog';
 import { type Customer, createCustomer, findCustomers, toPhoneNumber } from './service';
 
 export function customerTools({ professional }: Assistant): AssistantTool[] {
@@ -41,6 +42,39 @@ export function customerTools({ professional }: Assistant): AssistantTool[] {
             const { customer, created } = await createCustomer(professional.id, { name, phoneNumber: digits });
             const prefix = created ? 'Cliente cadastrado' : 'Esse número já é de um cliente';
             return `${prefix}: ${JSON.stringify(toResult(customer))}`;
+          },
+        }),
+      ),
+    },
+  ];
+}
+
+// In a Customer's thread, an Assistant hands the part of the request that is a teammate's over to them.
+export function threadTools({ role, customer }: Assistant): AssistantTool[] {
+  const teammates = customer?.team.filter((teammate) => teammate.role !== role) ?? [];
+  if (!customer || !teammates.length) return [];
+  const roles = teammates.map((teammate) => teammate.role) as [Assistant['role'], ...Assistant['role'][]];
+  const described = teammates.map(
+    (teammate) => `${teammate.role}: ${teammate.name}, ${catalogEntry(teammate.role).title}`,
+  );
+  return [
+    {
+      tool: strict(
+        betaZodTool({
+          name: 'askTeammate',
+          description: `Chama um colega da equipe nesta conversa para fazer a parte dele do pedido. A mensagem aparece aqui para o profissional, e o colega responde logo depois de você. Colegas: ${described.join('; ')}.`,
+          inputSchema: z.strictObject({
+            role: z.enum(roles).describe('A função do colega.'),
+            message: z
+              .string()
+              .describe(
+                'O que o colega deve fazer, falando com ele pelo nome, com o que ele precisa saber. Ex.: "@Lia, o João aprovou a troca do compressor; veja um horário para a execução na semana que vem."',
+              ),
+          }),
+          run: ({ role: teammateRole, message }) => {
+            customer.handoffs.push({ role: teammateRole, message });
+            const { name } = teammates.find((teammate) => teammate.role === teammateRole)!;
+            return `${name} responde aqui logo depois de você. Não repita o pedido na sua resposta.`;
           },
         }),
       ),

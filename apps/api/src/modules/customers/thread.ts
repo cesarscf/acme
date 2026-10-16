@@ -1,4 +1,4 @@
-import { db, professionals, whatsappMessages } from '@acme/db';
+import { assistants, db, professionals, whatsappMessages } from '@acme/db';
 import { asc, eq } from 'drizzle-orm';
 import { formatMoney } from '../briefing/scripts';
 import { isCustomerWorking, listThreadAssistants, messageItems, speaker } from '../conversations/service';
@@ -21,6 +21,7 @@ type Item = { id: string; at: Date } & (
   | { type: 'whatsapp'; direction: 'outbound' | 'inbound'; label: string; text: string; buttons: string[] }
   | { type: 'professional'; text: string }
   | { type: 'assistant'; text: string; assistant: ReturnType<typeof speaker> }
+  | { type: 'handoff'; text: string; assistant: ReturnType<typeof speaker>; to: ReturnType<typeof speaker> }
   | ({ type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard)
 );
 type DayItem = { type: 'day'; id: string; label: string };
@@ -218,6 +219,10 @@ async function whatsappItems(customer: Customer, details: JobDetail[], current: 
 async function teamItems(professionalId: string, customerId: string, details: JobDetail[], current?: JobDetail) {
   const earlier = new Set(details.filter((detail) => detail !== current).map(({ job }) => job.id));
   const items: Item[] = [];
+  const team = await db
+    .select({ id: assistants.id, name: assistants.name, role: assistants.role })
+    .from(assistants)
+    .where(eq(assistants.professionalId, professionalId));
   for (const assistant of await listThreadAssistants(professionalId, customerId)) {
     for (const message of await messageItems(assistant, customerId)) {
       if (message.jobId && earlier.has(message.jobId)) continue;
@@ -225,7 +230,18 @@ async function teamItems(professionalId: string, customerId: string, details: Jo
       for (const item of message.items) {
         if (item.type === 'professional') items.push({ ...item, at });
         else if (item.type === 'assistant') items.push({ ...item, at, assistant: speaker(assistant) });
-        else if (item.type === 'confirmation') items.push({ ...item, at });
+        else if (item.type === 'handoff') {
+          const to = team.find(({ role }) => role === item.role);
+          if (to)
+            items.push({
+              type: 'handoff',
+              id: item.id,
+              at,
+              text: item.text,
+              assistant: speaker(assistant),
+              to: speaker(to),
+            });
+        } else if (item.type === 'confirmation') items.push({ ...item, at });
       }
     }
   }

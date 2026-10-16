@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { randomInt, randomUUID } from 'node:crypto';
-import { db, llmUsages } from '@acme/db';
+import { db, llmUsages, runningTurns } from '@acme/db';
 import { createApp as createEmulator } from '@acme/meta-emulator/app';
 import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
@@ -112,6 +112,27 @@ test('the reply streams to the app and the conversation is kept', async () => {
       { type: 'assistant', text: 'Oi! Sou a Lia.' },
     ],
   });
+});
+
+test('a turn another API process is running for the Assistant holds it until it expires', async () => {
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  const lia = api.team({ id: schedulingAssistant.id });
+  await db
+    .insert(runningTurns)
+    .values({ assistantId: schedulingAssistant.id, expiresAt: new Date(Date.now() + 60_000) });
+
+  const held = await lia.messages.post({ text: 'Oi' }, { headers });
+  expect(held.status).toBe(409);
+  expect((await lia.messages.get({ headers })).data!.working).toBe(true);
+
+  await db
+    .update(runningTurns)
+    .set({ expiresAt: new Date(Date.now() - 1000) })
+    .where(eq(runningTurns.assistantId, schedulingAssistant.id));
+  claude.reply({ content: [{ type: 'text', text: 'Oi! Quer marcar uma visita?' }] });
+  const events = await drain(lia.messages.post({ text: 'Oi' }, { headers }));
+  expect(events.at(-1)).toEqual({ type: 'done' });
+  expect((await lia.messages.get({ headers })).data!.working).toBe(false);
 });
 
 test('Claude runs Haiku 5.5 by default, without the server-side fallback it does not have', async () => {

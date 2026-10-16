@@ -55,7 +55,7 @@ export async function getCustomerThread(professionalId: string, customerId: stri
 
   return {
     customer: { id: customer.id, name: customer.name, phoneNumber: formatPhoneNumber(customer.phoneNumber) },
-    working: isCustomerWorking(customer.id),
+    working: await isCustomerWorking(customer.id),
     pinned: current
       ? {
           label: current.job.status === 'open' ? 'EM ANDAMENTO' : 'CONCLUÍDO',

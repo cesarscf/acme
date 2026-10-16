@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { randomInt, randomUUID } from 'node:crypto';
-import { assistantMessages, db, jobs } from '@acme/db';
+import { assistantMessages, db, jobs, runningTurns } from '@acme/db';
 import { createApp as createEmulator } from '@acme/meta-emulator/app';
 import type Anthropic from '@anthropic-ai/sdk';
 import { treaty } from '@elysia/eden';
@@ -249,6 +249,26 @@ test('a second message while the team picks who answers waits for the first', as
   }
   const { data } = await thread.thread.get({ headers });
   expect(data!.working).toBe(false);
+});
+
+test('a turn another API process is running holds the thread until it expires', async () => {
+  const { headers, joao, thread } = await professionalWith(['quotes']);
+  // Another process's turn is known only through the database.
+  await db.insert(runningTurns).values({ customerId: joao.id, expiresAt: new Date(Date.now() + 60_000) });
+
+  const held = await thread.messages.post({ text: 'Manda um orçamento' }, { headers });
+  expect(held.status).toBe(409);
+  expect((await thread.thread.get({ headers })).data!.working).toBe(true);
+
+  await db
+    .update(runningTurns)
+    .set({ expiresAt: new Date(Date.now() - 1000) })
+    .where(eq(runningTurns.customerId, joao.id));
+  expect((await thread.thread.get({ headers })).data!.working).toBe(false);
+  claude.reply(say('Qual serviço entra no orçamento?'));
+  const events = await drain(thread.messages.post({ text: 'Manda um orçamento' }, { headers }));
+  expect(events.at(-1)).toEqual({ type: 'done' });
+  expect((await thread.thread.get({ headers })).data!.working).toBe(false);
 });
 
 test('a Job the Assistant opens during the turn holds the rest of that turn', async () => {

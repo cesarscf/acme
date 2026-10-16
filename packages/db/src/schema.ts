@@ -205,6 +205,19 @@ export const toolConfirmations = pgTable('tool_confirmations', {
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 
+// A turn running in some API process; expiresAt is renewed while it runs, so a dead process frees it.
+export const runningTurns = pgTable('running_turns', {
+  id: uuid().primaryKey().defaultRandom(),
+  // Null while the Customer's thread is held but the team has not picked who answers.
+  assistantId: uuid()
+    .unique()
+    .references(() => assistants.id, { onDelete: 'cascade' }),
+  customerId: uuid()
+    .unique()
+    .references(() => customers.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+});
+
 export const llmUsages = pgTable(
   'llm_usages',
   {

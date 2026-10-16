@@ -1,5 +1,5 @@
 import { customers, db } from '@acme/db';
-import { and, asc, eq, ilike, or } from 'drizzle-orm';
+import { and, asc, eq, ilike, or, sql } from 'drizzle-orm';
 
 export type Customer = typeof customers.$inferSelect;
 
@@ -16,6 +16,7 @@ export function formatPhoneNumber(phoneNumber: string) {
 
 export function findCustomers(professionalId: string, query: string) {
   const digits = query.replace(/\D/g, '');
+  const pattern = `%${escapeLike(query.trim())}%`;
   return db
     .select()
     .from(customers)
@@ -23,7 +24,7 @@ export function findCustomers(professionalId: string, query: string) {
       and(
         eq(customers.professionalId, professionalId),
         or(
-          ilike(customers.name, `%${escapeLike(query.trim())}%`),
+          sql`unaccent(${customers.name}) ilike unaccent(${pattern})`,
           digits.length >= 4 ? ilike(customers.phoneNumber, `%${digits}%`) : undefined,
         ),
       ),

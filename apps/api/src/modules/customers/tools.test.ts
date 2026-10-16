@@ -78,6 +78,21 @@ test("findCustomer finds the Professional's Customers by part of the name or the
   expect(JSON.parse(byPhone.text)).toEqual([expect.objectContaining({ name: 'João Pereira' })]);
 });
 
+test('findCustomer ignores accents and cedillas on both sides', async () => {
+  const schedulingAssistant = await newAssistant();
+  const tools = customerTools(schedulingAssistant);
+  for (const name of ['Debora Alves', 'Débora Costa', 'João Pereira', 'Maria da Conceição']) {
+    await runTool(tools, 'createCustomer', { name, phoneNumber: newPhoneNumber() });
+  }
+  const names = async (query: string) =>
+    JSON.parse((await runTool(tools, 'findCustomer', { query })).text).map(({ name }: { name: string }) => name);
+
+  expect(await names('Débora')).toEqual(['Debora Alves', 'Débora Costa']);
+  expect(await names('Debora')).toEqual(['Debora Alves', 'Débora Costa']);
+  expect(await names('Joao')).toEqual(['João Pereira']);
+  expect(await names('conceicao')).toEqual(['Maria da Conceição']);
+});
+
 test('findCustomer says when nobody matches', async () => {
   const schedulingAssistant = await newAssistant();
 

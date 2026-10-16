@@ -113,6 +113,13 @@
       "when": 1792092345326,
       "tag": "0015_charges-one-per-payment-method",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792157482035,
+      "tag": "0016_customers-search-unaccent",
+      "breakpoints": true
     }
   ]
 }

@@ -81,6 +81,7 @@ function Chat({
   const interpreting = answer.isPending && !!answer.variables && 'text' in answer.variables;
   const working = send.isPending || decide.isPending || suggest.isPending || conversation.working || interpreting;
   const draft = send.draft || decide.draft || suggest.draft;
+  const activity = send.activity ?? decide.activity ?? suggest.activity;
   const awaiting = conversation.items.some((item) => item.type === 'confirmation' && item.status === 'pending');
   const status = working
     ? 'Trabalhando…'
@@ -209,7 +210,7 @@ function Chat({
           ),
         )}
         {!!draft && <Reply text={draft} />}
-        {working && !draft && <Thinking assistant={assistant} />}
+        {working && !draft && <Thinking assistant={assistant} activity={activity} />}
         {failed && (
           <Text selectable className="font-normal text-destructive text-sm">
             Não consegui responder agora. Tente de novo.
@@ -303,9 +304,10 @@ function SuggestionCard({
   );
 }
 
-function Thinking({ assistant }: { assistant: Assistant }) {
+function Thinking({ assistant, activity }: { assistant: Assistant; activity: string | null }) {
+  const label = activity ?? 'Pensando';
   return (
-    <View className="flex-row items-center gap-2.5" accessibilityLabel={`${assistant.name} está pensando`}>
+    <View className="flex-row items-center gap-2.5" accessibilityLabel={`${assistant.name}: ${label}`}>
       <Animated.View
         style={{
           animationName: { from: { transform: [{ scale: 0.92 }] }, to: { transform: [{ scale: 1.06 }] } },
@@ -317,7 +319,7 @@ function Thinking({ assistant }: { assistant: Assistant }) {
       >
         <Mascot mascot={assistant.mascot} size={22} />
       </Animated.View>
-      <Text className="font-normal text-muted-foreground text-sm">Pensando</Text>
+      <Text className="font-normal text-muted-foreground text-sm">{label}</Text>
     </View>
   );
 }

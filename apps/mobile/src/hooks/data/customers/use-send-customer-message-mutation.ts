@@ -2,19 +2,20 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { queryClient } from '@/lib/query-client';
+import { idleTurn } from '@/lib/turn';
 import { readTurn } from '../conversation/read-turn';
 import { customerKeys } from './keys';
 import type { CustomerThread } from './use-customer-thread-query';
 
 export function useSendCustomerMessageMutation(customerId: string) {
-  const [draft, setDraft] = useState('');
+  const [turn, setTurn] = useState(idleTurn);
   const [answeredBy, setAnsweredBy] = useState<string | null>(null);
   const mutation = useMutation({
     mutationFn: (text: string) =>
       readTurn(
         customerKeys.thread(customerId),
         api.customers({ id: customerId }).messages.post({ text }),
-        setDraft,
+        setTurn,
         setAnsweredBy,
       ),
     onMutate: async (text) => {
@@ -30,5 +31,5 @@ export function useSendCustomerMessageMutation(customerId: string) {
       );
     },
   });
-  return { ...mutation, draft, answeredBy };
+  return { ...mutation, draft: turn.draft, activity: turn.status, answeredBy };
 }

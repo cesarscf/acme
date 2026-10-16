@@ -60,6 +60,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
 
   const working = send.isPending || decide.isPending || thread.working;
   const draft = send.draft || decide.draft;
+  const activity = send.activity ?? decide.activity;
   const answeredBy = team?.find(({ id }) => id === (send.answeredBy ?? decide.answeredBy));
   const failed = (send.isError || decide.isError) && !working;
   const canSend = !!text.trim() && !working;
@@ -125,10 +126,15 @@ function Thread({ thread }: { thread: CustomerThread }) {
         )}
         {!!draft && <AssistantReply assistant={answeredBy} text={draft} team={speakers} />}
         {working && !draft && (
-          <View className="flex-row items-center gap-1.5">
+          <View
+            className="flex-row items-center gap-1.5"
+            accessibilityLabel={
+              answeredBy ? `${answeredBy.name}: ${activity ?? 'está pensando'}` : 'Vendo quem responde'
+            }
+          >
             {answeredBy && <AssistantChip assistant={answeredBy} />}
             <Text className="font-normal text-muted-foreground text-sm">
-              {answeredBy ? 'está pensando' : 'Chamando a equipe'}
+              {answeredBy ? (activity ?? 'está pensando') : 'Vendo quem responde'}
             </Text>
           </View>
         )}

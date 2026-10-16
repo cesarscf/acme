@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { db, quotes } from '@acme/db';
+import { eq } from 'drizzle-orm';
 import { called, customerOf, sayInThread, scriptedTeam } from '../conversations/scripted-conversation';
 import { upsertPriceItem } from '../quotes/service';
 import { addDays, localDate, toInstant } from '../time/time';
@@ -92,6 +94,8 @@ describe('the team in a Customer thread', () => {
     expect(answered.role).toBe('quotes');
     const quote = answered.calls.find(({ name }) => name === 'createQuote');
     expect(quote?.input.customerId).toBe(joao.id);
-    expect(totalOf(quote)).toBe(145000);
+    // The price can come from a PriceItem the Assistant saved, so the total is the Quote's, not the call's.
+    const [saved] = await db.select().from(quotes).where(eq(quotes.customerId, joao.id));
+    expect(saved?.totalCents).toBe(145000);
   });
 });

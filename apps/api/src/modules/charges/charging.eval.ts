@@ -71,7 +71,7 @@ describe('the billing Assistant', () => {
     expect(turn.calls).not.toContainEqual(called('sendCharge'));
   });
 
-  test('a service that was never recorded asks for Registrar serviço instead of inventing a Charge', async () => {
+  test('a service that was never recorded asks for Contar o que fiz instead of inventing a Charge', async () => {
     const assistant = await scriptedAssistant('billing', pixAccount);
     await customerOf(assistant, 'Marta Ribeiro');
 
@@ -79,7 +79,7 @@ describe('the billing Assistant', () => {
 
     expect(turn.calls).not.toContainEqual(called('createCharge'));
     expect(turn.calls).not.toContainEqual(called('sendCharge'));
-    expect(turn.reply).toMatch(/registrar servi[çc]o/i);
+    expect(turn.reply).toMatch(/contar o que fiz/i);
   });
 
   test('a transcribed audio about "a dona Cida da limpeza" charges her service', async () => {

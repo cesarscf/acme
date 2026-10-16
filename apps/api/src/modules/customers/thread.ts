@@ -10,7 +10,7 @@ import { facts, hasEnded, type JobDetail, jobStatus, jobSteps, listJobs, type Pi
 import { daysAgo, formatSlot, localTime, shortDate, shortDay } from '../time/time';
 import { freeSlots } from '../visits/free-slots';
 import { readMessage } from '../whatsapp/service';
-import { type Customer, findCustomer, formatPhoneNumber } from './service';
+import { type Customer, findCustomer, firstName, formatPhoneNumber } from './service';
 
 const paymentMethodLabels = { pix: 'Pix', cash: 'Dinheiro' } as const;
 
@@ -82,7 +82,7 @@ export async function getCustomerThread(professionalId: string, customerId: stri
   items.push(...whatsappItems(customer, messages, details, current));
   const scheduling = team.find(({ role }) => role === 'scheduling');
   if (current?.job.status === 'open' && scheduling) {
-    const question = await executionQuestion(current, customer.name, speaker(scheduling), timeZone, now);
+    const question = await executionQuestion(current, customer.name, speaker(scheduling), { timeZone, now });
     if (question) items.push(question);
   }
   items.push(...(await teamItems(professionalId, customer.id, team, details, current)));
@@ -109,39 +109,46 @@ export async function getCustomerThread(professionalId: string, customerId: stri
 
 // The Job's next steps for where it stands, each done by the Assistant of its Role, as in the prototype.
 function jobActions(detail: JobDetail, customerName: string, team: Team, messages: WhatsappMessage[]): Action[] {
+  return stepActions(detail, customerName, messages).filter(
+    ({ role }) => role === null || team.some((assistant) => assistant.role === role),
+  );
+}
+
+function stepActions(detail: JobDetail, customerName: string, messages: WhatsappMessage[]): Action[] {
   const { quote, sentPix, service, executionBooked, recorded } = facts(detail);
   const sends = (originId: string) =>
     messages.filter((message) => message.direction === 'outbound' && message.originId === originId).length;
   const lastVisit = detail.visits.findLast(({ status }) => status !== 'cancelled');
-  const actions: Action[] = [];
   if (service) {
-    if (!sentPix) actions.push({ key: 'charge', label: 'Cobrar no Pix', role: 'billing', done: false });
-    else if (sentPix.status !== 'paid') {
+    if (sentPix && sentPix.status !== 'paid') {
       // The Customer already got it again (from here or from the reminder Routine).
-      actions.push({ key: 'resend_charge', label: 'Reenviar o Pix', role: 'billing', done: sends(sentPix.id) > 1 });
+      return [{ key: 'resend_charge', label: 'Reenviar o Pix', role: 'billing', done: sends(sentPix.id) > 1 }];
     }
-    if (!sentPix) {
-      const returnBooked = detail.visits.some(
-        ({ status, createdAt }) => status !== 'cancelled' && createdAt > service.createdAt,
-      );
-      actions.push({ key: 'return_visit', label: 'Agendar o retorno', role: 'scheduling', done: returnBooked });
-    }
-  } else if (quote?.status === 'approved' && !executionBooked) {
-    // The scheduling Assistant's question about booking the execution is the next step.
-  } else if (quote?.status === 'sent') {
-    const reminded = !!quote.followedUpAt || sends(quote.id) > 1;
-    const label = `Lembrar o ${customerName.split(' ')[0]}`;
-    actions.push({ key: 'remind_quote', label, role: 'quotes', done: reminded });
-  } else if (lastVisit && (!recorded || executionBooked)) {
-    actions.push({ key: 'record', label: 'Contar como foi', role: null, visitId: lastVisit.id, done: false });
-    if (!quote && !recorded) actions.push({ key: 'quote', label: 'Mandar orçamento', role: 'quotes', done: false });
-    if (lastVisit.status !== 'confirmed') {
-      const asked = lastVisit.confirmationRequestedFor?.getTime() === lastVisit.scheduledAt.getTime();
-      actions.push({ key: 'confirm', label: 'Pedir confirmação', role: 'scheduling', done: asked });
-    }
-    actions.push({ key: 'reschedule', label: 'Remarcar', role: 'scheduling', done: false });
+    const returnBooked = detail.visits.some(
+      ({ status, createdAt }) => status !== 'cancelled' && createdAt > service.createdAt,
+    );
+    return [
+      { key: 'charge', label: 'Cobrar no Pix', role: 'billing', done: false },
+      { key: 'return_visit', label: 'Agendar o retorno', role: 'scheduling', done: returnBooked },
+    ];
   }
-  return actions.filter(({ role }) => role === null || team.some((assistant) => assistant.role === role));
+  // An approved Quote waits on the scheduling Assistant's question about booking the execution.
+  if (quote?.status === 'approved' && !executionBooked) return [];
+  if (quote?.status === 'sent') {
+    const reminded = !!quote.followedUpAt || sends(quote.id) > 1;
+    return [{ key: 'remind_quote', label: `Lembrar o ${firstName(customerName)}`, role: 'quotes', done: reminded }];
+  }
+  if (!lastVisit || (recorded && !executionBooked)) return [];
+  const actions: Action[] = [
+    { key: 'record', label: 'Contar como foi', role: null, visitId: lastVisit.id, done: false },
+  ];
+  if (!quote && !recorded) actions.push({ key: 'quote', label: 'Mandar orçamento', role: 'quotes', done: false });
+  if (lastVisit.status !== 'confirmed') {
+    const asked = lastVisit.confirmationRequestedFor?.getTime() === lastVisit.scheduledAt.getTime();
+    actions.push({ key: 'confirm', label: 'Pedir confirmação', role: 'scheduling', done: asked });
+  }
+  actions.push({ key: 'reschedule', label: 'Remarcar', role: 'scheduling', done: false });
+  return actions;
 }
 
 // An approved Quote with nothing booked to carry it out: the scheduling Assistant offers the first free times.
@@ -149,17 +156,16 @@ async function executionQuestion(
   detail: JobDetail,
   customerName: string,
   assistant: ReturnType<typeof speaker>,
-  timeZone: string,
-  now: Date,
+  { timeZone, now }: { timeZone: string; now: Date },
 ): Promise<Item | undefined> {
   const { quote, executionBooked } = facts(detail);
   if (quote?.status !== 'approved' || executionBooked) return;
-  const slots = await freeSlots(detail.job.professionalId, timeZone, { now });
+  const slots = await freeSlots(detail.job.professionalId, timeZone, now);
   return {
     type: 'question',
     id: `execution_question:${quote.id}`,
     at: quote.updatedAt,
-    text: `Quer que eu marque a execução com o ${customerName.split(' ')[0]}? Estes horários estão livres:`,
+    text: `Quer que eu marque a execução com o ${firstName(customerName)}? Estes horários estão livres:`,
     assistant,
     role: 'scheduling',
     options: [
@@ -209,7 +215,7 @@ function jobItems(
   const { job } = detail;
   const items: Item[] = [];
   const billing = team.find(({ role }) => role === 'billing');
-  const first = customerName.split(' ')[0];
+  const first = firstName(customerName);
 
   for (const visit of detail.visits) {
     const status: Pill =
@@ -335,7 +341,7 @@ function whatsappItems(
   for (const { job, visits, quotes, charges } of details) {
     for (const { id } of [...visits, ...quotes, ...charges]) jobOf.set(id, job.id);
   }
-  const first = customer.name.split(' ')[0];
+  const first = firstName(customer.name);
   const items: Item[] = [];
   // Free text answers no message in particular: it belongs to whoever wrote to the number last.
   let lastIsOurs = false;

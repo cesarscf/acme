@@ -88,8 +88,8 @@ test('what the Professional writes stays in the thread, tied to the open Job, an
 
   const events = await drain(thread.messages.post({ text: 'O João disse que vai estar em casa' }, { headers }));
 
-  const lia = assistantWith('scheduling');
-  expect(events[0]).toEqual({ type: 'assistant', assistantId: lia.id });
+  const schedulingAssistant = assistantWith('scheduling');
+  expect(events[0]).toEqual({ type: 'assistant', assistantId: schedulingAssistant.id });
   expect(events.at(-1)).toEqual({ type: 'done' });
   const { data } = await thread.thread.get({ headers });
   expect(data!.working).toBe(false);
@@ -98,7 +98,12 @@ test('what the Professional writes stays in the thread, tied to the open Job, an
     expect.objectContaining({
       type: 'assistant',
       text: 'Anotado. O João tem visita marcada, quer que eu peça a confirmação?',
-      assistant: { id: lia.id, name: lia.name, title: lia.title, mascot: lia.mascot },
+      assistant: {
+        id: schedulingAssistant.id,
+        name: schedulingAssistant.name,
+        title: schedulingAssistant.title,
+        mascot: schedulingAssistant.mascot,
+      },
     }),
   ]);
   const [openJob] = await db
@@ -114,11 +119,11 @@ test('what the Professional writes stays in the thread, tied to the open Job, an
   expect(system).toContain('Ar da sala não gela');
   // Nothing reaches the Customer, and the Assistant's own chat only links to what it said there.
   expect(await listMessages({ phoneNumberId: platformNumber, waId: joao.phoneNumber })).toEqual([]);
-  const { data: chat } = await api.team({ id: lia.id }).messages.get({ headers });
+  const { data: chat } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
   expect(chat!.items.map(({ type }) => type)).toEqual(['activity']);
   const { data: team } = await api.team.get({ headers });
   // The Lia's preview shows her last activity, never what the Professional wrote in the thread.
-  expect(team!.find(({ id }) => id === lia.id)!.lastMessage).toMatchObject({
+  expect(team!.find(({ id }) => id === schedulingAssistant.id)!.lastMessage).toMatchObject({
     from: 'assistant',
     text: 'Anotado. O João tem visita marcada, quer que eu peça a confirmação?',
   });
@@ -154,8 +159,8 @@ test('"Manda um orçamento" goes to the quotes Assistant, whose card shows in th
     ),
   );
 
-  const olga = assistantWith('quotes');
-  expect(events[0]).toEqual({ type: 'assistant', assistantId: olga.id });
+  const quotesAssistant = assistantWith('quotes');
+  expect(events[0]).toEqual({ type: 'assistant', assistantId: quotesAssistant.id });
   expect(events.at(-1)).toEqual({ type: 'awaiting_confirmation' });
   // The router saw the team and the message; the quotes Assistant got the thread's history.
   expect(JSON.stringify(claude.requests.at(-3)!.messages)).toContain('Manda um orçamento');
@@ -175,10 +180,10 @@ test('"Manda um orçamento" goes to the quotes Assistant, whose card shows in th
   expect(after!.items.at(-1)).toMatchObject({
     type: 'assistant',
     text: 'Mandei. Te aviso quando ele responder.',
-    assistant: { id: olga.id },
+    assistant: { id: quotesAssistant.id },
   });
   // The Olga's own chat only links to what she said there.
-  const { data: chat } = await api.team({ id: olga.id }).messages.get({ headers });
+  const { data: chat } = await api.team({ id: quotesAssistant.id }).messages.get({ headers });
   expect(chat!.items.map(({ type }) => type)).toEqual(['activity']);
 });
 
@@ -317,11 +322,11 @@ test('an Assistant asks a teammate in the thread, and the teammate answers right
     thread.messages.post({ text: 'Orçamento aprovado, já vê um horário para a troca' }, { headers }),
   );
 
-  const olga = assistantWith('quotes');
-  const lia = assistantWith('scheduling');
+  const quotesAssistant = assistantWith('quotes');
+  const schedulingAssistant = assistantWith('scheduling');
   expect(events.filter(({ type }) => type === 'assistant')).toEqual([
-    { type: 'assistant', assistantId: olga.id },
-    { type: 'assistant', assistantId: lia.id },
+    { type: 'assistant', assistantId: quotesAssistant.id },
+    { type: 'assistant', assistantId: schedulingAssistant.id },
   ]);
   // Lia gets the request as a teammate's, with the thread's history in her prompt.
   const asked = claude.requests.at(-1)!;
@@ -333,22 +338,22 @@ test('an Assistant asks a teammate in the thread, and the teammate answers right
     expect.objectContaining({
       type: 'handoff',
       text: 'Lia, veja um horário para a troca do compressor.',
-      assistant: expect.objectContaining({ id: olga.id }),
-      to: expect.objectContaining({ id: lia.id }),
+      assistant: expect.objectContaining({ id: quotesAssistant.id }),
+      to: expect.objectContaining({ id: schedulingAssistant.id }),
     }),
     expect.objectContaining({ type: 'assistant', text: 'Pedi para a Lia ver o horário.' }),
     expect.objectContaining({
       type: 'assistant',
       text: 'Tenho segunda às 10h ou terça às 14h. Qual prefere?',
-      assistant: expect.objectContaining({ id: lia.id }),
+      assistant: expect.objectContaining({ id: schedulingAssistant.id }),
     }),
   ]);
 });
 
 test('an Assistant calling a teammate says whom it is calling, by the name the Professional gave', async () => {
   const { headers, assistantWith, thread } = await professionalWith(['scheduling', 'quotes']);
-  const lia = assistantWith('scheduling');
-  await api.team({ id: lia.id }).patch({ name: 'Carla' }, { headers });
+  const schedulingAssistant = assistantWith('scheduling');
+  await api.team({ id: schedulingAssistant.id }).patch({ name: 'Carla' }, { headers });
   claude.reply(
     routeTo('quotes'),
     { content: [call('askTeammate', { role: 'scheduling', message: 'Carla, veja um horário para a troca.' })] },

@@ -4,11 +4,12 @@ import { api } from '@/lib/api';
 import { queryClient } from '@/lib/query-client';
 import { idleTurn } from '@/lib/turn';
 import { readTurn } from '../conversation/read-turn';
+import type { Assistant } from '../team/use-team-query';
 import { customerKeys } from './keys';
 import type { CustomerThread } from './use-customer-thread-query';
 
 // An action above the field, or an answer to a question, names the Role that does it; free text goes to whoever fits.
-type Message = { text: string; role?: 'scheduling' | 'quotes' | 'billing' };
+type Message = { text: string; role?: Assistant['role'] };
 
 export function useSendCustomerMessageMutation(customerId: string) {
   const [turn, setTurn] = useState(idleTurn);

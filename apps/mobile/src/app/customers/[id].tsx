@@ -13,6 +13,7 @@ import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
 import { Mascot } from '@/components/mascot';
 import { OptionRow } from '@/components/option-row';
+import { QuestionCard } from '@/components/question-card';
 import { StatusPill } from '@/components/status-pill';
 import { TeamAction } from '@/components/team-action';
 import { useCustomerConfirmationMutation } from '@/hooks/data/customers/use-customer-confirmation-mutation';
@@ -25,6 +26,7 @@ import { useSendCustomerMessageMutation } from '@/hooks/data/customers/use-send-
 import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
 import { useTeamQuery } from '@/hooks/data/team/use-team-query';
 import { withoutOpeningMention } from '@/lib/mentions';
+import { firstName } from '@/lib/onboarding';
 
 type Pinned = NonNullable<CustomerThread['pinned']>;
 type Item<Type extends ThreadItem['type']> = Extract<ThreadItem, { type: Type }>;
@@ -32,8 +34,7 @@ type Speaker = Item<'assistant'>['assistant'];
 type Message = Parameters<ReturnType<typeof useSendCustomerMessageMutation>['mutate']>[0];
 
 export default function CustomerScreen() {
-  // focus: the item an Assistant's activity card points at, opened highlighted; job: its Job, whose card
-  // holds the item once the Job is concluded.
+  // focus: the item an activity card points at; job: its Job, whose card holds the item once concluded.
   const { id, focus, job } = useLocalSearchParams<{ id: string; focus?: string; job?: string }>();
   const thread = useCustomerThreadQuery(id);
   const { refetch } = thread;
@@ -247,7 +248,9 @@ function Thread({ thread, focus }: { thread: CustomerThread; focus?: string }) {
           value={text}
           onChangeText={setText}
           placeholder={
-            working ? 'Escreva uma correção ou o próximo pedido' : `Conte à equipe sobre ${customer.name.split(' ')[0]}`
+            working
+              ? 'Escreva uma correção ou o próximo pedido'
+              : `Conte à equipe sobre ${firstName(customer.name) ?? customer.name}`
           }
           canSend={canSend}
           onSend={() => canSend && sendMessage({ text: text.trim() })}
@@ -640,15 +643,7 @@ function Question({
   onOther: () => void;
 }) {
   return (
-    <View
-      className="overflow-hidden rounded-2xl border border-border bg-card pt-3.5"
-      style={{ borderCurve: 'continuous' }}
-    >
-      <View className="mb-1 flex-row items-center gap-1.5 px-3.5">
-        <Mascot mascot={item.assistant.mascot} size={18} />
-        <Text className="font-bold text-[12.5px] text-foreground">{item.assistant.name}</Text>
-      </View>
-      <Text className="px-3.5 pb-3 font-bold text-[15px] text-foreground leading-[21px]">{item.text}</Text>
+    <QuestionCard title={item.text} assistant={item.assistant}>
       {item.options.map((option, index) => (
         <OptionRow
           key={option.label}
@@ -660,7 +655,7 @@ function Question({
           onPress={() => (option.other ? onOther() : onAnswer(option.label))}
         />
       ))}
-    </View>
+    </QuestionCard>
   );
 }
 

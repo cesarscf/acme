@@ -2,8 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { ConversationItem } from '@/hooks/data/conversation/use-conversation-query';
-import { useAskConfirmationsMutation } from '@/hooks/data/customers/use-ask-confirmations-mutation';
-import { ConfirmationCard } from './confirmation-card';
+import { AskConfirmations } from './ask-confirmations';
 import { Icon } from './icons';
 import { StatusPill } from './status-pill';
 
@@ -11,7 +10,6 @@ type Agenda = Extract<ConversationItem, { type: 'agenda' }>;
 
 // The Visits of the period the Assistant read after @agenda; each row opens the Customer's thread.
 export function AgendaCard({ agenda }: { agenda: Agenda }) {
-  const ask = useAskConfirmationsMutation();
   const [asking, setAsking] = useState(false);
   const { confirmation } = agenda;
   return (
@@ -67,21 +65,7 @@ export function AgendaCard({ agenda }: { agenda: Agenda }) {
           </Pressable>
         </View>
       </View>
-      {confirmation && asking && (
-        <ConfirmationCard
-          confirmation={{ id: 'agenda', type: 'confirmation', status: 'pending', ...confirmation.card }}
-          disabled={ask.isPending}
-          decisionLine={false}
-          onDecide={(confirmed) =>
-            confirmed ? ask.mutate(confirmation.visitIds, { onSuccess: () => setAsking(false) }) : setAsking(false)
-          }
-        />
-      )}
-      {ask.isError && (
-        <Text selectable className="font-normal text-destructive text-sm">
-          Não consegui pedir agora. Tente de novo.
-        </Text>
-      )}
+      {confirmation && asking && <AskConfirmations confirmation={confirmation} onClose={() => setAsking(false)} />}
     </View>
   );
 }

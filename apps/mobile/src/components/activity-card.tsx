@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import { firstName } from '@/lib/onboarding';
 import { formatWhen } from '@/lib/when';
 import { CustomerAvatar } from './customer-avatar';
 import { Icon } from './icons';
@@ -18,7 +19,7 @@ export function ActivityCard({
   text: string;
   at: Date;
 }) {
-  const first = customer.name.split(' ')[0];
+  const first = firstName(customer.name) ?? customer.name;
   return (
     <Pressable
       className="flex-row items-center gap-2.5 rounded-2xl border border-border bg-card px-3 py-2.5 active:bg-secondary"

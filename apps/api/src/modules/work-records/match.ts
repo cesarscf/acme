@@ -10,6 +10,15 @@ import { listCustomerOptions } from './service';
 type Professional = { id: string; timezone: string };
 type Choice = Awaited<ReturnType<typeof listTellableVisits>>[number];
 
+const columns = {
+  id: visits.id,
+  jobId: visits.jobId,
+  scheduledAt: visits.scheduledAt,
+  createdAt: visits.createdAt,
+  title: jobs.title,
+  customerName: customers.name,
+};
+
 const system = `Um profissional que atende na casa ou na empresa dos clientes gravou um áudio contando o que fez numa visita, e o áudio foi transcrito. Diga de qual visita da lista é o relato: pelo cliente que ele citou, pelo serviço ou pelo horário. Responda com a referência (V1, V2…). Se ele fala de um cliente que não está na lista, ou não dá para saber, responda null.`;
 
 const schema = z.strictObject({ visit: z.string().nullable() });
@@ -19,14 +28,6 @@ async function listTellableVisits({ id: professionalId, timezone }: Professional
   const today = localDate(new Date(), timezone);
   const startOfToday = toInstant(today, '00:00', timezone);
   const untold = notExists(db.select().from(workRecords).where(eq(workRecords.visitId, visits.id)));
-  const columns = {
-    id: visits.id,
-    jobId: visits.jobId,
-    scheduledAt: visits.scheduledAt,
-    createdAt: visits.createdAt,
-    title: jobs.title,
-    customerName: customers.name,
-  };
   const open = and(
     eq(visits.professionalId, professionalId),
     ne(visits.status, 'cancelled'),
@@ -106,14 +107,7 @@ export async function matchVisit(
   let suggested: Choice | undefined;
   if (visitId) {
     [suggested] = await db
-      .select({
-        id: visits.id,
-        jobId: visits.jobId,
-        scheduledAt: visits.scheduledAt,
-        createdAt: visits.createdAt,
-        title: jobs.title,
-        customerName: customers.name,
-      })
+      .select(columns)
       .from(visits)
       .innerJoin(jobs, eq(jobs.id, visits.jobId))
       .innerJoin(customers, eq(customers.id, visits.customerId))

@@ -16,6 +16,7 @@ import { ProfessionalBubble, Reply } from '@/components/chat-messages';
 import { Composer } from '@/components/composer';
 import { CustomerQuestion } from '@/components/customer-question';
 import { OptionRow } from '@/components/option-row';
+import { QuestionCard } from '@/components/question-card';
 import { useCreateWorkRecordMutation } from '@/hooks/data/work-records/use-create-work-record-mutation';
 import { useMatchVisitMutation, type VisitMatch } from '@/hooks/data/work-records/use-match-visit-mutation';
 import { useTranscriptionMutation } from '@/hooks/data/work-records/use-transcription-mutation';
@@ -217,16 +218,10 @@ function VisitQuestion({
   const letters = 'ABCDEFGH';
   const offset = suggested ? 1 : 0;
   return (
-    <View
-      className="overflow-hidden rounded-2xl border border-border bg-card pt-3.5"
-      style={{ borderCurve: 'continuous' }}
+    <QuestionCard
+      title={suggested ? suggested.question : 'De qual visita é o que você contou?'}
+      detail={suggested?.detail}
     >
-      <View className="px-3.5 pb-3">
-        <Text className="font-bold text-[15px] text-foreground leading-[21px]">
-          {suggested ? suggested.question : 'De qual visita é o que você contou?'}
-        </Text>
-        {suggested && <Text className="mt-0.5 font-normal text-[13px] text-muted-foreground">{suggested.detail}</Text>}
-      </View>
       {suggested && (
         <OptionRow letter="A" label="Sim, é essa" strong disabled={false} onPress={() => onPick(suggested.visitId)} />
       )}
@@ -247,7 +242,7 @@ function VisitQuestion({
         disabled={false}
         onPress={onOtherCustomer}
       />
-    </View>
+    </QuestionCard>
   );
 }
 
@@ -256,8 +251,7 @@ function openThread(customerId: string) {
   router.dismissTo({ pathname: '/customers/[id]', params: { id: customerId } });
 }
 
-// "De qual cliente é este serviço?": one of the likely Customers, or a new one's name and WhatsApp written below.
-// Nothing is saved until the Customer is known, so leaving here leaves nothing behind.
+// "De qual cliente é este serviço?": nothing is saved until the Customer is known, so leaving saves nothing.
 function CustomerStep({
   transcript,
   lines,

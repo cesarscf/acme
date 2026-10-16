@@ -5,7 +5,6 @@ import { formatMoney } from '../briefing/scripts';
 import type { Assistant } from '../conversations/service';
 import { type AssistantTool, confirmed, strict } from '../conversations/tools';
 import { formatLocalDateTime } from '../time/time';
-import { addMessage } from '../work-records/service';
 import {
   type ChargeWithCustomer,
   chargeCard,
@@ -83,33 +82,6 @@ export function chargeTools({ professional }: Assistant): AssistantTool[] {
               throw new ToolError('Esse serviço já foi pago.');
             }
             return `Cobrança montada, ainda não enviada: ${JSON.stringify(toResult(created.charge))}`;
-          },
-        }),
-      ),
-    },
-    {
-      status: 'Corrigindo o registro',
-      tool: strict(
-        betaZodTool({
-          name: 'updateWorkRecord',
-          description:
-            'Completa ou corrige um serviço registrado (ou uma visita registrada, sem valor) com o que o profissional disse: o valor, a forma de pagamento (Pix ou dinheiro, e se já recebeu), o que foi feito, o material. O registro é relido inteiro com a correção; o cliente não muda. Use quando ele contar o valor de uma visita registrada ou corrigir um registro.',
-          inputSchema: z.strictObject({
-            workRecordId: z.string().describe('id do registro, do histórico ou de listCharges.'),
-            correction: z
-              .string()
-              .describe('O que o profissional disse, com as palavras dele. Ex.: "Ficou 350 no Pix".'),
-          }),
-          run: async ({ workRecordId, correction }) => {
-            const updated = await addMessage(professional.id, workRecordId, correction);
-            if (!updated) throw new ToolError(`Registro ${workRecordId} não encontrado.`);
-            const { title, description, amountCents, paymentMethod, paid } = updated;
-            return `Registro atualizado: ${JSON.stringify({
-              service: description ?? title,
-              amount: amountCents && formatMoney(amountCents),
-              paymentMethod,
-              paid,
-            })}`;
           },
         }),
       ),

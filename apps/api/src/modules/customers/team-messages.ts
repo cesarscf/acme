@@ -67,7 +67,14 @@ export async function findTeamAssistant(professionalId: string, role: Assistant[
   return found && findAssistant(professionalId, found.id);
 }
 
-export async function chooseAssistant(professionalId: string, thread: CustomerThread, text: string) {
+// An action names the Role that answers; free text goes to whoever the router picks.
+export async function chooseAssistant(
+  professionalId: string,
+  thread: CustomerThread,
+  text: string,
+  named?: Assistant['role'],
+) {
+  if (named) return findTeamAssistant(professionalId, named);
   const team = await listTeam(professionalId);
   if (!team.length) return undefined;
   const lastSpeaker = thread.items.findLast((item) => item.type === 'assistant')?.assistant.id;

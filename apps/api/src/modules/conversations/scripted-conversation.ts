@@ -5,7 +5,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { asc, eq } from 'drizzle-orm';
 import { signInNewProfessional } from '../auth/test-auth';
 import { createCustomer } from '../customers/service';
-import { chooseAssistant, findTeamAssistant, inCustomerThread, runTeam } from '../customers/team-messages';
+import { chooseAssistant, inCustomerThread, runTeam } from '../customers/team-messages';
 import { getCustomerThread } from '../customers/thread';
 import type { AssistantRole } from '../team/catalog';
 import { type Assistant, findAssistant } from './service';
@@ -52,13 +52,10 @@ export function say(assistant: Assistant, text: string) {
   return turn(assistant, (emit) => sendText(assistant, text, emit));
 }
 
-// The Professional writes in the Customer's thread; the team picks who answers, unless an action names the Role.
-// role is who the message went to; calls and replies cover every teammate that answered after them.
+// The Professional writes in the Customer's thread; calls and replies cover every teammate who answered.
 export async function sayInThread(professionalId: string, customerId: string, text: string, to?: AssistantRole) {
   const thread = (await getCustomerThread(professionalId, customerId))!;
-  const chosen = to
-    ? (await findTeamAssistant(professionalId, to))!
-    : (await chooseAssistant(professionalId, thread, text))!;
+  const chosen = (await chooseAssistant(professionalId, thread, text, to))!;
   const first = await inCustomerThread(chosen, thread);
   const before = (await threadMessagesOf(customerId)).length;
   const end = await runTeam(

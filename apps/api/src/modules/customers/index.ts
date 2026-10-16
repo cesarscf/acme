@@ -35,9 +35,7 @@ export const customers = new Elysia()
       if (!claim) throw status(409, 'The team is working');
       let turn: AsyncGenerator<TurnEvent> | undefined;
       try {
-        const chosen = role
-          ? await findTeamAssistant(professional.id, role)
-          : await chooseAssistant(professional.id, thread, text);
+        const chosen = await chooseAssistant(professional.id, thread, text, role);
         if (!chosen) throw status(409, 'No Assistant on the team');
         const assistant = await inCustomerThread(chosen, thread);
         turn = await startTurn(

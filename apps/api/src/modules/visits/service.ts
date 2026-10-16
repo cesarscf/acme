@@ -6,6 +6,7 @@ import { formatLocalDateTime, nextDay, toInstant } from '../time/time';
 import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 
 type VisitTiming = { scheduledAt: Date; durationMinutes: number };
+type VisitStatus = (typeof visits.$inferSelect)['status'];
 export type VisitWithCustomer = Awaited<ReturnType<typeof selectVisits>>[number];
 
 const visitConfirmationTemplate = defineTemplate({
@@ -142,6 +143,16 @@ async function sendConfirmationTemplate(visit: VisitWithCustomer, professional: 
   });
 }
 
+// Asking to confirm only makes sense for a booked Visit still to start.
+export function canAskToConfirm(visit: { status: VisitStatus; scheduledAt: Date }, now = new Date()) {
+  return visit.status === 'scheduled' && visit.scheduledAt > now;
+}
+
+// The first of each Customer's Visits, in the order given: one message per Customer.
+export function firstOfEachCustomer<Visit extends { customer: { id: string } }>(ordered: Visit[]) {
+  return [...new Map(ordered.toReversed().map((visit) => [visit.customer.id, visit])).values()].reverse();
+}
+
 // "Pedir confirmação" in Hoje or on the Agenda card: each listed Customer gets one message, about their first Visit.
 export async function requestVisitConfirmations(professionalId: string, visitIds: string[]) {
   const [professional] = await db
@@ -150,8 +161,8 @@ export async function requestVisitConfirmations(professionalId: string, visitIds
     .where(eq(professionals.id, professionalId));
   const listed = (
     await selectVisits(and(eq(visits.professionalId, professionalId), inArray(visits.id, visitIds)))
-  ).filter(({ status, scheduledAt }) => status === 'scheduled' && scheduledAt > new Date());
-  const firstOfEach = [...new Map(listed.toReversed().map((visit) => [visit.customer.id, visit])).values()].reverse();
+  ).filter((visit) => canAskToConfirm(visit));
+  const firstOfEach = firstOfEachCustomer(listed);
   for (const visit of firstOfEach) await sendVisitConfirmation(visit, professional!);
   if (firstOfEach.length) {
     const names = firstOfEach.map(({ customer }) => customer.name);

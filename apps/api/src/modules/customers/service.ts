@@ -9,6 +9,11 @@ export function toPhoneNumber(typed: string) {
   if (national.length === 10 || national.length === 11) return `55${national}`;
 }
 
+// "João" for "João Pereira", as the Assistants call the Customer in the app.
+export function firstName(name: string) {
+  return name.trim().split(/\s+/)[0]!;
+}
+
 export function formatPhoneNumber(phoneNumber: string) {
   const match = /^55(\d{2})(\d{4,5})(\d{4})$/.exec(phoneNumber);
   return match ? `(${match[1]}) ${match[2]}-${match[3]}` : phoneNumber;

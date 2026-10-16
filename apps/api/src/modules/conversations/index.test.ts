@@ -141,23 +141,23 @@ test('while the Assistant works, the app hears what it is doing, one status per 
 
 test('a turn another API process is running for the Assistant holds it until it expires', async () => {
   const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
-  const lia = api.team({ id: schedulingAssistant.id });
+  const chat = api.team({ id: schedulingAssistant.id });
   await db
     .insert(runningTurns)
     .values({ assistantId: schedulingAssistant.id, expiresAt: new Date(Date.now() + 60_000) });
 
-  const held = await lia.messages.post({ text: 'Oi' }, { headers });
+  const held = await chat.messages.post({ text: 'Oi' }, { headers });
   expect(held.status).toBe(409);
-  expect((await lia.messages.get({ headers })).data!.working).toBe(true);
+  expect((await chat.messages.get({ headers })).data!.working).toBe(true);
 
   await db
     .update(runningTurns)
     .set({ expiresAt: new Date(Date.now() - 1000) })
     .where(eq(runningTurns.assistantId, schedulingAssistant.id));
   claude.reply({ content: [{ type: 'text', text: 'Oi! Quer marcar uma visita?' }] });
-  const events = await drain(lia.messages.post({ text: 'Oi' }, { headers }));
+  const events = await drain(chat.messages.post({ text: 'Oi' }, { headers }));
   expect(events.at(-1)).toEqual({ type: 'done' });
-  expect((await lia.messages.get({ headers })).data!.working).toBe(false);
+  expect((await chat.messages.get({ headers })).data!.working).toBe(false);
 });
 
 test('Claude runs Haiku 5.5 by default, without the server-side fallback it does not have', async () => {

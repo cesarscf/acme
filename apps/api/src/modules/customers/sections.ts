@@ -13,6 +13,7 @@ import {
 } from '../jobs/progress';
 import { daysAgo, localTime, shortDay } from '../time/time';
 import { confirmationsCard } from '../visits/confirmation-card';
+import { canAskToConfirm } from '../visits/service';
 import { findCustomers, formatPhoneNumber } from './service';
 
 type Row = { id: string; name: string; when: string; detail: string; status: Pill | null };
@@ -46,8 +47,7 @@ export async function listCustomerSections(professionalId: string, query = '', n
     const toAsk = live.find(
       ({ detail, visit }) =>
         daysAgo(visit.scheduledAt, timeZone, now) === 0 &&
-        visit.status === 'scheduled' &&
-        visit.scheduledAt > now &&
+        canAskToConfirm(visit, now) &&
         !detail.workRecords.some(({ visitId }) => visitId === visit.id),
     );
     if (toAsk) unconfirmed.push({ visitId: toAsk.visit.id, name: customer.name, scheduledAt: toAsk.visit.scheduledAt });

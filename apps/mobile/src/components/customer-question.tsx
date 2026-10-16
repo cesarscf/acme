@@ -1,5 +1,5 @@
-import { Text, View } from 'react-native';
 import { OptionRow } from './option-row';
+import { QuestionCard } from './question-card';
 
 const letters = 'ABCDEFGH';
 
@@ -15,13 +15,7 @@ export function CustomerQuestion({
   onOther: () => void;
 }) {
   return (
-    <View
-      className="overflow-hidden rounded-2xl border border-border bg-card pt-3.5"
-      style={{ borderCurve: 'continuous' }}
-    >
-      <Text className="px-3.5 pb-3 font-bold text-[15px] text-foreground leading-[21px]">
-        De qual cliente é este serviço?
-      </Text>
+    <QuestionCard title="De qual cliente é este serviço?">
       {options.map((option, index) => (
         <OptionRow
           key={option.id}
@@ -38,6 +32,6 @@ export function CustomerQuestion({
         disabled={disabled}
         onPress={onOther}
       />
-    </View>
+    </QuestionCard>
   );
 }

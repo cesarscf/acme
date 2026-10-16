@@ -24,12 +24,12 @@ function nextMonday() {
   return day;
 }
 
-async function liasDay() {
+async function schedulingDay() {
   const { professional, headers } = await signInNewProfessional();
   await api.me['ai-consent'].post(undefined, { headers });
   await api.team.post({ roles: ['scheduling'] }, { headers });
   const { data: team } = await api.team.get({ headers });
-  const lia = team![0]!;
+  const schedulingAssistant = team![0]!;
   const customer = async (name: string) =>
     (
       await createCustomer(professional.id, {
@@ -49,16 +49,16 @@ async function liasDay() {
       { content: [{ type: 'tool_use', id: `toolu_${randomUUID()}`, name: 'listVisits', input: { from, to } }] },
       { content: [{ type: 'text', text: 'Aqui está.' }] },
     );
-    const { data } = await api.team({ id: lia.id }).messages.post({ text }, { headers });
+    const { data } = await api.team({ id: schedulingAssistant.id }).messages.post({ text }, { headers });
     for await (const _ of data!);
-    const { data: chat } = await api.team({ id: lia.id }).messages.get({ headers });
+    const { data: chat } = await api.team({ id: schedulingAssistant.id }).messages.get({ headers });
     return chat!.items.findLast((item) => item.type === 'agenda');
   };
   return { professional, headers, customer, visit, ask };
 }
 
 test('"@agenda da semana que vem" shows the Agenda card of the period Claude read, with day and time on each row', async () => {
-  const { customer, visit, ask } = await liasDay();
+  const { customer, visit, ask } = await schedulingDay();
   const monday = nextMonday();
   const friday = addDays(monday, 4);
   const joao = await customer('João Pereira');
@@ -98,7 +98,7 @@ test('"@agenda da semana que vem" shows the Agenda card of the period Claude rea
 });
 
 test('"@agenda de amanhã" shows only the hour on each row, and no "Pedir confirmação" once everyone confirmed', async () => {
-  const { customer, visit, ask } = await liasDay();
+  const { customer, visit, ask } = await schedulingDay();
   const tomorrow = addDays(today(), 1);
   const joao = await customer('João Pereira');
   const joaos = await visit(joao.id, tomorrow, '09:00', 'Ar da sala não gela');
@@ -114,7 +114,7 @@ test('"@agenda de amanhã" shows only the hour on each row, and no "Pedir confir
 });
 
 test('an empty day says so, and listing Visits without @agenda shows no card', async () => {
-  const { ask } = await liasDay();
+  const { ask } = await schedulingDay();
 
   const empty = await ask('@agenda', today(), today());
   const plain = await ask('Tenho algo amanhã?', addDays(today(), 1), addDays(today(), 1));

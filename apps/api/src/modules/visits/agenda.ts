@@ -1,9 +1,9 @@
 import { db, workRecords } from '@acme/db';
 import { inArray } from 'drizzle-orm';
 import { jobStatus, listJobs } from '../jobs/progress';
-import { addDays, dayMonth, localDate, localTime, shortWeekday } from '../time/time';
+import { addDays, dayMonth, localDate, localTime, shortWeekday, weekdayOf } from '../time/time';
 import { confirmationsCard } from './confirmation-card';
-import { listVisits } from './service';
+import { canAskToConfirm, firstOfEachCustomer, listVisits } from './service';
 
 // The "Agenda" card for the period Claude read after @agenda, with the Visits as they are now.
 export async function agendaCard(
@@ -44,12 +44,10 @@ export async function agendaCard(
       status: jobStatus(detail, visit, now),
     };
   });
-  // Only a Visit still to start can be asked about, as requestVisitConfirmations does.
   const toAsk = found.filter(
-    (visit) =>
-      visit.status === 'scheduled' && visit.scheduledAt > now && !told.some(({ visitId }) => visitId === visit.id),
+    (visit) => canAskToConfirm(visit, now) && !told.some(({ visitId }) => visitId === visit.id),
   );
-  const firstOfEach = [...new Map(toAsk.toReversed().map((visit) => [visit.customer.id, visit])).values()].reverse();
+  const firstOfEach = firstOfEachCustomer(toAsk);
   const count = found.length === 0 ? 'Nenhuma visita' : found.length === 1 ? '1 visita' : `${found.length} visitas`;
   return {
     title: 'Agenda',
@@ -73,13 +71,12 @@ function period(from: string, to: string, today: string) {
   const [, fromMonth] = from.split('-');
   const [, toMonth] = to.split('-');
   const range =
-    fromMonth === toMonth ? `${dayMonth(from).split(' ')[0]} a ${dayMonth(to)}` : `${dayMonth(from)} a ${dayMonth(to)}`;
+    fromMonth === toMonth ? `${Number(from.slice(8))} a ${dayMonth(to)}` : `${dayMonth(from)} a ${dayMonth(to)}`;
   const thisMonday = mondayOf(today);
   const week = { [thisMonday]: 'Esta semana', [addDays(thisMonday, 7)]: 'Semana que vem' }[from];
   return week ? `${week}, ${range}` : range;
 }
 
 function mondayOf(date: string) {
-  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
-  return addDays(date, -((weekday + 6) % 7));
+  return addDays(date, -((weekdayOf(date) + 6) % 7));
 }

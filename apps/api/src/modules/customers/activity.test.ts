@@ -31,17 +31,17 @@ afterAll(async () => {
   await emulator.stop();
 });
 
-async function liaAndJoao() {
+async function schedulingAndJoao() {
   const { professional, headers } = await signInNewProfessional();
   await api.me['ai-consent'].post(undefined, { headers });
   await api.team.post({ roles: ['scheduling'] }, { headers });
   const { data: team } = await api.team.get({ headers });
-  const lia = team![0]!;
+  const schedulingAssistant = team![0]!;
   const phoneNumber = `55119${String(randomInt(1e8)).padStart(8, '0')}`;
   const { customer: joao } = await createCustomer(professional.id, { name: 'João Pereira', phoneNumber });
-  const chat = async () => (await api.team({ id: lia.id }).messages.get({ headers })).data!.items;
+  const chat = async () => (await api.team({ id: schedulingAssistant.id }).messages.get({ headers })).data!.items;
   const thread = async () => (await api.customers({ id: joao.id }).thread.get({ headers })).data!.items;
-  return { professional, headers, lia, joao, chat, thread };
+  return { professional, headers, schedulingAssistant, joao, chat, thread };
 }
 
 async function drain(request: Promise<{ data: AsyncIterable<unknown> | null; error: unknown }>) {
@@ -50,18 +50,18 @@ async function drain(request: Promise<{ data: AsyncIterable<unknown> | null; err
   for await (const _ of data!);
 }
 
-const liaAsks =
+const schedulingAsks =
   'Terminou a visita do João? Me conte como foi: o que você viu, o que fez e o que vem agora. Se precisar de orçamento, eu chamo a Olga.';
 
 test("the Lia's message in João's thread shows in her chat as an activity card pointing at that message", async () => {
-  const { headers, lia, joao, chat, thread } = await liaAndJoao();
-  claude.reply({ content: [{ type: 'text', text: liaAsks }] });
+  const { headers, schedulingAssistant, joao, chat, thread } = await schedulingAndJoao();
+  claude.reply({ content: [{ type: 'text', text: schedulingAsks }] });
 
   await drain(
     api.customers({ id: joao.id }).messages.post({ text: 'Como ficou a visita?', role: 'scheduling' }, { headers }),
   );
 
-  const message = (await thread()).find((item) => item.type === 'assistant' && item.text === liaAsks)!;
+  const message = (await thread()).find((item) => item.type === 'assistant' && item.text === schedulingAsks)!;
   expect(await chat()).toEqual([
     {
       id: `activity:${message.id}`,
@@ -69,17 +69,20 @@ test("the Lia's message in João's thread shows in her chat as an activity card 
       customer: { id: joao.id, name: 'João Pereira' },
       itemId: message.id,
       jobId: null,
-      text: liaAsks,
+      text: schedulingAsks,
       at: expect.any(Date),
     },
   ]);
   // What the Professional wrote in the thread is not the Lia's activity.
   const { data: team } = await api.team.get({ headers });
-  expect(team!.find(({ id }) => id === lia.id)!.lastMessage).toMatchObject({ from: 'assistant', text: liaAsks });
+  expect(team!.find(({ id }) => id === schedulingAssistant.id)!.lastMessage).toMatchObject({
+    from: 'assistant',
+    text: schedulingAsks,
+  });
 });
 
 test("a Routine's notice about João shows in his thread and as an activity card in the Lia's chat", async () => {
-  const { professional, joao, chat, thread } = await liaAndJoao();
+  const { professional, joao, chat, thread } = await schedulingAndJoao();
   const tomorrow = addDays(localDate(new Date(), timeZone), 1);
   await createVisit(professional.id, joao.id, {
     scheduledAt: new Date(`${tomorrow}T12:00:00Z`),
@@ -101,9 +104,9 @@ test("a Routine's notice about João shows in his thread and as an activity card
 });
 
 test("a message of a Job concluded since links to that Job's card in the thread", async () => {
-  const { professional, headers, joao, chat, thread } = await liaAndJoao();
+  const { professional, headers, joao, chat, thread } = await schedulingAndJoao();
   const jobId = await openJob(professional.id, joao.id, 'Ar da sala não gela');
-  claude.reply({ content: [{ type: 'text', text: liaAsks }] });
+  claude.reply({ content: [{ type: 'text', text: schedulingAsks }] });
   await drain(
     api.customers({ id: joao.id }).messages.post({ text: 'Como ficou a visita?', role: 'scheduling' }, { headers }),
   );

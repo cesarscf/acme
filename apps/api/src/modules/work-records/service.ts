@@ -85,8 +85,7 @@ async function extract(professionalId: string, transcript: string) {
   );
 }
 
-// Saved only once the Professional said where it goes: a Visit, a Customer, or a new Customer's name and WhatsApp.
-// The Visit comes only from that choice, never from the audio, so a rejected Visit is not used.
+// Saved only once the Professional picked a Visit or a Customer; the Visit never comes from the audio.
 export async function createWorkRecord(
   professionalId: string,
   transcript: string,
@@ -124,8 +123,7 @@ export async function createWorkRecord(
   return { workRecord: await viewWorkRecord(workRecord!) };
 }
 
-// A message completes or corrects the account: Claude reads it all again.
-// A WorkRecord with a Customer keeps it; without one, the message can name who it is.
+// A correction is read with the whole account again; a WorkRecord with a Customer keeps it.
 export async function addMessage(professionalId: string, id: string, text: string) {
   const current = await findWorkRecord(professionalId, id);
   if (!current) return;

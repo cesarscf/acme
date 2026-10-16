@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, or, sql } from 'dri
 import { formatMoney } from '../briefing/scripts';
 import { addNotice } from '../conversations/notices';
 import type { ConfirmationCard } from '../conversations/tools';
+import { firstName } from '../customers/service';
 import { concludeJob } from '../jobs/service';
 import { pixBrCode } from '../pix/br-code';
 import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
@@ -182,7 +183,7 @@ export function chargeCard({
   service: string;
   amountCents: number;
 }): ConfirmationCard {
-  const first = customerName.split(' ')[0]!;
+  const first = firstName(customerName);
   return {
     title: 'Para confirmar: cobrar no Pix',
     subtitle: customerName,

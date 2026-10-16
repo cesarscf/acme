@@ -41,7 +41,7 @@ When this file and a tool's docs disagree, this file wins.
 
 ## Styling
 
-Both UIs use Tailwind v4 with the **shadcn token names** (`background`, `foreground`, `card`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, plus their `-foreground` pairs), filled with the colours of the product design (`prototype/index.html`). Components use only these tokens (`bg-primary`, `text-muted-foreground`), never raw colours.
+Both UIs use Tailwind v4 with the **shadcn token names** (`background`, `foreground`, `card`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, plus their `-foreground` pairs), filled with the colours of the product design (`prototype/index.html`). The prototype's own colours that shadcn has no name for (the status pills `warning`, `info`, `orange`, `purple`, `pink`, `teal`, and `whatsapp`, `mention`, `highlight`) are tokens too, in the same file. Components use only these tokens (`bg-primary`, `text-muted-foreground`), never raw colours.
 
 - **`apps/meta-emulator`**: shadcn/ui components, added with the `shadcn` CLI.
 - **`apps/mobile`**: Uniwind (ADR 0002) with the same token names.

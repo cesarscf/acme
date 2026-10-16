@@ -37,15 +37,15 @@ async function professionalWithBilling() {
   await api.me['ai-consent'].post(undefined, { headers });
   await api.team.post({ roles: ['scheduling', 'billing'] }, { headers });
   const { data: team } = await api.team.get({ headers });
-  const tina = team!.find(({ role }) => role === 'billing')!;
-  const briefing = api.team({ id: tina.id }).briefing;
+  const billingAssistant = team!.find(({ role }) => role === 'billing')!;
+  const briefing = api.team({ id: billingAssistant.id }).briefing;
   await briefing.answers.post({ step: 'paymentMethods', option: 'pix_and_cash' }, { headers });
   await briefing.answers.post({ step: 'pixKey', text: 'carlos@example.com' }, { headers });
   await briefing.answers.post({ step: 'pixName', text: 'Carlos Souza' }, { headers });
   await briefing.answers.post({ step: 'pixCity', text: 'Campinas' }, { headers });
   const phoneNumber = `55119${String(randomInt(1e8)).padStart(8, '0')}`;
   const { customer: joao } = await createCustomer(professional.id, { name: 'João Pereira', phoneNumber });
-  return { professional, headers, joao, tina, thread: api.customers({ id: joao.id }) };
+  return { professional, headers, joao, billingAssistant, thread: api.customers({ id: joao.id }) };
 }
 
 type Professional = Awaited<ReturnType<typeof professionalWithBilling>>;
@@ -111,7 +111,7 @@ function idIn(result: string) {
 
 test('a service registered with an amount lands in the Customer thread, with the Tina offering "Cobrar no Pix"', async () => {
   const professional = await professionalWithBilling();
-  const { thread, tina } = professional;
+  const { thread, billingAssistant } = professional;
 
   const workRecord = await recordService(professional);
 
@@ -122,7 +122,7 @@ test('a service registered with an amount lands in the Customer thread, with the
   expect(data!.items[card + 1]).toMatchObject({
     type: 'assistant',
     text: 'Registrei o serviço do João. Escolha o que a equipe faz agora:',
-    assistant: { id: tina.id },
+    assistant: { id: billingAssistant.id },
   });
   expect(data!.actions).toContainEqual({ key: 'charge', label: 'Cobrar no Pix', role: 'billing', done: false });
 });
@@ -162,12 +162,12 @@ async function chargeSent(professional: Professional) {
 
 test('"Cobrar no Pix" goes to the Tina without the router, and Confirmar sends the Pix shown with its QR Code', async () => {
   const professional = await professionalWithBilling();
-  const { thread, headers, tina } = professional;
+  const { thread, headers, billingAssistant } = professional;
 
   const { events, card, sent } = await chargeSent(professional);
 
   // The first request is the Tina's turn itself: no router picked who answers.
-  expect(events[0]).toEqual({ type: 'assistant', assistantId: tina.id });
+  expect(events[0]).toEqual({ type: 'assistant', assistantId: billingAssistant.id });
   expect(card).toMatchObject({ type: 'confirmation', title: 'Para confirmar: cobrar no Pix' });
   expect(sent).toMatchObject({ originType: 'charge' });
   const { data } = await thread.thread.get({ headers });
@@ -194,7 +194,7 @@ test('a Role the team does not have cannot be addressed', async () => {
 
 test('"Já paguei" makes the Tina ask in the thread whether the money arrived, and "Recebi" concludes the Job', async () => {
   const professional = await professionalWithBilling();
-  const { thread, headers, tina } = professional;
+  const { thread, headers, billingAssistant } = professional;
   const { sent } = await chargeSent(professional);
 
   await meta.emulator.messages({ id: sent.wamid }).click.post({ index: 0 });
@@ -205,7 +205,7 @@ test('"Já paguei" makes the Tina ask in the thread whether the money arrived, a
     id: `paid_question:${sent.originId}`,
     at: expect.any(Date),
     text: 'João disse que já pagou. O dinheiro caiu?',
-    assistant: expect.objectContaining({ id: tina.id }),
+    assistant: expect.objectContaining({ id: billingAssistant.id }),
     role: 'billing',
     options: [{ label: 'Recebi' }, { label: 'Não caiu' }],
   });

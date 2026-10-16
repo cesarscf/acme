@@ -36,19 +36,23 @@ export function localTime(instant: Date, timeZone: string) {
   return `${hour}:${minute}`;
 }
 
+// 0 for Sunday to 6 for Saturday, of a local date.
+export function weekdayOf(date: string) {
+  return new Date(`${date}T12:00:00Z`).getUTCDay();
+}
+
 // "Qua, 14 out", as the prototype names a day.
 export function shortDay(instant: Date, timeZone: string) {
-  const [year, month, day] = localDate(instant, timeZone).split('-').map(Number);
-  const weekday = new Date(Date.UTC(year!, month! - 1, day!)).getUTCDay();
-  return `${weekdays[weekday]}, ${String(day).padStart(2, '0')} ${months[month! - 1]}`;
+  const date = localDate(instant, timeZone);
+  const [, month, day] = date.split('-').map(Number);
+  return `${shortWeekday(date)}, ${String(day).padStart(2, '0')} ${months[month! - 1]}`;
 }
 
 // "Seg, 19/10, às 08:00", a time offered to the Professional.
 export function formatSlot(instant: Date, timeZone: string) {
-  const [year, month, day] = localDate(instant, timeZone).split('-').map(Number);
-  const weekday = new Date(Date.UTC(year!, month! - 1, day!)).getUTCDay();
-  const dayMonth = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
-  return `${weekdays[weekday]}, ${dayMonth}, às ${localTime(instant, timeZone)}`;
+  const date = localDate(instant, timeZone);
+  const [, month, day] = date.split('-');
+  return `${shortWeekday(date)}, ${day}/${month}, às ${localTime(instant, timeZone)}`;
 }
 
 // "19 out", a day of a period.
@@ -59,7 +63,7 @@ export function dayMonth(date: string) {
 
 // "Seg", the short weekday of a local date.
 export function shortWeekday(date: string) {
-  return weekdays[new Date(`${date}T12:00:00Z`).getUTCDay()]!;
+  return weekdays[weekdayOf(date)]!;
 }
 
 // "12 ABR", the date of an earlier Job.

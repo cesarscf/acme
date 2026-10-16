@@ -1,5 +1,5 @@
 import { assistantMessages, assistantNotices, assistants, db } from '@acme/db';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { type AnyColumn, and, asc, desc, eq, sql } from 'drizzle-orm';
 import { briefingScripts } from '../briefing/scripts';
 import { type AssistantRole, catalogEntry } from './catalog';
 
@@ -39,6 +39,7 @@ async function loadLastMessages(professionalId: string) {
       role: assistantMessages.role,
       content: assistantMessages.content,
       at: assistantMessages.createdAt,
+      micros: inMicroseconds(assistantMessages.createdAt),
     })
     .from(assistantMessages)
     .innerJoin(assistants, eq(assistants.id, assistantMessages.assistantId))
@@ -54,6 +55,7 @@ async function loadLastMessages(professionalId: string) {
       assistantId: assistantNotices.assistantId,
       text: assistantNotices.text,
       at: assistantNotices.createdAt,
+      micros: inMicroseconds(assistantNotices.createdAt),
     })
     .from(assistantNotices)
     .innerJoin(assistants, eq(assistants.id, assistantNotices.assistantId))
@@ -61,18 +63,27 @@ async function loadLastMessages(professionalId: string) {
     .orderBy(assistantNotices.assistantId, desc(assistantNotices.createdAt));
 
   const last = new Map<string, LastMessage>();
-  for (const { assistantId, role, content, at } of messages) {
+  const lastMicros = new Map<string, bigint>();
+  for (const { assistantId, role, content, at, micros } of messages) {
     const text = (content as { type: string; text?: string }[])
       .flatMap((block) => (block.type === 'text' && block.text ? [block.text] : []))
       .join(' ')
       .trim();
-    if (text) last.set(assistantId, { from: role === 'user' ? 'professional' : 'assistant', text, at });
+    if (!text) continue;
+    last.set(assistantId, { from: role === 'user' ? 'professional' : 'assistant', text, at });
+    lastMicros.set(assistantId, BigInt(micros));
   }
-  for (const { assistantId, text, at } of notices) {
-    const message = last.get(assistantId);
-    if (!message || message.at < at) last.set(assistantId, { from: 'notice', text, at });
+  for (const { assistantId, text, at, micros } of notices) {
+    const messageMicros = lastMicros.get(assistantId);
+    if (messageMicros === undefined || messageMicros < BigInt(micros))
+      last.set(assistantId, { from: 'notice', text, at });
   }
   return last;
+}
+
+// A JS Date keeps only milliseconds, so a message and a notice written in the same one would tie.
+function inMicroseconds(column: AnyColumn) {
+  return sql<string>`(extract(epoch from ${column}) * 1000000)::bigint`;
 }
 export async function chooseRoles(professionalId: string, roles: AssistantRole[]) {
   await db

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { assistantMessages, assistantNotices, assistants, db } from '@acme/db';
 import { treaty } from '@elysia/eden';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
 import { catalogEntry } from './catalog';
@@ -95,6 +95,28 @@ test('each Assistant comes with what was said last in its conversation', async (
     { from: 'assistant', text: 'Marquei às 9h.' },
     { from: 'notice', text: 'O João pagou.' },
   ]);
+});
+
+test('a notice written in the same millisecond as a message, but after it, is what was said last', async () => {
+  const { headers } = await signInNewProfessional();
+  await api.team.post({ roles: ['billing'] }, { headers });
+  const { data: team } = await api.team.get({ headers });
+  const billing = team![0]!;
+
+  await db.insert(assistantMessages).values({
+    assistantId: billing.id,
+    role: 'assistant',
+    content: [{ type: 'text', text: 'Cobrança enviada.' }],
+    createdAt: sql`'2026-10-16T12:00:00.000100Z'::timestamptz`,
+  });
+  await db.insert(assistantNotices).values({
+    assistantId: billing.id,
+    text: 'O João pagou.',
+    createdAt: sql`'2026-10-16T12:00:00.000200Z'::timestamptz`,
+  });
+
+  const { data } = await api.team.get({ headers });
+  expect(data?.[0]?.lastMessage).toMatchObject({ from: 'notice', text: 'O João pagou.' });
 });
 
 test('a coming soon Role cannot be chosen', async () => {

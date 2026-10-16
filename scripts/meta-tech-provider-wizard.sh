@@ -191,9 +191,34 @@ finish() {
 # Business verification takes up to 14 business days and App Review needs it approved,
 # so come back later with FROM=11 scripts/meta-tech-provider-wizard.sh to skip to App Review.
 
-ENV_FILE="${ENV_FILE:-.env.meta}"
+# The library already defaulted ENV_FILE to .env, which holds the Meta Emulator values.
+ENV_FILE=.env.meta
 TOTAL_STAGES=11
 FROM="${FROM:-1}"
+
+# ask_required KEY "Prompt" asks until a value is given: an empty ID would break every later stage.
+ask_required() {
+  local attempt
+  for attempt in 1 2 3; do
+    ask "$1" "$2"
+    [[ -n "${!1}" ]] && return
+    warn "Esse valor é obrigatório."
+  done
+  warn "Sem valor para $1. Rode de novo quando tiver: FROM=$_STAGE_INDEX scripts/meta-tech-provider-wizard.sh"
+  exit 1
+}
+
+# ask_secret_required KEY "Prompt" is ask_required with hidden input.
+ask_secret_required() {
+  local attempt
+  for attempt in 1 2 3; do
+    ask_secret "$1" "$2"
+    [[ -n "${!1}" ]] && return
+    warn "Esse valor é obrigatório."
+  done
+  warn "Sem valor para $1. Rode de novo quando tiver: FROM=$_STAGE_INDEX scripts/meta-tech-provider-wizard.sh"
+  exit 1
+}
 
 stage_prerequisites() {
   stage "Pré-requisitos"
@@ -214,9 +239,9 @@ stage_app() {
   step "Quando pedir, conecte o business portfolio da empresa."
   step "Em Use cases > Customize, abra 'Tech Provider onboarding' e siga o checklist."
   step "Em App settings > Basic, copie o App ID."
-  ask META_APP_ID "Cole o App ID:"
+  ask_required META_APP_ID "Cole o App ID:"
   step "Na mesma página, clique em 'Show' no App secret e copie."
-  ask_secret META_APP_SECRET "Cole o App secret:"
+  ask_secret_required META_APP_SECRET "Cole o App secret:"
   write_env META_APP_ID "$META_APP_ID"
   write_env META_APP_SECRET "$META_APP_SECRET"
   note "Ainda em Basic: preencha ícone, URL da política de privacidade e categoria. O App Review pede."
@@ -242,8 +267,8 @@ stage_phone_number() {
   step "Verifique o número pelo código recebido por SMS ou ligação."
   step "De volta ao API Setup, selecione o número em 'From' e copie o Phone number ID e o WhatsApp Business Account ID."
   warn "Não use o número de teste da Meta: ele não serve para clientes reais."
-  ask META_PLATFORM_PHONE_NUMBER_ID "Cole o Phone number ID:"
-  ask META_PLATFORM_WABA_ID "Cole o WhatsApp Business Account ID:"
+  ask_required META_PLATFORM_PHONE_NUMBER_ID "Cole o Phone number ID:"
+  ask_required META_PLATFORM_WABA_ID "Cole o WhatsApp Business Account ID:"
   write_env META_PLATFORM_PHONE_NUMBER_ID "$META_PLATFORM_PHONE_NUMBER_ID"
   write_env META_PLATFORM_WABA_ID "$META_PLATFORM_WABA_ID"
   pause
@@ -257,7 +282,7 @@ stage_system_user_token() {
   step "Em 'Assign assets', dê Full control no app e no WABA da plataforma."
   step "Clique em 'Generate token', escolha o app, expiração 'Never' e as permissões"
   step "  whatsapp_business_messaging e whatsapp_business_management. Copie o token."
-  ask_secret META_ACCESS_TOKEN "Cole o token:"
+  ask_secret_required META_ACCESS_TOKEN "Cole o token:"
   write_env META_ACCESS_TOKEN "$META_ACCESS_TOKEN"
   pause
 }
@@ -265,7 +290,7 @@ stage_system_user_token() {
 stage_register_number() {
   stage "Registrar o número na Cloud API"
   say "O registro ativa o número na Cloud API e define um PIN de verificação em duas etapas."
-  ask_secret REGISTER_PIN "Escolha um PIN de 6 dígitos (guarde num cofre de senhas):"
+  ask_secret_required REGISTER_PIN "Escolha um PIN de 6 dígitos (guarde num cofre de senhas):"
   if confirm "Registrar o número ${META_PLATFORM_PHONE_NUMBER_ID} agora?"; then
     curl -sS -X POST "https://graph.facebook.com/v24.0/${META_PLATFORM_PHONE_NUMBER_ID}/register" \
       -H "Authorization: Bearer ${META_ACCESS_TOKEN}" \

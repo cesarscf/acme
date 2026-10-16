@@ -114,6 +114,31 @@ test('the reply streams to the app and the conversation is kept', async () => {
   });
 });
 
+test('while the Assistant works, the app hears what it is doing, one status per tool it calls', async () => {
+  const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
+  claude.reply(
+    {
+      content: [
+        { type: 'tool_use', id: 'toolu_find', name: 'findCustomer', input: { query: 'João' } },
+        { type: 'tool_use', id: 'toolu_list', name: 'listVisits', input: { from: '2026-10-19', to: '2026-10-19' } },
+      ],
+    },
+    { content: [{ type: 'text', text: 'Não achei o João. Qual o WhatsApp dele?' }] },
+  );
+
+  const events = await drain(
+    api.team({ id: schedulingAssistant.id }).messages.post({ text: 'Marca o João amanhã às 10h' }, { headers }),
+  );
+
+  expect(events.filter(({ type }) => type === 'status')).toEqual([
+    { type: 'status', text: 'Procurando o cliente' },
+    { type: 'status', text: 'Olhando a agenda' },
+  ]);
+  expect(events.findIndex(({ type }) => type === 'status')).toBeLessThan(
+    events.findIndex(({ type }) => type === 'message'),
+  );
+});
+
 test('a turn another API process is running for the Assistant holds it until it expires', async () => {
   const { headers, schedulingAssistant } = await consentingProfessionalWithSchedulingAssistant();
   const lia = api.team({ id: schedulingAssistant.id });

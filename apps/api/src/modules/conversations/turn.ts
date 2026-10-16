@@ -22,6 +22,7 @@ type ToolResult = Anthropic.Beta.BetaToolResultBlockParam;
 
 export type TurnEvent =
   | { type: 'assistant'; assistantId: string }
+  | { type: 'status'; text: string }
   | { type: 'text'; text: string }
   | { type: 'message' }
   | { type: 'awaiting_confirmation' }
@@ -172,6 +173,17 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
 
   for await (const stream of runner) {
     stream.on('text', (text) => emit({ type: 'text', text }));
+    // A call is announced as it starts, before its input is written.
+    stream.on('streamEvent', (event) => {
+      if (event.type !== 'content_block_start' || event.content_block.type !== 'tool_use') return;
+      const status = findTool(tools, event.content_block.name)?.status;
+      if (status) emit({ type: 'status', text: status });
+    });
+    stream.on('contentBlock', (block) => {
+      if (block.type !== 'tool_use') return;
+      const status = findTool(tools, block.name)?.inputStatus?.(block.input);
+      if (status) emit({ type: 'status', text: status });
+    });
     const message = await stream.finalMessage();
     await recordUsage(assistant, message);
     const calls = message.content.filter((block) => block.type === 'tool_use');

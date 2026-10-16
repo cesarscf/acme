@@ -9,6 +9,7 @@ import { type Customer, createCustomer, findCustomers, toPhoneNumber } from './s
 export function customerTools({ professional }: Assistant): AssistantTool[] {
   return [
     {
+      status: 'Procurando o cliente',
       tool: strict(
         betaZodTool({
           name: 'findCustomer',
@@ -26,6 +27,7 @@ export function customerTools({ professional }: Assistant): AssistantTool[] {
       ),
     },
     {
+      status: 'Cadastrando o cliente',
       tool: strict(
         betaZodTool({
           name: 'createCustomer',
@@ -59,6 +61,11 @@ export function threadTools({ role, customer }: Assistant): AssistantTool[] {
   );
   return [
     {
+      status: 'Chamando a equipe',
+      inputStatus: (input) => {
+        const teammate = teammates.find(({ role }) => role === (input as { role?: string }).role);
+        return teammate && `Chamando ${teammate.name}`;
+      },
       tool: strict(
         betaZodTool({
           name: 'askTeammate',

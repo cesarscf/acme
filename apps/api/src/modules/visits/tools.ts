@@ -60,6 +60,7 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
 
   return [
     {
+      status: 'Olhando a agenda',
       tool: strict(
         betaZodTool({
           name: 'listVisits',
@@ -77,6 +78,7 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
       ),
     },
     {
+      status: 'Marcando a visita',
       tool: strict(
         betaZodTool({
           name: 'createVisit',
@@ -119,6 +121,7 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
       ),
     },
     {
+      status: 'Remarcando a visita',
       tool: strict(
         betaZodTool({
           name: 'rescheduleVisit',
@@ -143,6 +146,7 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
       ),
     },
     {
+      status: 'Cancelando a visita',
       tool: strict(
         betaZodTool({
           name: 'cancelVisit',
@@ -157,6 +161,7 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
       ),
     },
     confirmed(
+      'Preparando a confirmação',
       betaZodTool({
         name: 'sendVisitConfirmation',
         description:

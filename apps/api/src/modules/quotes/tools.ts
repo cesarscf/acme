@@ -51,6 +51,7 @@ export function quoteTools({ professional, playbook }: Assistant): AssistantTool
 
   return [
     {
+      status: 'Olhando a tabela de preços',
       tool: strict(
         betaZodTool({
           name: 'listPriceItems',
@@ -67,6 +68,7 @@ export function quoteTools({ professional, playbook }: Assistant): AssistantTool
       ),
     },
     {
+      status: 'Salvando o preço',
       tool: strict(
         betaZodTool({
           name: 'upsertPriceItem',
@@ -94,6 +96,7 @@ export function quoteTools({ professional, playbook }: Assistant): AssistantTool
       ),
     },
     {
+      status: 'Montando o orçamento',
       tool: strict(
         betaZodTool({
           name: 'createQuote',
@@ -155,6 +158,7 @@ export function quoteTools({ professional, playbook }: Assistant): AssistantTool
       ),
     },
     confirmed(
+      'Preparando o orçamento',
       betaZodTool({
         name: 'sendQuote',
         description: `Manda o orçamento ao cliente, no WhatsApp, com os botões Aprovar e Recusar e validade de ${validityDays} dias. Também serve para mandar de novo um orçamento sem resposta. O profissional vê um cartão e só depois de ele tocar em Confirmar a mensagem sai. Quando o cliente tocar num botão, aparece um <aviso> na conversa.`,

@@ -14,6 +14,10 @@ export type ConfirmationCard = {
 // A tool with a card only runs after the Professional taps Confirmar on it.
 export type AssistantTool = {
   tool: BetaRunnableTool;
+  // What the app shows while the Assistant calls the tool; never sent to Claude.
+  status: string;
+  // A sharper status once the call's input is complete.
+  inputStatus?: (input: unknown) => string | undefined;
   card?: (input: unknown) => Promise<ConfirmationCard>;
 };
 
@@ -22,10 +26,11 @@ export function strict<Input>(tool: BetaRunnableTool<Input>) {
 }
 
 export function confirmed<Input>(
+  status: string,
   tool: BetaRunnableTool<Input>,
   card: (input: Input) => Promise<ConfirmationCard>,
 ): AssistantTool {
-  return { tool: strict(tool), card: (input) => card(tool.parse(input)) };
+  return { tool: strict(tool), status, card: (input) => card(tool.parse(input)) };
 }
 
 export function findTool(tools: AssistantTool[], name: string) {

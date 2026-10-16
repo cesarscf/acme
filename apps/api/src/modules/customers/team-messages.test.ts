@@ -341,6 +341,25 @@ test('an Assistant asks a teammate in the thread, and the teammate answers right
   ]);
 });
 
+test('an Assistant calling a teammate says whom it is calling, by the name the Professional gave', async () => {
+  const { headers, assistantWith, thread } = await professionalWith(['scheduling', 'quotes']);
+  const lia = assistantWith('scheduling');
+  await api.team({ id: lia.id }).patch({ name: 'Carla' }, { headers });
+  claude.reply(
+    routeTo('quotes'),
+    { content: [call('askTeammate', { role: 'scheduling', message: 'Carla, veja um horário para a troca.' })] },
+    say('Pedi para a Carla ver o horário.'),
+    say('Tenho segunda às 10h.'),
+  );
+
+  const events = await drain(thread.messages.post({ text: 'Aprovado, já vê um horário' }, { headers }));
+
+  expect(events.filter(({ type }) => type === 'status')).toEqual([
+    { type: 'status', text: 'Chamando a equipe' },
+    { type: 'status', text: 'Chamando Carla' },
+  ]);
+});
+
 test('Assistants asking each other stop after a few hops', async () => {
   const { headers, thread } = await professionalWith(['scheduling', 'quotes']);
   const askBack = (role: string) => ({ content: [call('askTeammate', { role, message: 'Veja isso.' })] });

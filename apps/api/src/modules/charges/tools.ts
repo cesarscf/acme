@@ -37,6 +37,7 @@ export function chargeTools({ professional }: Assistant): AssistantTool[] {
 
   return [
     {
+      status: 'Olhando as cobranças',
       tool: strict(
         betaZodTool({
           name: 'listCharges',
@@ -61,6 +62,7 @@ export function chargeTools({ professional }: Assistant): AssistantTool[] {
       ),
     },
     {
+      status: 'Montando a cobrança',
       tool: strict(
         betaZodTool({
           name: 'createCharge',
@@ -85,6 +87,7 @@ export function chargeTools({ professional }: Assistant): AssistantTool[] {
       ),
     },
     confirmed(
+      'Preparando a cobrança',
       betaZodTool({
         name: 'sendCharge',
         description:
@@ -113,6 +116,7 @@ export function chargeTools({ professional }: Assistant): AssistantTool[] {
       },
     ),
     {
+      status: 'Registrando o pagamento',
       tool: strict(
         betaZodTool({
           name: 'confirmChargePaid',

@@ -376,6 +376,12 @@ STAGES=(
   stage_app_review
 )
 
+# Every stage waits for the human, so without a terminal on stdin (e.g. Claude Code's ! prefix) it would race through.
+if [[ ! -t 0 ]]; then
+  warn "Rode num terminal comum, na raiz do repo: scripts/meta-tech-provider-wizard.sh"
+  exit 1
+fi
+
 banner "Virar Tech Provider da Meta"
 
 # Values from earlier runs, so FROM can skip ahead.

@@ -135,12 +135,10 @@ export function Composer({
           }
           placeholderTextColor={placeholderColor}
           multiline
-          // React Native colors part of a TextInput only through Text children, so the mentions go in as pieces.
-          value={mentions ? undefined : value}
           onChangeText={changeText}
-        >
-          {mentions && <DataMentionText text={value} />}
-        </TextInput>
+          // React Native colors part of a TextInput only through Text children, and refuses them with a value.
+          {...(mentions ? { children: <DataMentionText text={value} /> } : { value })}
+        />
         {transcription.isError && (
           <Text className="px-1 pb-2 font-normal text-[12.5px] text-destructive">
             {nothingHeard ? 'Não ouvi nada. Segure e fale mais perto do celular.' : 'Não consegui entender o áudio.'}

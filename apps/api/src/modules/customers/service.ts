@@ -14,7 +14,7 @@ export function formatPhoneNumber(phoneNumber: string) {
   return match ? `(${match[1]}) ${match[2]}-${match[3]}` : phoneNumber;
 }
 
-export function findCustomers(professionalId: string, query: string) {
+export function findCustomers(professionalId: string, query: string, limit = 10) {
   const digits = query.replace(/\D/g, '');
   const pattern = `%${escapeLike(query.trim())}%`;
   return db
@@ -30,7 +30,7 @@ export function findCustomers(professionalId: string, query: string) {
       ),
     )
     .orderBy(asc(customers.name))
-    .limit(10);
+    .limit(limit);
 }
 
 export function findCustomer(professionalId: string, id: string) {

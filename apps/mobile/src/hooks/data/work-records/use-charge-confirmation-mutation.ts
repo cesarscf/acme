@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { api, unwrap } from '@/lib/api';
 import { queryClient } from '@/lib/query-client';
+import { customerKeys } from '../customers/keys';
 import { workRecordKeys } from './keys';
 
 export function useChargeConfirmationMutation(id: string) {
@@ -8,7 +9,7 @@ export function useChargeConfirmationMutation(id: string) {
     mutationFn: (received: boolean) => unwrap(api['work-records']({ id }).charge.confirmation.post({ received })),
     onSuccess: (workRecord) => {
       queryClient.setQueryData(workRecordKeys.detail(id), workRecord);
-      queryClient.invalidateQueries({ queryKey: workRecordKeys.list });
+      queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
   });
 }

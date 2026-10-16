@@ -20,6 +20,21 @@
   --input: #dfe3e8;
   --ring: #0e7c5a;
   --radius: 1rem;
+  /* Status pills and avatars of the Customers tab, and the WhatsApp bubbles of a Customer's thread. */
+  --warning: #fff3d6;
+  --warning-foreground: #7a5200;
+  --info: #e7eeff;
+  --info-foreground: #2747a0;
+  --orange: #ffebd9;
+  --orange-foreground: #9a4b0b;
+  --purple: #f3e8ff;
+  --purple-foreground: #6b3fc4;
+  --pink: #fde7f0;
+  --pink-foreground: #a3235f;
+  --teal: #e5f6f8;
+  --teal-foreground: #0e6b75;
+  --whatsapp: #eaf7f0;
+  --whatsapp-border: #cbe7d8;
 }
 
 @theme inline {
@@ -42,6 +57,20 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-orange: var(--orange);
+  --color-orange-foreground: var(--orange-foreground);
+  --color-purple: var(--purple);
+  --color-purple-foreground: var(--purple-foreground);
+  --color-pink: var(--pink);
+  --color-pink-foreground: var(--pink-foreground);
+  --color-teal: var(--teal);
+  --color-teal-foreground: var(--teal-foreground);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-border: var(--whatsapp-border);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

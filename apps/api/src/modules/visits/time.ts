@@ -28,6 +28,33 @@ export function formatLocalDateTime(instant: Date, timeZone: string) {
   return `${weekday}, ${day}/${month}, às ${hour}:${minute}`;
 }
 
+const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+export function localTime(instant: Date, timeZone: string) {
+  const { hour, minute } = parts(instant, timeZone);
+  return `${hour}:${minute}`;
+}
+
+// "Qua, 14 out", as the prototype names a day.
+export function shortDay(instant: Date, timeZone: string) {
+  const [year, month, day] = localDate(instant, timeZone).split('-').map(Number);
+  const weekday = new Date(Date.UTC(year!, month! - 1, day!)).getUTCDay();
+  return `${weekdays[weekday]}, ${String(day).padStart(2, '0')} ${months[month! - 1]}`;
+}
+
+// "12 ABR", the date of an earlier Job.
+export function shortDate(instant: Date, timeZone: string) {
+  const [, month, day] = localDate(instant, timeZone).split('-').map(Number);
+  return `${String(day).padStart(2, '0')} ${months[month! - 1]!.toUpperCase()}`;
+}
+
+// How many local days the instant is before today: 0 today, 1 yesterday, negative ahead.
+export function daysAgo(instant: Date, timeZone: string, now = new Date()) {
+  const day = (date: Date) => Date.parse(localDate(date, timeZone));
+  return Math.round((day(now) - day(instant)) / 86_400_000);
+}
+
 function offsetAt(instant: number, timeZone: string) {
   const { year, month, day, hour, minute, second } = parts(new Date(instant), timeZone);
   const asUtc = Date.UTC(

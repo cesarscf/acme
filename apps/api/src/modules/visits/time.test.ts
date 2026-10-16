@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { formatLocalDateTime, localDate, nextDay, toInstant } from './time';
+import { daysAgo, formatLocalDateTime, localDate, localTime, nextDay, shortDate, shortDay, toInstant } from './time';
 
 test('a local date and time in São Paulo is stored three hours later in UTC', () => {
   expect(toInstant('2026-10-16', '14:00', 'America/Sao_Paulo')).toEqual(new Date('2026-10-16T17:00:00Z'));
@@ -23,4 +23,18 @@ test('the local date of an instant near midnight is the previous day in São Pau
 test('the day after the last day of a month is the first of the next one', () => {
   expect(nextDay('2026-02-28')).toBe('2026-03-01');
   expect(nextDay('2026-12-31')).toBe('2027-01-01');
+});
+
+test('a short day and date read in Portuguese, in the local time zone', () => {
+  const saturday = new Date('2026-10-17T02:30:00Z');
+  expect(shortDay(saturday, 'America/Sao_Paulo')).toBe('Sex, 16 out');
+  expect(shortDate(saturday, 'America/Sao_Paulo')).toBe('16 OUT');
+  expect(localTime(saturday, 'America/Sao_Paulo')).toBe('23:30');
+});
+
+test('days ago counts local days, so just before midnight is still today', () => {
+  const now = new Date('2026-10-17T02:59:00Z');
+  expect(daysAgo(new Date('2026-10-16T03:00:00Z'), 'America/Sao_Paulo', now)).toBe(0);
+  expect(daysAgo(new Date('2026-10-16T02:59:00Z'), 'America/Sao_Paulo', now)).toBe(1);
+  expect(daysAgo(new Date('2026-10-20T12:00:00Z'), 'America/Sao_Paulo', now)).toBe(-4);
 });

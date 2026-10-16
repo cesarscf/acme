@@ -56,7 +56,7 @@ export function hasEnded(visit: Visit, now = new Date()) {
   return visit.scheduledAt.getTime() + visit.durationMinutes * 60_000 <= now.getTime();
 }
 
-function facts(detail: JobDetail) {
+export function facts(detail: JobDetail) {
   const quote = detail.quotes.at(-1);
   const sentPix = detail.charges.findLast(
     ({ paymentMethod, sentAt, status }) => paymentMethod === 'pix' && sentAt && status !== 'cancelled',

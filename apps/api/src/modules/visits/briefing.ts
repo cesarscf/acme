@@ -2,7 +2,7 @@ import * as z from 'zod';
 import { type BriefingScript, step } from '../briefing/scripts';
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'HH:MM, 24 horas');
-const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+export const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 type Weekday = (typeof weekdays)[number];
 const weekdayNames: Record<Weekday, string> = {
   mon: 'seg',
@@ -14,7 +14,7 @@ const weekdayNames: Record<Weekday, string> = {
   sun: 'dom',
 };
 
-const hours = z
+export const hours = z
   .array(
     z.strictObject({
       days: z.array(z.enum(weekdays)).min(1),

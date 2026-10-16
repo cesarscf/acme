@@ -6,8 +6,9 @@ import { messageItems } from '../conversations/history';
 import { isCustomerWorking } from '../conversations/running-turns';
 import { type Assistant, listThreadAssistants, speaker } from '../conversations/service';
 import type { ConfirmationCard } from '../conversations/tools';
-import { hasEnded, type JobDetail, jobStatus, jobSteps, listJobs, type Pill } from '../jobs/progress';
-import { daysAgo, localTime, shortDate, shortDay } from '../time/time';
+import { facts, hasEnded, type JobDetail, jobStatus, jobSteps, listJobs, type Pill } from '../jobs/progress';
+import { daysAgo, formatSlot, localTime, shortDate, shortDay } from '../time/time';
+import { freeSlots } from '../visits/free-slots';
 import { readMessage } from '../whatsapp/service';
 import { type Customer, findCustomer, formatPhoneNumber } from './service';
 
@@ -28,7 +29,7 @@ type Item = { id: string; at: Date } & (
       text: string;
       assistant: ReturnType<typeof speaker>;
       role: Assistant['role'];
-      options: string[];
+      options: Option[];
     }
   | { type: 'professional'; text: string }
   | { type: 'assistant'; text: string; assistant: ReturnType<typeof speaker> }
@@ -37,8 +38,14 @@ type Item = { id: string; at: Date } & (
 );
 type DayItem = { type: 'day'; id: string; label: string };
 type Team = { id: string; name: string; role: Assistant['role'] }[];
-// A next step the Professional taps above the field; tapping sends the message to that Role's Assistant in the thread.
-type Action = { key: string; label: string; role: Assistant['role']; message: string; done: boolean };
+// An answer the Professional taps; it goes to the Assistant who asked, as if typed. "Outro" opens the field instead.
+type Option = { label: string; hint?: string; other?: true };
+// A next step above the field: its label goes to that Role's Assistant as if typed; without a Role, it records the Visit.
+type Action = { key: string; label: string; done: boolean } & (
+  | { role: Assistant['role'] }
+  | { role: null; visitId: string }
+);
+type WhatsappMessage = typeof whatsappMessages.$inferSelect;
 
 export type CustomerThread = NonNullable<Awaited<ReturnType<typeof getCustomerThread>>>;
 
@@ -65,7 +72,18 @@ export async function getCustomerThread(professionalId: string, customerId: stri
     if (detail === current) items.push(...jobItems(detail, customer.name, { team, pixAccount, timeZone, now }));
     else items.push(pastJob(detail, timeZone));
   }
-  items.push(...(await whatsappItems(customer, details, current)));
+  // M1 sends every Professional's messages from the platform's number, so the phone number alone is shared.
+  const messages = await db
+    .select()
+    .from(whatsappMessages)
+    .where(eq(whatsappMessages.waId, customer.phoneNumber))
+    .orderBy(asc(whatsappMessages.createdAt));
+  items.push(...whatsappItems(customer, messages, details, current));
+  const scheduling = team.find(({ role }) => role === 'scheduling');
+  if (current?.job.status === 'open' && scheduling) {
+    const question = await executionQuestion(current, customer.name, speaker(scheduling), timeZone, now);
+    if (question) items.push(question);
+  }
   items.push(...(await teamItems(professionalId, customer.id, team, details, current)));
   // The Job starts at its first record when that came before the Job row (the migration's older records).
   const rank = { past_job: 0, job_start: 1 } as Partial<Record<Item['type'], number>>;
@@ -83,23 +101,73 @@ export async function getCustomerThread(professionalId: string, customerId: stri
         }
       : null,
     items: withDays(items, timeZone, now),
-    actions: current?.job.status === 'open' ? jobActions(current, team) : [],
+    actions: current?.job.status === 'open' ? jobActions(current, customer.name, team, messages) : [],
   };
 }
 
-// The Job's next steps, each done by the Assistant of its Role.
-function jobActions(detail: JobDetail, team: Team): Action[] {
-  const has = (role: Assistant['role']) => team.some((assistant) => assistant.role === role);
+// The Job's next steps for where it stands, each done by the Assistant of its Role, as in the prototype.
+function jobActions(detail: JobDetail, customerName: string, team: Team, messages: WhatsappMessage[]): Action[] {
+  const { quote, sentPix, service, executionBooked, recorded } = facts(detail);
+  const sends = (originId: string) =>
+    messages.filter((message) => message.direction === 'outbound' && message.originId === originId).length;
+  const lastVisit = detail.visits.findLast(({ status }) => status !== 'cancelled');
   const actions: Action[] = [];
-  const service = detail.workRecords.some(({ amountCents }) => amountCents !== null);
-  const paid = detail.charges.some(({ status }) => status === 'paid');
-  if (service && !paid && has('billing')) {
-    const sent = detail.charges.some(
-      ({ paymentMethod, sentAt, status }) => paymentMethod === 'pix' && sentAt && status !== 'cancelled',
-    );
-    actions.push({ key: 'charge', label: 'Cobrar no Pix', role: 'billing', message: 'Cobrar no Pix', done: sent });
+  if (service) {
+    if (!sentPix) actions.push({ key: 'charge', label: 'Cobrar no Pix', role: 'billing', done: false });
+    else if (sentPix.status !== 'paid') {
+      // The Customer already got it again (from here or from the reminder Routine).
+      actions.push({ key: 'resend_charge', label: 'Reenviar o Pix', role: 'billing', done: sends(sentPix.id) > 1 });
+    }
+    if (!sentPix) {
+      const returnBooked = detail.visits.some(
+        ({ status, createdAt }) => status !== 'cancelled' && createdAt > service.createdAt,
+      );
+      actions.push({ key: 'return_visit', label: 'Agendar o retorno', role: 'scheduling', done: returnBooked });
+    }
+  } else if (quote?.status === 'approved' && !executionBooked) {
+    // The scheduling Assistant's question about booking the execution is the next step.
+  } else if (quote?.status === 'sent') {
+    const reminded = !!quote.followedUpAt || sends(quote.id) > 1;
+    const label = `Lembrar o ${customerName.split(' ')[0]}`;
+    actions.push({ key: 'remind_quote', label, role: 'quotes', done: reminded });
+  } else if (lastVisit && (!recorded || executionBooked)) {
+    actions.push({ key: 'record', label: 'Contar como foi', role: null, visitId: lastVisit.id, done: false });
+    if (!quote && !recorded) actions.push({ key: 'quote', label: 'Mandar orçamento', role: 'quotes', done: false });
+    if (lastVisit.status !== 'confirmed') {
+      const asked = lastVisit.confirmationRequestedFor?.getTime() === lastVisit.scheduledAt.getTime();
+      actions.push({ key: 'confirm', label: 'Pedir confirmação', role: 'scheduling', done: asked });
+    }
+    actions.push({ key: 'reschedule', label: 'Remarcar', role: 'scheduling', done: false });
   }
-  return actions;
+  return actions.filter(({ role }) => role === null || team.some((assistant) => assistant.role === role));
+}
+
+// An approved Quote with nothing booked to carry it out: the scheduling Assistant offers the first free times.
+async function executionQuestion(
+  detail: JobDetail,
+  customerName: string,
+  assistant: ReturnType<typeof speaker>,
+  timeZone: string,
+  now: Date,
+): Promise<Item | undefined> {
+  const { quote, executionBooked } = facts(detail);
+  if (quote?.status !== 'approved' || executionBooked) return;
+  const slots = await freeSlots(detail.job.professionalId, timeZone, { now });
+  return {
+    type: 'question',
+    id: `execution_question:${quote.id}`,
+    at: quote.updatedAt,
+    text: `Quer que eu marque a execução com o ${customerName.split(' ')[0]}? Estes horários estão livres:`,
+    assistant,
+    role: 'scheduling',
+    options: [
+      ...slots.map((slot, index) => ({
+        label: formatSlot(slot, timeZone),
+        ...(index === 0 && { hint: 'O primeiro horário livre' }),
+      })),
+      { label: 'Outro', hint: 'Escreva o dia e o horário', other: true },
+    ],
+  };
 }
 
 // The open Job; a Job paid today stays pinned as CONCLUÍDO until the day ends.
@@ -235,7 +303,7 @@ function jobItems(
         text: `${first} disse que já pagou. O dinheiro caiu?`,
         assistant: speaker(billing),
         role: 'billing',
-        options: ['Recebi', 'Não caiu'],
+        options: [{ label: 'Recebi' }, { label: 'Não caiu' }],
       });
     }
   }
@@ -254,18 +322,17 @@ function jobItems(
 }
 
 // The WhatsApp exchanged with the Customer; what belongs to an earlier Job stays inside its card.
-async function whatsappItems(customer: Customer, details: JobDetail[], current: JobDetail | undefined) {
+function whatsappItems(
+  customer: Customer,
+  messages: WhatsappMessage[],
+  details: JobDetail[],
+  current: JobDetail | undefined,
+) {
   // The Customer's records are this Professional's, so a message about one of them is this thread's.
   const jobOf = new Map<string, string>();
   for (const { job, visits, quotes, charges } of details) {
     for (const { id } of [...visits, ...quotes, ...charges]) jobOf.set(id, job.id);
   }
-  // M1 sends every Professional's messages from the platform's number, so the phone number alone is shared.
-  const messages = await db
-    .select()
-    .from(whatsappMessages)
-    .where(eq(whatsappMessages.waId, customer.phoneNumber))
-    .orderBy(asc(whatsappMessages.createdAt));
   const first = customer.name.split(' ')[0];
   const items: Item[] = [];
   // Free text answers no message in particular: it belongs to whoever wrote to the number last.

@@ -172,7 +172,8 @@ export default function RecordWorkRecord() {
 }
 
 function openThread(customerId: string) {
-  router.replace({ pathname: '/customers/[id]', params: { id: customerId } });
+  // From the Customer's thread the recording goes back to it; from home it opens it.
+  router.dismissTo({ pathname: '/customers/[id]', params: { id: customerId } });
 }
 
 // The record was saved without a Customer: picking one, or writing a new one's name and WhatsApp, opens their thread.

@@ -43,6 +43,14 @@ export function shortDay(instant: Date, timeZone: string) {
   return `${weekdays[weekday]}, ${String(day).padStart(2, '0')} ${months[month! - 1]}`;
 }
 
+// "Seg, 19/10, às 08:00", a time offered to the Professional.
+export function formatSlot(instant: Date, timeZone: string) {
+  const [year, month, day] = localDate(instant, timeZone).split('-').map(Number);
+  const weekday = new Date(Date.UTC(year!, month! - 1, day!)).getUTCDay();
+  const dayMonth = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+  return `${weekdays[weekday]}, ${dayMonth}, às ${localTime(instant, timeZone)}`;
+}
+
 // "12 ABR", the date of an earlier Job.
 export function shortDate(instant: Date, timeZone: string) {
   const [, month, day] = localDate(instant, timeZone).split('-').map(Number);

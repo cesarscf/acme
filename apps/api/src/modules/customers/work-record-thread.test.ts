@@ -124,9 +124,7 @@ test('a service registered with an amount lands in the Customer thread, with the
     text: 'Registrei o serviço do João. Escolha o que a equipe faz agora:',
     assistant: { id: tina.id },
   });
-  expect(data!.actions).toEqual([
-    { key: 'charge', label: 'Cobrar no Pix', role: 'billing', message: 'Cobrar no Pix', done: false },
-  ]);
+  expect(data!.actions).toContainEqual({ key: 'charge', label: 'Cobrar no Pix', role: 'billing', done: false });
 });
 
 test('a visit registered without an amount asks how much the service was, and offers no charge', async () => {
@@ -179,7 +177,7 @@ test('"Cobrar no Pix" goes to the Tina without the router, and Confirmar sends t
     status: { label: 'Aguardando pagamento' },
     pixCode: expect.stringContaining('br.gov.bcb.pix'),
   });
-  expect(data!.actions).toEqual([expect.objectContaining({ key: 'charge', done: true })]);
+  expect(data!.actions).toEqual([expect.objectContaining({ key: 'resend_charge', done: false })]);
   expect(data!.pinned!.status.label).toBe('Pix enviado');
 });
 
@@ -209,7 +207,7 @@ test('"Já paguei" makes the Tina ask in the thread whether the money arrived, a
     text: 'João disse que já pagou. O dinheiro caiu?',
     assistant: expect.objectContaining({ id: tina.id }),
     role: 'billing',
-    options: ['Recebi', 'Não caiu'],
+    options: [{ label: 'Recebi' }, { label: 'Não caiu' }],
   });
   claude.reply(
     { content: [call('confirmChargePaid', { chargeId: sent.originId, received: true })] },
@@ -267,6 +265,6 @@ test('"Ficou 350 no Pix" in the thread completes the visit registered without an
   const { data } = await thread.thread.get({ headers });
   const card = data!.items.find((item) => item.type === 'work_record')!;
   expect(card).toMatchObject({ label: 'Serviço registrado' });
-  expect(data!.actions).toEqual([expect.objectContaining({ key: 'charge', done: false })]);
+  expect(data!.actions).toContainEqual(expect.objectContaining({ key: 'charge', done: false }));
   expect(data!.items.at(-1)).toMatchObject({ type: 'assistant', text: 'Anotei: R$ 350 no Pix.' });
 });

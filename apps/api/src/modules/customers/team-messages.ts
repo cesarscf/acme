@@ -177,7 +177,7 @@ function describeItem(item: ThreadItem): string {
     case 'line':
       return item.text;
     case 'question':
-      return `${item.assistant.name} perguntou: ${item.text} [${item.options.join(' / ')}]`;
+      return `${item.assistant.name} perguntou: ${item.text} [${item.options.map(({ label }) => label).join(' / ')}]`;
     case 'confirmation':
       return `Cartão "${item.title}": ${decisionNames[item.status]}`;
   }

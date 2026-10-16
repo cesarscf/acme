@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Fragment, useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, type TextInput, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssistantChip, MentionText } from '@/components/assistant-mention';
@@ -59,6 +59,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
   const send = useSendCustomerMessageMutation(customer.id);
   const decide = useCustomerConfirmationMutation(customer.id);
   const [text, setText] = useState('');
+  const input = useRef<TextInput>(null);
   const afterConsent = useRef<Message | null>(null);
 
   const working = send.isPending || decide.isPending || thread.working;
@@ -80,6 +81,14 @@ function Thread({ thread }: { thread: CustomerThread }) {
     }
     setText('');
     send.mutate(message);
+  }
+
+  function record(visitId: string) {
+    if (!me?.aiConsentedAt) {
+      router.push({ pathname: '/ai-consent', params: { purpose: 'recording' } });
+      return;
+    }
+    router.push({ pathname: '/work-records/new', params: { visitId } });
   }
 
   function act(message: Message) {
@@ -142,6 +151,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
               item={item}
               disabled={working}
               onAnswer={(answer) => act({ text: answer, role: item.role })}
+              onOther={() => input.current?.focus()}
             />
           ) : (
             <ItemView key={item.id} item={item} customerId={customer.id} team={speakers} />
@@ -176,6 +186,17 @@ function Thread({ thread }: { thread: CustomerThread }) {
           showsHorizontalScrollIndicator={false}
         >
           {thread.actions.map((action) => {
+            const locked = action.done || working || waiting;
+            if (action.role === null) {
+              return (
+                <RecordAction
+                  key={action.key}
+                  label={action.label}
+                  locked={locked}
+                  onPress={() => record(action.visitId)}
+                />
+              );
+            }
             const assistant = team?.find(({ role }) => role === action.role);
             if (!assistant) return null;
             return (
@@ -184,8 +205,8 @@ function Thread({ thread }: { thread: CustomerThread }) {
                 label={action.label}
                 assistant={assistant}
                 done={action.done}
-                locked={action.done || working || waiting}
-                onPress={() => act({ text: action.message, role: action.role })}
+                locked={locked}
+                onPress={() => act({ text: action.label, role: action.role })}
               />
             );
           })}
@@ -194,6 +215,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
 
       <View className="px-3" style={{ paddingBottom: bottom + 10 }}>
         <Composer
+          inputRef={input}
           value={text}
           onChangeText={setText}
           placeholder={
@@ -575,15 +597,17 @@ function Line({ text }: { text: string }) {
   );
 }
 
-// A question with options; the answer goes to the Assistant who asked, as if typed.
+// A question with options; the answer goes to the Assistant who asked, as if typed. "Outro" opens the field.
 function Question({
   item,
   disabled,
   onAnswer,
+  onOther,
 }: {
   item: Item<'question'>;
   disabled: boolean;
   onAnswer: (answer: string) => void;
+  onOther: () => void;
 }) {
   return (
     <View
@@ -597,14 +621,36 @@ function Question({
       <Text className="px-3.5 pb-3 font-bold text-[15px] text-foreground leading-[21px]">{item.text}</Text>
       {item.options.map((option, index) => (
         <OptionRow
-          key={option}
+          key={option.label}
           letter={'ABCD'[index]!}
-          label={option}
+          label={option.label}
+          hint={option.hint}
           strong={index === 0}
           disabled={disabled}
-          onPress={() => onAnswer(option)}
+          onPress={() => (option.other ? onOther() : onAnswer(option.label))}
         />
       ))}
     </View>
+  );
+}
+
+// "Contar como foi" records the Visit by audio; nobody on the team does it.
+function RecordAction({ label, locked, onPress }: { label: string; locked: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      className={`rounded-2xl border border-border bg-card px-3.5 py-2.5 ${locked ? 'opacity-50' : ''}`}
+      style={{ borderCurve: 'continuous' }}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, por áudio`}
+      accessibilityState={{ disabled: locked }}
+      disabled={locked}
+      onPress={onPress}
+    >
+      <Text className="font-bold text-foreground text-sm">{label}</Text>
+      <View className="mt-1 flex-row items-center gap-[5px]">
+        <Icon name="mic" size={14} color="--color-muted-foreground" />
+        <Text className="font-normal text-muted-foreground text-xs">por áudio</Text>
+      </View>
+    </Pressable>
   );
 }

@@ -5,4 +5,3 @@ node_modules/
 .turbo/
 dist/
 .env
-.env.meta

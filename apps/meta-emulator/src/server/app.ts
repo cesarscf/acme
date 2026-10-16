@@ -1,11 +1,10 @@
 import { Elysia, t } from 'elysia';
 import { emulator } from './modules/emulator';
 import { graph } from './modules/graph';
-import { web } from './modules/web';
 import { createStore } from './store';
 import { createWebhooks } from './webhooks';
 
-export type Config = { appSecret: string; verifyToken: string; webhookUrl: string; webDir?: string };
+export type Config = { appSecret: string; verifyToken: string; webhookUrl: string };
 
 export function createApp(config: Config) {
   const store = createStore();
@@ -15,8 +14,7 @@ export function createApp(config: Config) {
       response: t.Object({ status: t.Literal('ok') }),
     })
     .use(graph(store, webhooks))
-    .use(emulator(store, webhooks))
-    .use(web(config.webDir));
+    .use(emulator(store, webhooks));
   store.onChange = () => app.server?.publish('messages', JSON.stringify({ messages: store.messages }));
   return app;
 }

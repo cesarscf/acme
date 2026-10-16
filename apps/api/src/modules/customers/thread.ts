@@ -1,6 +1,8 @@
 import { db, professionals, whatsappMessages } from '@acme/db';
 import { asc, eq } from 'drizzle-orm';
 import { formatMoney } from '../briefing/scripts';
+import { isCustomerWorking, listThreadAssistants, messageItems, speaker } from '../conversations/service';
+import type { ConfirmationCard } from '../conversations/tools';
 import { hasEnded, type JobDetail, jobStatus, jobSteps, listJobs, type Pill } from '../jobs/progress';
 import { daysAgo, localTime, shortDate, shortDay } from '../visits/time';
 import { readMessage } from '../whatsapp/service';
@@ -17,8 +19,13 @@ type Item = { id: string; at: Date } & (
   | { type: 'quote'; total: string; detail: string; status: Pill }
   | { type: 'pix'; amount: string; detail: string; status: Pill }
   | { type: 'whatsapp'; direction: 'outbound' | 'inbound'; label: string; text: string; buttons: string[] }
+  | { type: 'professional'; text: string }
+  | { type: 'assistant'; text: string; assistant: ReturnType<typeof speaker> }
+  | ({ type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard)
 );
 type DayItem = { type: 'day'; id: string; label: string };
+
+export type CustomerThread = NonNullable<Awaited<ReturnType<typeof getCustomerThread>>>;
 
 // The Customer's conversation: the Job in progress pinned on top, earlier Jobs as compact cards, the rest in time order.
 export async function getCustomerThread(professionalId: string, customerId: string, now = new Date()) {
@@ -38,12 +45,14 @@ export async function getCustomerThread(professionalId: string, customerId: stri
     else items.push(pastJob(detail, timeZone));
   }
   items.push(...(await whatsappItems(customer, details, current)));
+  items.push(...(await teamItems(professionalId, customer.id, details, current)));
   // The Job starts at its first record when that came before the Job row (the migration's older records).
   const rank = { past_job: 0, job_start: 1 } as Partial<Record<Item['type'], number>>;
   items.sort((a, b) => a.at.getTime() - b.at.getTime() || (rank[a.type] ?? 2) - (rank[b.type] ?? 2));
 
   return {
     customer: { id: customer.id, name: customer.name, phoneNumber: formatPhoneNumber(customer.phoneNumber) },
+    working: isCustomerWorking(customer.id),
     pinned: current
       ? {
           label: current.job.status === 'open' ? 'EM ANDAMENTO' : 'CONCLUÍDO',
@@ -201,6 +210,24 @@ async function whatsappItems(customer: Customer, details: JobDetail[], current: 
       text,
       buttons,
     });
+  }
+  return items;
+}
+
+// What the Professional told the team here and what the Assistants answered; what belongs to an earlier Job stays inside its card.
+async function teamItems(professionalId: string, customerId: string, details: JobDetail[], current?: JobDetail) {
+  const earlier = new Set(details.filter((detail) => detail !== current).map(({ job }) => job.id));
+  const items: Item[] = [];
+  for (const assistant of await listThreadAssistants(professionalId, customerId)) {
+    for (const message of await messageItems(assistant, customerId)) {
+      if (message.jobId && earlier.has(message.jobId)) continue;
+      const { at } = message;
+      for (const item of message.items) {
+        if (item.type === 'professional') items.push({ ...item, at });
+        else if (item.type === 'assistant') items.push({ ...item, at, assistant: speaker(assistant) });
+        else if (item.type === 'confirmation') items.push({ ...item, at });
+      }
+    }
   }
   return items;
 }

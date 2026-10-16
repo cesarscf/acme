@@ -33,7 +33,7 @@ export const conversations = new Elysia()
       if (!assistant) throw status(404, 'Assistant not found');
       if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
       if (isWorking(assistant.id)) throw status(409, 'Assistant is working');
-      for await (const event of startTurn(assistant.id, (emit) => sendText(assistant, text, emit))) {
+      for await (const event of startTurn(assistant, (emit) => sendText(assistant, text, emit))) {
         yield sse({ data: event });
       }
     },
@@ -44,10 +44,10 @@ export const conversations = new Elysia()
     async function* ({ professional, params: { id, confirmationId }, body: { confirmed } }) {
       const assistant = await findAssistant(professional.id, id);
       if (!assistant) throw status(404, 'Assistant not found');
-      const confirmation = await findPendingConfirmation(assistant.id, confirmationId);
+      const confirmation = await findPendingConfirmation(assistant.id, confirmationId, null);
       if (!confirmation) throw status(404, 'No pending confirmation');
       if (isWorking(assistant.id)) throw status(409, 'Assistant is working');
-      for await (const event of startTurn(assistant.id, (emit) => decide(assistant, confirmation, confirmed, emit))) {
+      for await (const event of startTurn(assistant, (emit) => decide(assistant, confirmation, confirmed, emit))) {
         yield sse({ data: event });
       }
     },
@@ -62,7 +62,7 @@ export const conversations = new Elysia()
       if (!suggestion) throw status(404, 'No open suggestion');
       if (accepted && !(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
       if (isWorking(assistant.id)) throw status(409, 'Assistant is working');
-      for await (const event of startTurn(assistant.id, (emit) =>
+      for await (const event of startTurn(assistant, (emit) =>
         answerSuggestion(assistant, suggestion, accepted, emit),
       )) {
         yield sse({ data: event });

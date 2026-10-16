@@ -6,7 +6,7 @@ import type { AssistantRole } from '../team/catalog';
 import { findAssistant } from './service';
 import type { AssistantTool } from './tools';
 
-const api = treaty(app);
+export const api = treaty(app);
 
 export async function newAssistant(role: AssistantRole = 'scheduling') {
   const { professional, headers } = await signInNewProfessional();

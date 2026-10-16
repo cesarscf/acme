@@ -1,5 +1,5 @@
 import { assistantMessages, assistantNotices, assistants, db } from '@acme/db';
-import { type AnyColumn, and, asc, desc, eq, sql } from 'drizzle-orm';
+import { type AnyColumn, and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { briefingScripts } from '../briefing/scripts';
 import { type AssistantRole, catalogEntry } from './catalog';
 
@@ -46,6 +46,7 @@ async function loadLastMessages(professionalId: string) {
     .where(
       and(
         eq(assistants.professionalId, professionalId),
+        isNull(assistantMessages.customerId),
         sql`${assistantMessages.content} @> '[{"type":"text"}]'::jsonb`,
       ),
     )

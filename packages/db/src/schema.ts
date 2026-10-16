@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   boolean,
   date,
   doublePrecision,
@@ -179,10 +180,13 @@ export const assistantMessages = pgTable(
       .references(() => assistants.id, { onDelete: 'cascade' }),
     role: assistantMessageRole().notNull(),
     content: jsonb().notNull(),
+    // Set when the turn happened in a Customer's thread, which keeps its own history apart from the Assistant's chat.
+    customerId: uuid().references((): AnyPgColumn => customers.id, { onDelete: 'cascade' }),
+    jobId: uuid().references((): AnyPgColumn => jobs.id, { onDelete: 'set null' }),
     // clock_timestamp, not now(): rows written in one transaction must keep their order.
     createdAt: timestamp({ withTimezone: true }).notNull().default(sql`clock_timestamp()`),
   },
-  (table) => [index().on(table.assistantId, table.createdAt)],
+  (table) => [index().on(table.assistantId, table.createdAt), index().on(table.customerId, table.createdAt)],
 );
 
 export const toolConfirmationStatus = pgEnum('tool_confirmation_status', ['pending', 'confirmed', 'cancelled']);

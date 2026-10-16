@@ -4,6 +4,7 @@ import {
   assistants,
   customers,
   db,
+  jobs,
   llmUsages,
   professionals,
   toolConfirmations,
@@ -13,7 +14,7 @@ import {
 import Anthropic from '@anthropic-ai/sdk';
 import { runRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
 import { and, asc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
-import type { AssistantRole } from '../team/catalog';
+import { type AssistantRole, catalogEntry } from '../team/catalog';
 import { formatLocalDateTime } from '../visits/time';
 import { type PromptContext, systemPrompt } from './prompts';
 import { type AssistantTool, assistantTools, type ConfirmationCard } from './tools';
@@ -25,7 +26,10 @@ type StoredMessage = typeof assistantMessages.$inferSelect & { content: Block[] 
 
 export type Assistant = PromptContext & { id: string; professional: PromptContext['professional'] & { id: string } };
 
+export type TimedItems = { at: Date; jobId: string | null; items: ConversationItem[] };
+
 export type TurnEvent =
+  | { type: 'assistant'; assistantId: string }
   | { type: 'text'; text: string }
   | { type: 'message' }
   | { type: 'awaiting_confirmation' }
@@ -60,8 +64,8 @@ const abandonedResult = 'Não executado: o profissional mandou outra mensagem an
 // Same window as the Visits a WorkRecord can be about.
 const endedVisitDays = 7;
 
-// One turn at a time per Assistant; the API runs as a single process in M1 and M2.
-const working = new Set<string>();
+// One turn at a time per Assistant, with the Customer whose thread it is in; the API runs as a single process in M1 and M2.
+const working = new Map<string, string | null>();
 
 export async function findAssistant(professionalId: string, id: string): Promise<Assistant | undefined> {
   const [row] = await db
@@ -91,20 +95,47 @@ export function isWorking(assistantId: string) {
   return working.has(assistantId);
 }
 
+// Held from a message's arrival until its turn starts: picking who answers takes a Claude call, and a second message must wait.
+const claimedThreads = new Set<string>();
+
+export function isCustomerWorking(customerId: string) {
+  return claimedThreads.has(customerId) || [...working.values()].includes(customerId);
+}
+
+export function claimCustomerThread(customerId: string) {
+  if (isCustomerWorking(customerId)) return false;
+  claimedThreads.add(customerId);
+  return true;
+}
+
+export function releaseCustomerThread(customerId: string) {
+  claimedThreads.delete(customerId);
+}
+
 export async function getConversation(assistant: Assistant) {
-  const messages = await loadMessages(assistant.id);
   const timed = await loadTimedItems(assistant);
+  const items: ConversationItem[] = [];
+  const pushNoticesBefore = (createdAt?: Date) => {
+    while (timed[0] && (!createdAt || timed[0].at < createdAt)) items.push(...timed.shift()!.items);
+  };
+  for (const message of await messageItems(assistant, null)) {
+    pushNoticesBefore(message.at);
+    items.push(...message.items);
+  }
+  pushNoticesBefore();
+  return { working: isWorking(assistant.id), items };
+}
+
+export async function messageItems(assistant: Assistant, customerId: string | null): Promise<TimedItems[]> {
+  const messages = await loadMessages(assistant.id, customerId);
   const confirmations = await db
     .select()
     .from(toolConfirmations)
     .where(eq(toolConfirmations.assistantId, assistant.id));
   const tools = assistantTools(assistant);
-  const items: ConversationItem[] = [];
-  const pushNoticesBefore = (createdAt?: Date) => {
-    while (timed[0] && (!createdAt || timed[0].at < createdAt)) items.push(...timed.shift()!.items);
-  };
+  const timed: TimedItems[] = [];
   for (const message of messages) {
-    pushNoticesBefore(message.createdAt);
+    const items: ConversationItem[] = [];
     const text = message.content
       .flatMap((block) => (block.type === 'text' ? [block.text] : []))
       .join('\n\n')
@@ -123,9 +154,24 @@ export async function getConversation(assistant: Assistant) {
         });
       }
     }
+    if (items.length) timed.push({ at: message.createdAt, jobId: message.jobId, items });
   }
-  pushNoticesBefore();
-  return { working: isWorking(assistant.id), items };
+  return timed;
+}
+
+export async function listThreadAssistants(professionalId: string, customerId: string) {
+  const rows = await db
+    .selectDistinct({ id: assistantMessages.assistantId })
+    .from(assistantMessages)
+    .innerJoin(assistants, eq(assistants.id, assistantMessages.assistantId))
+    .where(and(eq(assistantMessages.customerId, customerId), eq(assistants.professionalId, professionalId)));
+  const found = await Promise.all(rows.map(({ id }) => findAssistant(professionalId, id)));
+  return found.filter((assistant) => !!assistant);
+}
+
+export function speaker({ id, name, role }: Assistant) {
+  const { title, mascot } = catalogEntry(role);
+  return { id, name, title, mascot };
 }
 
 async function loadTimedItems(assistant: Assistant) {
@@ -258,22 +304,30 @@ export async function answerSuggestion(
   return sendText(assistant, bookVisitMessage(suggestion.customerName), emit);
 }
 
-export function findPendingConfirmation(assistantId: string, id: string) {
-  return db.query.toolConfirmations.findFirst({
-    where: and(
-      eq(toolConfirmations.id, id),
-      eq(toolConfirmations.assistantId, assistantId),
-      eq(toolConfirmations.status, 'pending'),
-    ),
-  });
+// A card belongs where it was shown: the Assistant's chat (no Customer) or one Customer's thread.
+export async function findPendingConfirmation(assistantId: string, id: string, customerId: string | null) {
+  const [row] = await db
+    .select({ confirmation: toolConfirmations })
+    .from(toolConfirmations)
+    .innerJoin(assistantMessages, eq(assistantMessages.id, toolConfirmations.messageId))
+    .where(
+      and(
+        eq(toolConfirmations.id, id),
+        eq(toolConfirmations.assistantId, assistantId),
+        eq(toolConfirmations.status, 'pending'),
+        customerId ? eq(assistantMessages.customerId, customerId) : isNull(assistantMessages.customerId),
+      ),
+    );
+  return row?.confirmation;
 }
 
 // Starts the turn right away and streams its events; the turn finishes and is saved even if the app disconnects.
-export function startTurn(assistantId: string, turn: (emit: (event: TurnEvent) => void) => Promise<TurnEvent>) {
+export function startTurn(assistant: Assistant, turn: (emit: (event: TurnEvent) => void) => Promise<TurnEvent>) {
+  const assistantId = assistant.id;
   const events: TurnEvent[] = [];
   let finished = false;
   let wake = () => {};
-  working.add(assistantId);
+  working.set(assistantId, assistant.customer?.id ?? null);
   turn((event) => {
     events.push(event);
     wake();
@@ -299,7 +353,7 @@ export function startTurn(assistantId: string, turn: (emit: (event: TurnEvent) =
 }
 
 export async function sendText(assistant: Assistant, text: string, emit: (event: TurnEvent) => void) {
-  const last = (await loadMessages(assistant.id)).at(-1);
+  const last = (await loadMessages(assistant.id, assistant.customer?.id ?? null)).at(-1);
   // A paused turn is abandoned: every call in it gets a result, so the history stays valid for the API.
   const abandoned: ToolResult[] =
     last?.role === 'assistant' ? toolUses(last).map((call) => result(call, abandonedResult)) : [];
@@ -309,7 +363,7 @@ export async function sendText(assistant: Assistant, text: string, emit: (event:
       .set({ status: 'cancelled', decidedAt: new Date() })
       .where(and(eq(toolConfirmations.messageId, last.id), eq(toolConfirmations.status, 'pending')));
   }
-  await saveMessage(assistant.id, 'user', [...abandoned, { type: 'text', text }]);
+  await saveMessage(assistant, 'user', [...abandoned, { type: 'text', text }]);
   return converse(assistant, emit);
 }
 
@@ -337,7 +391,7 @@ export async function decide(
     if (findTool(tools, call.name)?.card && decision !== 'confirmed') results.push(result(call, cancelledResult));
     else results.push(await run(tools, call));
   }
-  await saveMessage(assistant.id, 'user', results);
+  await saveMessage(assistant, 'user', results);
   return converse(assistant, emit);
 }
 
@@ -357,7 +411,7 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
     tools: tools.map(({ tool }) => tool),
     // Haiku 5.5 bills prompts over 100K tokens at a higher rate, so the server summarizes the history before that.
     context_management: { edits: [{ type: 'compact_20260112', trigger: { type: 'input_tokens', value: 100_000 } }] },
-    messages: await apiMessages(assistant.id),
+    messages: await apiMessages(assistant),
   });
 
   for await (const stream of runner) {
@@ -369,12 +423,12 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
     // A refusal or a cut-off call can leave a half-written tool input, so that turn's tools never run.
     if (message.stop_reason === 'refusal' || (message.stop_reason === 'max_tokens' && calls.length)) {
       const text = message.stop_reason === 'refusal' ? refusalText : truncatedText;
-      await saveMessage(assistant.id, 'assistant', [{ type: 'text', text }]);
+      await saveMessage(assistant, 'assistant', [{ type: 'text', text }]);
       emit({ type: 'message' });
       return { type: 'done' };
     }
 
-    const stored = (await saveMessage(assistant.id, 'assistant', echoable(message.content))) as StoredMessage;
+    const stored = (await saveMessage(assistant, 'assistant', echoable(message.content))) as StoredMessage;
     // Calls the stored history keeps; after a fallback, the declined model's calls are not among them.
     const kept = toolUses(stored);
     emit({ type: 'message' });
@@ -390,7 +444,7 @@ async function converse(assistant: Assistant, emit: (event: TurnEvent) => void):
     }
 
     const results = await Promise.all(kept.map((call) => run(tools, call)));
-    await saveMessage(assistant.id, 'user', results);
+    await saveMessage(assistant, 'user', results);
     // The runner's own copy of the reply still has the declined model's calls, so it goes on from the stored one.
     runner.pushMessages({ role: 'assistant', content: stored.content }, { role: 'user', content: results });
   }
@@ -442,18 +496,24 @@ function echoable(content: Anthropic.Beta.BetaContentBlock[]): Block[] {
   ) as Block[];
 }
 
-async function loadMessages(assistantId: string) {
+async function loadMessages(assistantId: string, customerId: string | null) {
   const rows = await db
     .select()
     .from(assistantMessages)
-    .where(eq(assistantMessages.assistantId, assistantId))
+    .where(
+      and(
+        eq(assistantMessages.assistantId, assistantId),
+        customerId ? eq(assistantMessages.customerId, customerId) : isNull(assistantMessages.customerId),
+      ),
+    )
     .orderBy(asc(assistantMessages.createdAt));
   return rows as StoredMessage[];
 }
 
-async function apiMessages(assistantId: string) {
-  const messages = await loadMessages(assistantId);
-  const notices = await loadNotices(assistantId);
+async function apiMessages(assistant: Assistant) {
+  const messages = await loadMessages(assistant.id, assistant.customer?.id ?? null);
+  // Notices belong to the Assistant's chat; in a Customer's thread the history goes in the prompt.
+  const notices = assistant.customer ? [] : await loadNotices(assistant.id);
   // The API ignores what comes before a compaction summary, so it is not sent at all.
   const summarized = messages.findLastIndex(({ content }) =>
     content.some((block) => block.type === 'compaction' && block.content),
@@ -478,8 +538,18 @@ function loadNotices(assistantId: string) {
     .orderBy(asc(assistantNotices.createdAt));
 }
 
-async function saveMessage(assistantId: string, role: 'user' | 'assistant', content: Block[]) {
-  const [stored] = await db.insert(assistantMessages).values({ assistantId, role, content }).returning();
+async function saveMessage({ id, customer }: Assistant, role: 'user' | 'assistant', content: Block[]) {
+  // Read at each save: a tool earlier in the turn can open the Job (a Visit or Quote for a Customer without one).
+  const [open] = customer
+    ? await db
+        .select({ id: jobs.id })
+        .from(jobs)
+        .where(and(eq(jobs.customerId, customer.id), eq(jobs.status, 'open')))
+    : [];
+  const [stored] = await db
+    .insert(assistantMessages)
+    .values({ assistantId: id, role, content, customerId: customer?.id, jobId: open?.id })
+    .returning();
   return stored!;
 }
 

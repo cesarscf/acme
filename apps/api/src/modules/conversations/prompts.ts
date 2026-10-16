@@ -9,7 +9,10 @@ export type PromptContext = {
   playbook: unknown;
   playbookStatus: 'draft' | 'approved';
   professional: { name: string; timezone: string };
+  customer?: CustomerContext;
 };
+
+export type CustomerContext = { id: string; name: string; phoneNumber: string; history: string };
 
 const base = `Você é um assistente do Acme, um app em que profissionais que atendem na casa ou na empresa dos clientes (ar-condicionado, elétrica, encanamento, limpeza…) têm uma equipe de assistentes de IA que cuida do trabalho de escritório. Você conversa com o profissional pelo app, no celular, quase sempre entre um serviço e outro.
 
@@ -37,7 +40,7 @@ const roles: Record<AssistantRole, string> = {
     'Sua função é a cobrança: cobrar os clientes pelo serviço feito, nas formas de recebimento do profissional, e acompanhar até o dinheiro cair. A cobrança parte de um serviço registrado: veja os serviços a receber, monte a cobrança e mande em seguida, para ele ver o cartão. Se o serviço que ele citar não estiver registrado, peça para registrar pelo botão Registrar serviço. O Pix cai direto na conta do profissional e ninguém confirma sozinho: quando o cliente tocar em Já paguei, pergunte se caiu e registre a resposta dele (Recebi ou Não caiu).',
 };
 
-export function systemPrompt({ role, name, playbook, playbookStatus, professional }: PromptContext) {
+export function systemPrompt({ role, name, playbook, playbookStatus, professional, customer }: PromptContext) {
   const { title } = catalogEntry(role);
   const today = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeZone: professional.timezone }).format(
     new Date(),
@@ -48,10 +51,20 @@ export function systemPrompt({ role, name, playbook, playbookStatus, professiona
     playbookStatus === 'approved'
       ? `<ficha>\n${describePlaybook(role, playbook)}\n</ficha>`
       : 'A ficha ainda não foi combinada com o profissional. Faça o que ele pedir, perguntando o que faltar.',
+    ...(customer ? [customerThread(customer)] : []),
   ].join('\n');
   // The fixed text goes first and is cached; what changes per Assistant or per day comes after the breakpoint.
   return [
     { type: 'text', text: `${base}\n\n${roles[role]}`, cache_control: { type: 'ephemeral' } },
     { type: 'text', text: context },
   ] satisfies Anthropic.Beta.BetaTextBlockParam[];
+}
+
+function customerThread({ id, name, phoneNumber, history }: CustomerContext) {
+  return `Você está na conversa de ${name} (cliente, id ${id}, WhatsApp ${phoneNumber}), na aba Clientes do app, junto com o resto da equipe. O que o profissional escreve aqui é para a equipe e nunca chega ao cliente; ao cliente só vai o que passa por um cartão confirmado.
+Quando ele não disser outro nome, o pedido é sobre este cliente e o atendimento em andamento: use este id, sem procurar o cliente. Os ids das visitas e dos orçamentos estão no histórico.
+Se remarcar uma visita aqui, peça em seguida a confirmação do cliente, para ele saber do novo horário.
+<historico_do_cliente>
+${history}
+</historico_do_cliente>`;
 }

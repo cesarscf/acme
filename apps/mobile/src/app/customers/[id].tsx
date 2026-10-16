@@ -1,20 +1,30 @@
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Fragment, useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
+import { ProfessionalBubble, Reply } from '@/components/chat-messages';
+import { Composer } from '@/components/composer';
+import { ConfirmationCard } from '@/components/confirmation-card';
 import { CustomerAvatar } from '@/components/customer-avatar';
 import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
+import { Mascot } from '@/components/mascot';
 import { StatusPill } from '@/components/status-pill';
+import { useCustomerConfirmationMutation } from '@/hooks/data/customers/use-customer-confirmation-mutation';
 import {
   type CustomerThread,
   type ThreadItem,
   useCustomerThreadQuery,
 } from '@/hooks/data/customers/use-customer-thread-query';
+import { useSendCustomerMessageMutation } from '@/hooks/data/customers/use-send-customer-message-mutation';
+import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
+import { useTeamQuery } from '@/hooks/data/team/use-team-query';
 
 type Pinned = NonNullable<CustomerThread['pinned']>;
 type Item<Type extends ThreadItem['type']> = Extract<ThreadItem, { type: Type }>;
+type Speaker = Item<'assistant'>['assistant'];
 
 export default function CustomerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,9 +48,39 @@ function Thread({ thread }: { thread: CustomerThread }) {
   const { top, bottom } = useSafeAreaInsets();
   const scroll = useRef<ScrollView>(null);
   const { customer, pinned, items } = thread;
+  const { data: me } = useProfessionalQuery();
+  const { data: team } = useTeamQuery();
+  const send = useSendCustomerMessageMutation(customer.id);
+  const decide = useCustomerConfirmationMutation(customer.id);
+  const [text, setText] = useState('');
+  const afterConsent = useRef<string | null>(null);
+
+  const working = send.isPending || decide.isPending || thread.working;
+  const draft = send.draft || decide.draft;
+  const answeredBy = team?.find(({ id }) => id === (send.answeredBy ?? decide.answeredBy));
+  const failed = (send.isError || decide.isError) && !working;
+  const canSend = !!text.trim() && !working;
+
+  function sendMessage(message: string) {
+    if (!me?.aiConsentedAt) {
+      afterConsent.current = message;
+      router.push('/ai-consent');
+      return;
+    }
+    setText('');
+    send.mutate(message);
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      const pending = afterConsent.current;
+      afterConsent.current = null;
+      if (pending && me?.aiConsentedAt) sendMessage(pending);
+    }, [me?.aiConsentedAt, sendMessage]),
+  );
 
   return (
-    <View className="flex-1 bg-background">
+    <KeyboardAvoidingView behavior="padding" className="flex-1 bg-background">
       <View className="flex-row items-center gap-2.5 px-4 pb-2.5" style={{ paddingTop: top + 16 }}>
         <BackButton />
         <View className="min-w-0 shrink flex-row items-center gap-2 rounded-full border border-border bg-card py-[5px] pr-3.5 pl-1.5">
@@ -49,9 +89,12 @@ function Thread({ thread }: { thread: CustomerThread }) {
             <Text numberOfLines={1} className="font-bold text-[14.5px] text-foreground leading-[18px]">
               {customer.name}
             </Text>
-            <Text numberOfLines={1} className="font-normal text-[11.5px] text-muted-foreground leading-[15px]">
-              {customer.phoneNumber}
-            </Text>
+            <View className="flex-row items-center gap-[5px]">
+              {working && <View className="size-1.5 rounded-full bg-primary" />}
+              <Text numberOfLines={1} className="font-normal text-[11.5px] text-muted-foreground leading-[15px]">
+                {working ? 'Trabalhando…' : customer.phoneNumber}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -61,14 +104,63 @@ function Thread({ thread }: { thread: CustomerThread }) {
       <ScrollView
         ref={scroll}
         className="flex-1"
-        contentContainerClassName="gap-3 px-[18px] pt-2"
-        contentContainerStyle={{ paddingBottom: bottom + 16 }}
+        contentContainerClassName="gap-3 px-[18px] pt-2 pb-4"
+        keyboardDismissMode="interactive"
         onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}
       >
-        {items.map((item) => (
-          <ItemView key={item.id} item={item} />
-        ))}
+        {items.map((item) =>
+          item.type === 'confirmation' ? (
+            <ConfirmationCard
+              key={item.id}
+              confirmation={item}
+              disabled={working}
+              onDecide={(confirmed) => decide.mutate({ confirmationId: item.id, confirmed })}
+            />
+          ) : (
+            <ItemView key={item.id} item={item} />
+          ),
+        )}
+        {!!draft && <AssistantReply assistant={answeredBy} text={draft} />}
+        {working && !draft && (
+          <Text className="font-normal text-muted-foreground text-sm">
+            {answeredBy ? `${answeredBy.name} está pensando` : 'Chamando a equipe'}
+          </Text>
+        )}
+        {failed && (
+          <Text selectable className="font-normal text-destructive text-sm">
+            Não consegui responder agora. Tente de novo.
+          </Text>
+        )}
       </ScrollView>
+
+      <View className="px-3" style={{ paddingBottom: bottom + 10 }}>
+        <Composer
+          value={text}
+          onChangeText={setText}
+          placeholder={
+            working ? 'Escreva uma correção ou o próximo pedido' : `Conte à equipe sobre ${customer.name.split(' ')[0]}`
+          }
+          canSend={canSend}
+          onSend={() => canSend && sendMessage(text.trim())}
+          canListen={!!me?.aiConsentedAt}
+          onListenBlocked={() => router.push('/ai-consent')}
+        />
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+function AssistantReply({ assistant, text }: { assistant?: Pick<Speaker, 'name' | 'title' | 'mascot'>; text: string }) {
+  return (
+    <View>
+      {assistant && (
+        <View className="mb-1 flex-row items-center gap-1.5">
+          <Mascot mascot={assistant.mascot} size={18} />
+          <Text className="font-bold text-[12.5px] text-foreground">{assistant.name}</Text>
+          <Text className="font-normal text-[12.5px] text-muted-foreground">{assistant.title}</Text>
+        </View>
+      )}
+      <Reply text={text} />
     </View>
   );
 }
@@ -152,8 +244,12 @@ function StepDot({ state }: { state: Pinned['steps'][number]['state'] }) {
   );
 }
 
-function ItemView({ item }: { item: ThreadItem }) {
+function ItemView({ item }: { item: Exclude<ThreadItem, { type: 'confirmation' }> }) {
   switch (item.type) {
+    case 'professional':
+      return <ProfessionalBubble text={item.text} />;
+    case 'assistant':
+      return <AssistantReply assistant={item.assistant} text={item.text} />;
     case 'day':
       return <DayDivider label={item.label} />;
     case 'job_start':

@@ -127,6 +127,13 @@
       "when": 1792164858205,
       "tag": "0017_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792167134035,
+      "tag": "0018_customer-thread-messages",
+      "breakpoints": true
     }
   ]
 }

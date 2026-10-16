@@ -10,7 +10,7 @@ export function useSendMessageMutation(assistantId: string) {
   const [draft, setDraft] = useState('');
   const mutation = useMutation({
     mutationFn: (text: string) =>
-      readTurn(assistantId, api.team({ id: assistantId }).messages.post({ text }), setDraft),
+      readTurn(conversationKeys.detail(assistantId), api.team({ id: assistantId }).messages.post({ text }), setDraft),
     onMutate: async (text) => {
       await queryClient.cancelQueries({ queryKey: conversationKeys.detail(assistantId) });
       queryClient.setQueryData<Conversation>(

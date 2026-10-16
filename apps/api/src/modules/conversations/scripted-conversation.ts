@@ -3,10 +3,13 @@ import { randomInt } from 'node:crypto';
 import { assistantMessages, assistantNotices, assistants, db } from '@acme/db';
 import type Anthropic from '@anthropic-ai/sdk';
 import { asc, eq } from 'drizzle-orm';
+import { signInNewProfessional } from '../auth/test-auth';
 import { createCustomer } from '../customers/service';
+import { chooseAssistant, inCustomerThread } from '../customers/team-messages';
+import { getCustomerThread } from '../customers/thread';
 import type { AssistantRole } from '../team/catalog';
 import { type Assistant, answerSuggestion, findAssistant, sendText, type TurnEvent } from './service';
-import { newAssistant } from './test-tools';
+import { api, newAssistant } from './test-tools';
 
 type Block = Anthropic.Beta.BetaContentBlockParam;
 export type ToolCall = { name: string; input: Record<string, unknown> };
@@ -18,8 +21,18 @@ export async function scriptedAssistant(role: AssistantRole, playbook: Record<st
   return (await findAssistant(created.professional.id, created.id))!;
 }
 
-export function customerOf(assistant: Assistant, name: string, phoneNumber = randomPhoneNumber()) {
-  return createCustomer(assistant.professional.id, { name, phoneNumber }).then(({ customer }) => customer);
+export async function scriptedTeam() {
+  const { professional, headers } = await signInNewProfessional();
+  await api.team.post({ roles: ['scheduling', 'quotes', 'billing'] }, { headers });
+  return { professional: { id: professional.id } };
+}
+
+export function customerOf(
+  { professional }: { professional: { id: string } },
+  name: string,
+  phoneNumber = randomPhoneNumber(),
+) {
+  return createCustomer(professional.id, { name, phoneNumber }).then(({ customer }) => customer);
 }
 
 function randomPhoneNumber() {
@@ -36,6 +49,14 @@ export function notice(assistant: Assistant, text: string, extra: Partial<typeof
 
 export function say(assistant: Assistant, text: string) {
   return turn(assistant, (emit) => sendText(assistant, text, emit));
+}
+
+// The Professional writes in the Customer's thread; the team picks who answers.
+export async function sayInThread(professionalId: string, customerId: string, text: string) {
+  const thread = (await getCustomerThread(professionalId, customerId))!;
+  const chosen = (await chooseAssistant(professionalId, thread, text))!;
+  const assistant = inCustomerThread(chosen, thread);
+  return { role: assistant.role, ...(await turn(assistant, (emit) => sendText(assistant, text, emit))) };
 }
 
 export function acceptSuggestion(assistant: Assistant, suggestion: { id: string; customerName: string }) {

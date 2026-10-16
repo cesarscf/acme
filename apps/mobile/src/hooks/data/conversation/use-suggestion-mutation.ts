@@ -10,7 +10,11 @@ export function useSuggestionMutation(assistantId: string) {
   const [draft, setDraft] = useState('');
   const mutation = useMutation({
     mutationFn: ({ suggestionId, accepted }: { suggestionId: string; accepted: boolean; message: string }) =>
-      readTurn(assistantId, api.team({ id: assistantId }).suggestions({ suggestionId }).post({ accepted }), setDraft),
+      readTurn(
+        conversationKeys.detail(assistantId),
+        api.team({ id: assistantId }).suggestions({ suggestionId }).post({ accepted }),
+        setDraft,
+      ),
     onMutate: async ({ suggestionId, accepted, message }) => {
       await queryClient.cancelQueries({ queryKey: conversationKeys.detail(assistantId) });
       queryClient.setQueryData<Conversation>(

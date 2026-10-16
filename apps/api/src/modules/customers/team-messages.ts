@@ -3,16 +3,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { and, asc, eq } from 'drizzle-orm';
 import * as z from 'zod';
+import { claude, modelParams, recordUsage } from '../conversations/claude';
 import type { Handoff } from '../conversations/prompts';
-import {
-  type Assistant,
-  claude,
-  findAssistant,
-  modelParams,
-  recordUsage,
-  sendText,
-  type TurnEvent,
-} from '../conversations/service';
+import { type Assistant, findAssistant } from '../conversations/service';
+import { sendText, type TurnEvent } from '../conversations/turn';
 import { catalogEntry } from '../team/catalog';
 import { roles } from '../team/roles';
 import { type CustomerThread, getCustomerThread } from './thread';

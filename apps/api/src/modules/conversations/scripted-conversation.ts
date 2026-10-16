@@ -8,8 +8,9 @@ import { createCustomer } from '../customers/service';
 import { chooseAssistant, inCustomerThread, runTeam } from '../customers/team-messages';
 import { getCustomerThread } from '../customers/thread';
 import type { AssistantRole } from '../team/catalog';
-import { type Assistant, answerSuggestion, findAssistant, sendText, type TurnEvent } from './service';
+import { type Assistant, findAssistant } from './service';
 import { api, newAssistant } from './test-tools';
+import { answerSuggestion, sendText, type TurnEvent } from './turn';
 
 type Block = Anthropic.Beta.BetaContentBlockParam;
 export type ToolCall = { name: string; input: Record<string, unknown> };

@@ -1,5 +1,6 @@
 import type { BriefingScript } from '../briefing/scripts';
 import { billingRole } from '../charges/role';
+import type { TimedItems } from '../conversations/history';
 import type { Assistant } from '../conversations/service';
 import type { AssistantTool } from '../conversations/tools';
 import { quotesRole } from '../quotes/role';
@@ -15,6 +16,10 @@ export type RoleDefinition = {
   tools: (assistant: Assistant) => AssistantTool[];
   briefing: BriefingScript;
   routine: Routine;
+  // Texts of the one-tap suggestion a notice to this Role can carry.
+  suggestion?: { question: (customerName: string) => string; message: (customerName: string) => string };
+  // Items only this Role's chat shows, each at its own time.
+  timeline?: (assistant: Assistant) => Promise<TimedItems[]>;
 };
 
 export const roles: Record<AssistantRole, RoleDefinition> = {

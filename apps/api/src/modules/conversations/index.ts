@@ -1,18 +1,10 @@
 import { Elysia, sse, status } from 'elysia';
 import { auth } from '../auth';
+import { getConversation } from './history';
 import { ConversationsModel } from './model';
-import {
-  answerSuggestion,
-  decide,
-  findAssistant,
-  findOpenSuggestion,
-  findPendingConfirmation,
-  getConversation,
-  hasAiConsent,
-  isWorking,
-  sendText,
-  startTurn,
-} from './service';
+import { findOpenSuggestion } from './notices';
+import { findAssistant, hasAiConsent } from './service';
+import { answerSuggestion, decide, findPendingConfirmation, isWorking, sendText, startTurn } from './turn';
 
 export const conversations = new Elysia()
   .use(auth)
@@ -22,7 +14,7 @@ export const conversations = new Elysia()
     async ({ professional, params: { id } }) => {
       const assistant = await findAssistant(professional.id, id);
       if (!assistant) throw status(404, 'Assistant not found');
-      return getConversation(assistant);
+      return getConversation(assistant, isWorking(assistant.id));
     },
     { auth: true, params: 'conversations.Assistant' },
   )

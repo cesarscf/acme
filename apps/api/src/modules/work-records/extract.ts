@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import * as z from 'zod';
-import { claude, modelParams, recordUsage } from '../conversations/service';
+import { claude, modelParams, recordUsage } from '../conversations/claude';
 import type { PaymentMethod, PaymentMethods } from './service';
 
 // Null is "the Professional did not say it": the WorkRecord keeps what it had.

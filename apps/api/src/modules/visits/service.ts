@@ -1,6 +1,6 @@
 import { customers, db, professionals, visits } from '@acme/db';
 import { and, asc, eq, getTableColumns, gte, lt, ne, type SQL, sql } from 'drizzle-orm';
-import { addNotice } from '../conversations/service';
+import { addNotice } from '../conversations/notices';
 import { openJob } from '../jobs/service';
 import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 import { formatLocalDateTime, nextDay, toInstant } from './time';

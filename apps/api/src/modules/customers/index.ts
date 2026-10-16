@@ -1,16 +1,15 @@
 import { Elysia, sse, status } from 'elysia';
 import { auth } from '../auth';
+import { findAssistant, hasAiConsent } from '../conversations/service';
 import {
   claimCustomerThread,
   decide,
-  findAssistant,
-  hasAiConsent,
   isWorking,
   releaseCustomerThread,
   sendText,
   startTurn,
   type TurnEvent,
-} from '../conversations/service';
+} from '../conversations/turn';
 import { CustomersModel } from './model';
 import { listCustomerSections } from './sections';
 import { chooseAssistant, findThreadConfirmation, inCustomerThread, runTeam } from './team-messages';

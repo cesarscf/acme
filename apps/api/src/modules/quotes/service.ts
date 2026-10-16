@@ -1,7 +1,7 @@
 import { customers, db, priceItems, professionals, quoteItems, quotes } from '@acme/db';
 import { and, asc, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 import { formatMoney } from '../briefing/scripts';
-import { addNotice } from '../conversations/service';
+import { addNotice } from '../conversations/notices';
 import { declineJob, openJob } from '../jobs/service';
 import { addDays, localDate } from '../visits/time';
 import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';

@@ -28,6 +28,10 @@ export function confirmed<Input>(
   return { tool: strict(tool), card: (input) => card(tool.parse(input)) };
 }
 
+export function findTool(tools: AssistantTool[], name: string) {
+  return tools.find(({ tool }) => tool.name === name);
+}
+
 export function assistantTools(assistant: Assistant): AssistantTool[] {
   return [...customerTools(assistant), ...roles[assistant.role].tools(assistant), ...threadTools(assistant)];
 }

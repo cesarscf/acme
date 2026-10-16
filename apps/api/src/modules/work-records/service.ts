@@ -12,7 +12,7 @@ import {
   formatWholeMoney,
   sendCharge,
 } from '../charges/service';
-import { addNotice } from '../conversations/service';
+import { addNotice } from '../conversations/notices';
 import { createCustomer, findCustomer, toPhoneNumber } from '../customers/service';
 import { concludeJob, openJob } from '../jobs/service';
 import { findVisit, listVisits } from '../visits/service';

@@ -1,6 +1,7 @@
 import type { RoleDefinition } from '../team/roles';
 import { confirmations, schedulingBriefing } from './briefing';
 import { requestDueVisitConfirmations } from './service';
+import { bookVisitSuggestion, endedVisitSuggestions } from './suggestions';
 import { localDate, nextDay, toInstant } from './time';
 import { visitTools } from './tools';
 
@@ -10,6 +11,8 @@ export const schedulingRole: RoleDefinition = {
   scope: 'Marca, remarca e cancela visitas e pede a confirmação ao cliente.',
   tools: visitTools,
   briefing: schedulingBriefing,
+  suggestion: bookVisitSuggestion,
+  timeline: endedVisitSuggestions,
   routine: {
     queue: 'visit-confirmations',
     cron: (playbook) => {

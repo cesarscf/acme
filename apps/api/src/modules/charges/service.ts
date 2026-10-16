@@ -1,7 +1,7 @@
 import { assistants, charges, customers, db, workRecords } from '@acme/db';
 import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { formatMoney } from '../briefing/scripts';
-import { addNotice } from '../conversations/service';
+import { addNotice } from '../conversations/notices';
 import type { ConfirmationCard } from '../conversations/tools';
 import { concludeJob } from '../jobs/service';
 import { pixBrCode } from '../pix/br-code';

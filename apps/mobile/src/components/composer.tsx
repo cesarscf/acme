@@ -5,18 +5,14 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
-import { type Ref, useRef, useState } from 'react';
+import { type RefObject, useRef, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 import { useTranscriptionMutation } from '@/hooks/data/work-records/use-transcription-mutation';
+import { dataMentions, insertDataMention, opensDataMenu } from '@/lib/data-mentions';
 import { selectionFeedback } from '@/lib/haptics';
+import { DataMentionText } from './data-mention-text';
 import { Icon } from './icons';
-
-const mentions = [
-  { tag: '@agenda', detail: 'de amanhã' },
-  { tag: '@cobranças', detail: 'em aberto' },
-  { tag: '@caixa', detail: 'do mês' },
-];
 
 export function Composer({
   inputRef,
@@ -26,19 +22,20 @@ export function Composer({
   editable = true,
   canSend,
   onSend,
-  onMention,
+  mentions = false,
   canListen,
   onListenBlocked,
   drawer,
 }: {
-  inputRef?: Ref<TextInput>;
+  inputRef?: RefObject<TextInput | null>;
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;
   editable?: boolean;
   canSend: boolean;
   onSend: () => void;
-  onMention?: (message: string) => void;
+  // The @ menu, for the Assistants' chat: it only puts the mention in the field, colored, for the Professional to finish.
+  mentions?: boolean;
   // Voice goes through the AI transcription, so it waits for the AI consent like a message does.
   canListen: boolean;
   onListenBlocked?: () => void;
@@ -54,15 +51,22 @@ export function Composer({
   const listening = recording.isRecording;
   const nothingHeard = (transcription.error as { status?: number } | null)?.status === 422;
 
+  const input = useRef<TextInput | null>(null);
+
   function changeText(text: string) {
     onChangeText(text);
-    if (onMention) setMenu(/(^|\s)@$/.test(text));
+    if (mentions) setMenu(opensDataMenu(text));
   }
 
-  function mention(message: string) {
+  function mention(tag: string) {
     setMenu(false);
-    onChangeText('');
-    onMention?.(message);
+    onChangeText(insertDataMention(value, tag));
+    input.current?.focus();
+  }
+
+  function setInput(node: TextInput | null) {
+    input.current = node;
+    if (inputRef) inputRef.current = node;
   }
 
   async function startListening() {
@@ -99,12 +103,12 @@ export function Composer({
           style={{ boxShadow: '0 12px 32px rgba(14,19,25,0.14)', borderCurve: 'continuous' }}
         >
           <Text className="px-4 pt-1.5 pb-1 font-normal text-muted-foreground text-xs">Ver agora</Text>
-          {mentions.map(({ tag, detail }) => (
+          {dataMentions.map(({ tag, detail }) => (
             <Pressable
               key={tag}
               className="min-h-11 flex-row items-center gap-3 px-4 py-2.5 active:bg-secondary"
               accessibilityRole="button"
-              onPress={() => mention(`${tag} ${detail}`)}
+              onPress={() => mention(tag)}
             >
               <View className="size-7 items-center justify-center rounded-lg bg-secondary">
                 <Text className="font-extrabold text-[13px] text-muted-foreground">@</Text>
@@ -122,7 +126,7 @@ export function Composer({
         style={{ boxShadow: '0 4px 16px rgba(14,19,25,0.06)', borderCurve: 'continuous' }}
       >
         <TextInput
-          ref={inputRef}
+          ref={setInput}
           className="max-h-32 px-1 pt-0.5 pb-2.5 font-normal text-[15px] text-foreground"
           accessibilityLabel="Mensagem"
           editable={editable && !listening && !transcription.isPending}
@@ -131,9 +135,12 @@ export function Composer({
           }
           placeholderTextColor={placeholderColor}
           multiline
-          value={value}
+          // React Native colors part of a TextInput only through Text children, so the mentions go in as pieces.
+          value={mentions ? undefined : value}
           onChangeText={changeText}
-        />
+        >
+          {mentions && <DataMentionText text={value} />}
+        </TextInput>
         {transcription.isError && (
           <Text className="px-1 pb-2 font-normal text-[12.5px] text-destructive">
             {nothingHeard ? 'Não ouvi nada. Segure e fale mais perto do celular.' : 'Não consegui entender o áudio.'}
@@ -141,7 +148,7 @@ export function Composer({
         )}
         <View className="flex-row items-center gap-2">
           <RoundButton label="Anexar foto" icon="attach" disabled />
-          {onMention && <RoundButton label="Ver dados com @" icon="at" active={menu} onPress={() => setMenu(!menu)} />}
+          {mentions && <RoundButton label="Ver dados com @" icon="at" active={menu} onPress={() => setMenu(!menu)} />}
           <View className="flex-1" />
           <Pressable
             className={`size-9 items-center justify-center rounded-full border ${

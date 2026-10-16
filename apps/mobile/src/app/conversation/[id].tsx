@@ -238,7 +238,7 @@ function Chat({
           }
           canSend={canSend}
           onSend={submit}
-          onMention={step || reviewing ? undefined : (message) => !working && sendMessage(message)}
+          mentions={!step && !reviewing}
           canListen={!!me?.aiConsentedAt}
           onListenBlocked={() => router.push('/ai-consent')}
           drawer={

@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { DataMentionText } from './data-mention-text';
 
 export function ProfessionalBubble({ text }: { text: string }) {
   return (
@@ -7,7 +8,7 @@ export function ProfessionalBubble({ text }: { text: string }) {
         selectable
         className="max-w-[82%] overflow-hidden rounded-[18px] rounded-br-md border border-border bg-card px-3.5 py-2.5 font-normal text-[15px] text-foreground leading-[22px]"
       >
-        {text}
+        <DataMentionText text={text} />
       </Text>
     </View>
   );

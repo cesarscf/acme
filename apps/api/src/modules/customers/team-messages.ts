@@ -62,6 +62,11 @@ export async function runTeam(
   }
 }
 
+export async function findTeamAssistant(professionalId: string, role: Assistant['role']) {
+  const found = (await listTeam(professionalId)).find((assistant) => assistant.role === role);
+  return found && findAssistant(professionalId, found.id);
+}
+
 export async function chooseAssistant(professionalId: string, thread: CustomerThread, text: string) {
   const team = await listTeam(professionalId);
   if (!team.length) return undefined;
@@ -156,7 +161,7 @@ function describeItem(item: ThreadItem): string {
     case 'visit':
       return `Visita (id ${ref}): ${item.title} · ${item.status.label}`;
     case 'work_record':
-      return `${item.label}, ${item.when}: ${item.rows.map(({ label, value }) => `${label} ${value}`).join(' · ')}`;
+      return `${item.label} (id ${ref}), ${item.when}: ${item.rows.map(({ label, value }) => `${label} ${value}`).join(' · ')}`;
     case 'quote':
       return `Orçamento (id ${ref}): ${item.total} · ${item.status.label}`;
     case 'pix':
@@ -169,6 +174,10 @@ function describeItem(item: ThreadItem): string {
       return `${item.assistant.name} (${item.assistant.title}): ${item.text}`;
     case 'handoff':
       return `${item.assistant.name} para ${item.to.name}: ${item.text}`;
+    case 'line':
+      return item.text;
+    case 'question':
+      return `${item.assistant.name} perguntou: ${item.text} [${item.options.join(' / ')}]`;
     case 'confirmation':
       return `Cartão "${item.title}": ${decisionNames[item.status]}`;
   }

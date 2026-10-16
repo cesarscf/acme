@@ -12,7 +12,9 @@ import { CustomerAvatar } from '@/components/customer-avatar';
 import { Icon } from '@/components/icons';
 import { LoadError } from '@/components/load-error';
 import { Mascot } from '@/components/mascot';
+import { OptionRow } from '@/components/option-row';
 import { StatusPill } from '@/components/status-pill';
+import { TeamAction } from '@/components/team-action';
 import { useCustomerConfirmationMutation } from '@/hooks/data/customers/use-customer-confirmation-mutation';
 import {
   type CustomerThread,
@@ -27,6 +29,7 @@ import { withoutOpeningMention } from '@/lib/mentions';
 type Pinned = NonNullable<CustomerThread['pinned']>;
 type Item<Type extends ThreadItem['type']> = Extract<ThreadItem, { type: Type }>;
 type Speaker = Item<'assistant'>['assistant'];
+type Message = Parameters<ReturnType<typeof useSendCustomerMessageMutation>['mutate']>[0];
 
 export default function CustomerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -56,22 +59,35 @@ function Thread({ thread }: { thread: CustomerThread }) {
   const send = useSendCustomerMessageMutation(customer.id);
   const decide = useCustomerConfirmationMutation(customer.id);
   const [text, setText] = useState('');
-  const afterConsent = useRef<string | null>(null);
+  const afterConsent = useRef<Message | null>(null);
 
   const working = send.isPending || decide.isPending || thread.working;
   const draft = send.draft || decide.draft;
   const activity = send.activity ?? decide.activity;
   const answeredBy = team?.find(({ id }) => id === (send.answeredBy ?? decide.answeredBy));
   const failed = (send.isError || decide.isError) && !working;
+  // While a card or a question waits for an answer, the actions wait too.
+  const waiting = items.some(
+    (item) => (item.type === 'confirmation' && item.status === 'pending') || item.type === 'question',
+  );
   const canSend = !!text.trim() && !working;
 
-  function sendMessage(message: string) {
+  function sendMessage(message: Message) {
     if (!me?.aiConsentedAt) {
       afterConsent.current = message;
       router.push('/ai-consent');
       return;
     }
     setText('');
+    send.mutate(message);
+  }
+
+  function act(message: Message) {
+    if (working) return;
+    if (!me?.aiConsentedAt) {
+      router.push('/ai-consent');
+      return;
+    }
     send.mutate(message);
   }
 
@@ -120,8 +136,15 @@ function Thread({ thread }: { thread: CustomerThread }) {
               disabled={working}
               onDecide={(confirmed) => decide.mutate({ confirmationId: item.id, confirmed })}
             />
+          ) : item.type === 'question' ? (
+            <Question
+              key={item.id}
+              item={item}
+              disabled={working}
+              onAnswer={(answer) => act({ text: answer, role: item.role })}
+            />
           ) : (
-            <ItemView key={item.id} item={item} team={speakers} />
+            <ItemView key={item.id} item={item} customerId={customer.id} team={speakers} />
           ),
         )}
         {!!draft && <AssistantReply assistant={answeredBy} text={draft} team={speakers} />}
@@ -145,6 +168,30 @@ function Thread({ thread }: { thread: CustomerThread }) {
         )}
       </ScrollView>
 
+      {thread.actions.length > 0 && (
+        <ScrollView
+          horizontal
+          className="shrink-0 grow-0"
+          contentContainerClassName="gap-2 px-4 pt-1 pb-2"
+          showsHorizontalScrollIndicator={false}
+        >
+          {thread.actions.map((action) => {
+            const assistant = team?.find(({ role }) => role === action.role);
+            if (!assistant) return null;
+            return (
+              <TeamAction
+                key={action.key}
+                label={action.label}
+                assistant={assistant}
+                done={action.done}
+                locked={action.done || working || waiting}
+                onPress={() => act({ text: action.message, role: action.role })}
+              />
+            );
+          })}
+        </ScrollView>
+      )}
+
       <View className="px-3" style={{ paddingBottom: bottom + 10 }}>
         <Composer
           value={text}
@@ -153,7 +200,7 @@ function Thread({ thread }: { thread: CustomerThread }) {
             working ? 'Escreva uma correção ou o próximo pedido' : `Conte à equipe sobre ${customer.name.split(' ')[0]}`
           }
           canSend={canSend}
-          onSend={() => canSend && sendMessage(text.trim())}
+          onSend={() => canSend && sendMessage({ text: text.trim() })}
           canListen={!!me?.aiConsentedAt}
           onListenBlocked={() => router.push('/ai-consent')}
         />
@@ -279,8 +326,18 @@ function StepDot({ state }: { state: Pinned['steps'][number]['state'] }) {
   );
 }
 
-function ItemView({ item, team }: { item: Exclude<ThreadItem, { type: 'confirmation' }>; team: Speaker[] }) {
+function ItemView({
+  item,
+  customerId,
+  team,
+}: {
+  item: Exclude<ThreadItem, { type: 'confirmation' | 'question' }>;
+  customerId: string;
+  team: Speaker[];
+}) {
   switch (item.type) {
+    case 'line':
+      return <Line text={item.text} />;
     case 'professional':
       return <ProfessionalBubble text={item.text} />;
     case 'assistant':
@@ -300,7 +357,20 @@ function ItemView({ item, team }: { item: Exclude<ThreadItem, { type: 'confirmat
     case 'quote':
       return <AmountCard icon="quote" tone="orange" amount={item.total} detail={item.detail} status={item.status} />;
     case 'pix':
-      return <AmountCard icon="pix" tone="accent" amount={item.amount} detail={item.detail} status={item.status} />;
+      return (
+        <AmountCard
+          icon="pix"
+          tone="accent"
+          amount={item.amount}
+          detail={item.detail}
+          status={item.status}
+          onShowQrCode={
+            item.pixCode
+              ? () => router.push({ pathname: '/pix-qr-code', params: { customerId, chargeId: item.chargeId } })
+              : undefined
+          }
+        />
+      );
     case 'whatsapp':
       return <WhatsappBubble item={item} />;
   }
@@ -453,12 +523,14 @@ function AmountCard({
   amount,
   detail,
   status,
+  onShowQrCode,
 }: {
   icon: 'quote' | 'pix';
   tone: 'orange' | 'accent';
   amount: string;
   detail: string;
   status: Item<'quote'>['status'];
+  onShowQrCode?: () => void;
 }) {
   return (
     <View className="gap-3 rounded-2xl border border-border bg-card px-4 py-3.5" style={{ borderCurve: 'continuous' }}>
@@ -478,9 +550,61 @@ function AmountCard({
           <Text className="font-normal text-[12.5px] text-muted-foreground">{detail}</Text>
         </View>
       </View>
-      <View className="flex-row">
+      <View className="flex-row items-center justify-between">
         <StatusPill status={status} />
+        {onShowQrCode && (
+          <Pressable
+            className="h-[38px] items-center justify-center rounded-full border border-input px-3.5 active:bg-secondary"
+            accessibilityRole="button"
+            onPress={onShowQrCode}
+          >
+            <Text className="font-bold text-[13.5px] text-foreground">Mostrar QR Code</Text>
+          </Pressable>
+        )}
       </View>
+    </View>
+  );
+}
+
+function Line({ text }: { text: string }) {
+  return (
+    <View className="flex-row items-center justify-center gap-1.5 py-0.5">
+      <Icon name="check" size={14} color="--color-primary" strokeWidth={2.4} />
+      <Text className="font-normal text-[12.5px] text-muted-foreground">{text}</Text>
+    </View>
+  );
+}
+
+// A question with options; the answer goes to the Assistant who asked, as if typed.
+function Question({
+  item,
+  disabled,
+  onAnswer,
+}: {
+  item: Item<'question'>;
+  disabled: boolean;
+  onAnswer: (answer: string) => void;
+}) {
+  return (
+    <View
+      className="overflow-hidden rounded-2xl border border-border bg-card pt-3.5"
+      style={{ borderCurve: 'continuous' }}
+    >
+      <View className="mb-1 flex-row items-center gap-1.5 px-3.5">
+        <Mascot mascot={item.assistant.mascot} size={18} />
+        <Text className="font-bold text-[12.5px] text-foreground">{item.assistant.name}</Text>
+      </View>
+      <Text className="px-3.5 pb-3 font-bold text-[15px] text-foreground leading-[21px]">{item.text}</Text>
+      {item.options.map((option, index) => (
+        <OptionRow
+          key={option}
+          letter={'ABCD'[index]!}
+          label={option}
+          strong={index === 0}
+          disabled={disabled}
+          onPress={() => onAnswer(option)}
+        />
+      ))}
     </View>
   );
 }

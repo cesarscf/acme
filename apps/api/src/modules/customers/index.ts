@@ -5,7 +5,7 @@ import { findAssistant, hasAiConsent } from '../conversations/service';
 import { decide, sendText, startTurn, type TurnEvent } from '../conversations/turn';
 import { CustomersModel } from './model';
 import { listCustomerSections } from './sections';
-import { chooseAssistant, findThreadConfirmation, inCustomerThread, runTeam } from './team-messages';
+import { chooseAssistant, findTeamAssistant, findThreadConfirmation, inCustomerThread, runTeam } from './team-messages';
 import { getCustomerThread } from './thread';
 
 export const customers = new Elysia()
@@ -26,15 +26,18 @@ export const customers = new Elysia()
   )
   .post(
     '/customers/:id/messages',
-    async function* ({ professional, params: { id }, body: { text } }) {
+    async function* ({ professional, params: { id }, body: { text, role } }) {
       const thread = await getCustomerThread(professional.id, id);
       if (!thread) throw status(404, 'Customer not found');
+      if (role && !(await findTeamAssistant(professional.id, role))) throw status(404, 'No such Assistant on the team');
       if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
       const claim = await claimCustomerThread(id);
       if (!claim) throw status(409, 'The team is working');
       let turn: AsyncGenerator<TurnEvent> | undefined;
       try {
-        const chosen = await chooseAssistant(professional.id, thread, text);
+        const chosen = role
+          ? await findTeamAssistant(professional.id, role)
+          : await chooseAssistant(professional.id, thread, text);
         if (!chosen) throw status(409, 'No Assistant on the team');
         const assistant = await inCustomerThread(chosen, thread);
         turn = await startTurn(

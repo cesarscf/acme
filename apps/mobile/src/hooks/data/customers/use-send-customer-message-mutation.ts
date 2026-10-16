@@ -7,18 +7,21 @@ import { readTurn } from '../conversation/read-turn';
 import { customerKeys } from './keys';
 import type { CustomerThread } from './use-customer-thread-query';
 
+// An action above the field, or an answer to a question, names the Role that does it; free text goes to whoever fits.
+type Message = { text: string; role?: 'scheduling' | 'quotes' | 'billing' };
+
 export function useSendCustomerMessageMutation(customerId: string) {
   const [turn, setTurn] = useState(idleTurn);
   const [answeredBy, setAnsweredBy] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: (text: string) =>
+    mutationFn: ({ text, role }: Message) =>
       readTurn(
         customerKeys.thread(customerId),
-        api.customers({ id: customerId }).messages.post({ text }),
+        api.customers({ id: customerId }).messages.post({ text, role }),
         setTurn,
         setAnsweredBy,
       ),
-    onMutate: async (text) => {
+    onMutate: async ({ text }) => {
       setAnsweredBy(null);
       await queryClient.cancelQueries({ queryKey: customerKeys.thread(customerId) });
       queryClient.setQueryData<CustomerThread>(

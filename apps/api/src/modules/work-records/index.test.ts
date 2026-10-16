@@ -6,6 +6,7 @@ import { treaty } from '@elysia/eden';
 import { eq } from 'drizzle-orm';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
+import { confirmChargePaid } from '../charges/service';
 import { startFakeClaude } from '../conversations/fake-claude';
 import { createCustomer } from '../customers/service';
 import { startFakeOpenRouter } from '../transcription/fake-openrouter';
@@ -307,41 +308,6 @@ test('a WhatsApp that is already a Customer links that Customer instead of creat
   expect(await db.select().from(customers).where(eq(customers.professionalId, professional.id))).toHaveLength(1);
 });
 
-test("the Serviços list shows the Professional's WorkRecords, newest first, and another Professional cannot open them", async () => {
-  const { professional, headers } = await professionalWith();
-  const joao = await newCustomer(professional.id, 'João Pereira');
-  claude.reply((request) =>
-    filled({ customer: refOf(request, 'João Pereira'), title: 'Limpeza de split', amountCents: 35000 }),
-  );
-  const { data: first } = await api['work-records'].post({ transcript: 'Limpei o split do João, 350.' }, { headers });
-  claude.reply(filled({ title: 'Troca de capacitor' }));
-  const { data: second } = await api['work-records'].post({ transcript: 'Troquei um capacitor.' }, { headers });
-  const other = await signInNewProfessional();
-
-  const { data: list } = await api['work-records'].get({ headers });
-  const opened = await api['work-records']({ id: first!.id }).get({ headers: other.headers });
-
-  expect(list).toEqual([
-    {
-      id: second!.id,
-      createdAt: expect.any(Date),
-      title: 'Troca de capacitor',
-      amountCents: null,
-      customerName: null,
-      paid: false,
-    },
-    {
-      id: first!.id,
-      createdAt: expect.any(Date),
-      title: 'Limpeza de split',
-      amountCents: 35000,
-      customerName: joao.name,
-      paid: false,
-    },
-  ]);
-  expect(opened.status).toBe(404);
-});
-
 async function pixChargeFor(
   workRecord: { id: string; professionalId: string; customerId: string | null },
   status: 'pending' | 'paid' = 'pending',
@@ -384,7 +350,7 @@ test('cash received after the Pix went out settles the service: a paid cash Char
     { headers },
   );
 
-  expect(data).toMatchObject({ paid: true, charge: null });
+  expect(data).toMatchObject({ paid: true });
   const saved = await db.select().from(charges).where(eq(charges.workRecordId, created!.id));
   expect(saved).toHaveLength(2);
   expect(saved.find(({ id }) => id === pix.id)).toMatchObject({ status: 'cancelled' });
@@ -393,11 +359,7 @@ test('cash received after the Pix went out settles the service: a paid cash Char
     amountCents: 35000,
     status: 'paid',
   });
-  const received = await api['work-records']({ id: created!.id }).charge.confirmation.post(
-    { received: true },
-    { headers },
-  );
-  expect(received.status).toBe(409);
+  expect(await confirmChargePaid(professional.id, pix.id, true)).toEqual({ refused: 'already_paid' });
 });
 
 test('a corrected amount reaches the Pix Charge not yet paid, and never a paid one', async () => {
@@ -421,7 +383,7 @@ test('a corrected amount reaches the Pix Charge not yet paid, and never a paid o
   claude.reply(filled({ amountCents: 40000 }));
   await api['work-records']({ id: created[1]!.id }).messages.post({ text: 'Na verdade foram 400.' }, { headers });
 
-  expect(data).toMatchObject({ amountCents: 40000, charge: { id: pending.id, amountCents: 40000 } });
+  expect(data).toMatchObject({ amountCents: 40000 });
   const [pendingNow] = await db.select().from(charges).where(eq(charges.id, pending.id));
   const [paidNow] = await db.select().from(charges).where(eq(charges.id, paid.id));
   expect(pendingNow!.amountCents).toBe(40000);

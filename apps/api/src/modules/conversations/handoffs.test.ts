@@ -254,7 +254,6 @@ test('"Registrar serviço" from an ended Visit saves the WorkRecord about that V
   );
 
   expect(created).toMatchObject({ customer: { id: team.joao.id }, amountCents: 45000 });
-  expect(created!.chargeCard).not.toBeNull();
   const [saved] = await db.select().from(workRecords).where(eq(workRecords.id, created!.id));
   expect(saved).toMatchObject({ visitId: visit.id, customerId: team.joao.id });
   expect(await itemsOf(team.scheduling, team.headers)).toMatchObject([

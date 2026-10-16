@@ -1,9 +1,10 @@
 import { assistants, db, professionals, whatsappMessages } from '@acme/db';
 import { asc, eq } from 'drizzle-orm';
 import { formatMoney } from '../briefing/scripts';
+import { chargePixCode, findPixAccount } from '../charges/service';
 import { messageItems } from '../conversations/history';
 import { isCustomerWorking } from '../conversations/running-turns';
-import { listThreadAssistants, speaker } from '../conversations/service';
+import { type Assistant, listThreadAssistants, speaker } from '../conversations/service';
 import type { ConfirmationCard } from '../conversations/tools';
 import { hasEnded, type JobDetail, jobStatus, jobSteps, listJobs, type Pill } from '../jobs/progress';
 import { daysAgo, localTime, shortDate, shortDay } from '../time/time';
@@ -19,14 +20,25 @@ type Item = { id: string; at: Date } & (
   | { type: 'visit'; title: string; detail: string; status: Pill }
   | { type: 'work_record'; label: string; when: string; rows: Row[]; transcript: string[] }
   | { type: 'quote'; total: string; detail: string; status: Pill }
-  | { type: 'pix'; amount: string; detail: string; status: Pill }
+  | { type: 'pix'; chargeId: string; amount: string; detail: string; status: Pill; pixCode: string | null }
   | { type: 'whatsapp'; direction: 'outbound' | 'inbound'; label: string; text: string; buttons: string[] }
+  | { type: 'line'; text: string }
+  | {
+      type: 'question';
+      text: string;
+      assistant: ReturnType<typeof speaker>;
+      role: Assistant['role'];
+      options: string[];
+    }
   | { type: 'professional'; text: string }
   | { type: 'assistant'; text: string; assistant: ReturnType<typeof speaker> }
   | { type: 'handoff'; text: string; assistant: ReturnType<typeof speaker>; to: ReturnType<typeof speaker> }
   | ({ type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard)
 );
 type DayItem = { type: 'day'; id: string; label: string };
+type Team = { id: string; name: string; role: Assistant['role'] }[];
+// A next step the Professional taps above the field; tapping sends the message to that Role's Assistant in the thread.
+type Action = { key: string; label: string; role: Assistant['role']; message: string; done: boolean };
 
 export type CustomerThread = NonNullable<Awaited<ReturnType<typeof getCustomerThread>>>;
 
@@ -41,14 +53,20 @@ export async function getCustomerThread(professionalId: string, customerId: stri
   const timeZone = professional!.timezone;
   const details = await listJobs(professionalId, [customer.id]);
   const current = pinnedJob(details, timeZone, now);
+  const team = await db
+    .select({ id: assistants.id, name: assistants.name, role: assistants.role })
+    .from(assistants)
+    .where(eq(assistants.professionalId, professionalId));
+
+  const pixAccount = await findPixAccount(professionalId);
 
   const items: Item[] = [];
   for (const detail of details) {
-    if (detail === current) items.push(...jobItems(detail, customer.name, timeZone, now));
+    if (detail === current) items.push(...jobItems(detail, customer.name, { team, pixAccount, timeZone, now }));
     else items.push(pastJob(detail, timeZone));
   }
   items.push(...(await whatsappItems(customer, details, current)));
-  items.push(...(await teamItems(professionalId, customer.id, details, current)));
+  items.push(...(await teamItems(professionalId, customer.id, team, details, current)));
   // The Job starts at its first record when that came before the Job row (the migration's older records).
   const rank = { past_job: 0, job_start: 1 } as Partial<Record<Item['type'], number>>;
   items.sort((a, b) => a.at.getTime() - b.at.getTime() || (rank[a.type] ?? 2) - (rank[b.type] ?? 2));
@@ -65,7 +83,23 @@ export async function getCustomerThread(professionalId: string, customerId: stri
         }
       : null,
     items: withDays(items, timeZone, now),
+    actions: current?.job.status === 'open' ? jobActions(current, team) : [],
   };
+}
+
+// The Job's next steps, each done by the Assistant of its Role.
+function jobActions(detail: JobDetail, team: Team): Action[] {
+  const has = (role: Assistant['role']) => team.some((assistant) => assistant.role === role);
+  const actions: Action[] = [];
+  const service = detail.workRecords.some(({ amountCents }) => amountCents !== null);
+  const paid = detail.charges.some(({ status }) => status === 'paid');
+  if (service && !paid && has('billing')) {
+    const sent = detail.charges.some(
+      ({ paymentMethod, sentAt, status }) => paymentMethod === 'pix' && sentAt && status !== 'cancelled',
+    );
+    actions.push({ key: 'charge', label: 'Cobrar no Pix', role: 'billing', message: 'Cobrar no Pix', done: sent });
+  }
+  return actions;
 }
 
 // The open Job; a Job paid today stays pinned as CONCLUÍDO until the day ends.
@@ -95,9 +129,17 @@ function pastJob(detail: JobDetail, timeZone: string): Item {
   };
 }
 
-function jobItems(detail: JobDetail, customerName: string, timeZone: string, now: Date): Item[] {
+type PixAccount = Awaited<ReturnType<typeof findPixAccount>>;
+
+function jobItems(
+  detail: JobDetail,
+  customerName: string,
+  { team, pixAccount, timeZone, now }: { team: Team; pixAccount: PixAccount; timeZone: string; now: Date },
+): Item[] {
   const { job } = detail;
   const items: Item[] = [];
+  const billing = team.find(({ role }) => role === 'billing');
+  const first = customerName.split(' ')[0];
 
   for (const visit of detail.visits) {
     const status: Pill =
@@ -137,6 +179,18 @@ function jobItems(detail: JobDetail, customerName: string, timeZone: string, now
       rows,
       transcript: workRecord.transcript.split('\n').filter((line) => line.trim()),
     });
+    // The billing Assistant answers the record: what the team can do now, or the amount still missing.
+    if (billing) {
+      items.push({
+        type: 'assistant',
+        id: `work_record_reply:${workRecord.id}`,
+        at: workRecord.createdAt,
+        text: service
+          ? `Registrei o serviço do ${first}. Escolha o que a equipe faz agora:`
+          : `Registrei a visita do ${first}. Se já fez o serviço, quanto ficou? Me diga aqui embaixo.`,
+        assistant: speaker(billing),
+      });
+    }
   }
 
   for (const quote of detail.quotes) {
@@ -162,17 +216,41 @@ function jobItems(detail: JobDetail, customerName: string, timeZone: string, now
       type: 'pix',
       id: `pix:${charge.id}`,
       at: charge.sentAt,
+      chargeId: charge.id,
       amount: formatMoney(charge.amountCents),
       detail: `Pix para ${customerName} · enviado no WhatsApp`,
       status:
         charge.status === 'paid' && charge.paidAt
           ? { label: `Pago às ${localTime(charge.paidAt, timeZone)}`, tone: 'ok' }
           : { label: 'Aguardando pagamento', tone: 'none' },
+      // "Mostrar QR Code" lets the Customer pay on the spot.
+      pixCode: pixAccount && chargePixCode(charge, pixAccount),
     });
+    // Only the Professional knows whether the Pix arrived; the answer goes to the billing Assistant like a message.
+    if (charge.status === 'awaiting_confirmation' && billing) {
+      items.push({
+        type: 'question',
+        id: `paid_question:${charge.id}`,
+        at: charge.updatedAt,
+        text: `${first} disse que já pagou. O dinheiro caiu?`,
+        assistant: speaker(billing),
+        role: 'billing',
+        options: ['Recebi', 'Não caiu'],
+      });
+    }
   }
 
-  const first = Math.min(job.openedAt.getTime(), ...items.map(({ at }) => at.getTime()));
-  return [{ type: 'job_start', id: `job_start:${job.id}`, at: new Date(first), title: job.title }, ...items];
+  for (const charge of detail.charges) {
+    if (charge.status !== 'paid' || !charge.paidAt) continue;
+    const text = `Pagamento recebido: ${formatMoney(charge.amountCents)}`;
+    items.push({ type: 'line', id: `paid:${charge.id}`, at: charge.paidAt, text });
+  }
+  if (job.status === 'done' && job.closedAt) {
+    items.push({ type: 'line', id: `job_done:${job.id}`, at: job.closedAt, text: 'Atendimento concluído' });
+  }
+
+  const start = Math.min(job.openedAt.getTime(), ...items.map(({ at }) => at.getTime()));
+  return [{ type: 'job_start', id: `job_start:${job.id}`, at: new Date(start), title: job.title }, ...items];
 }
 
 // The WhatsApp exchanged with the Customer; what belongs to an earlier Job stays inside its card.
@@ -218,13 +296,15 @@ async function whatsappItems(customer: Customer, details: JobDetail[], current: 
 }
 
 // What the Professional told the team here and what the Assistants answered; what belongs to an earlier Job stays inside its card.
-async function teamItems(professionalId: string, customerId: string, details: JobDetail[], current?: JobDetail) {
+async function teamItems(
+  professionalId: string,
+  customerId: string,
+  team: Team,
+  details: JobDetail[],
+  current?: JobDetail,
+) {
   const earlier = new Set(details.filter((detail) => detail !== current).map(({ job }) => job.id));
   const items: Item[] = [];
-  const team = await db
-    .select({ id: assistants.id, name: assistants.name, role: assistants.role })
-    .from(assistants)
-    .where(eq(assistants.professionalId, professionalId));
   for (const assistant of await listThreadAssistants(professionalId, customerId)) {
     for (const message of await messageItems(assistant, customerId)) {
       if (message.jobId && earlier.has(message.jobId)) continue;

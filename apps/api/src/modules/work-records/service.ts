@@ -1,18 +1,7 @@
 import { assistants, audioUsages, charges, customers, db, professionals, workRecords } from '@acme/db';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import { paymentMethods } from '../charges/briefing';
-import {
-  chargeCard,
-  chargePixCode,
-  confirmChargePaid,
-  createCharge,
-  findPixAccount,
-  findPixCharge,
-  followAmount,
-  formatWholeMoney,
-  sendCharge,
-} from '../charges/service';
-import { addNotice } from '../conversations/notices';
+import { followAmount } from '../charges/service';
 import { createCustomer, findCustomer, toPhoneNumber } from '../customers/service';
 import { concludeJob, openJob } from '../jobs/service';
 import { addDays, formatLocalDateTime, localDate } from '../time/time';
@@ -121,14 +110,14 @@ export async function createWorkRecord(professionalId: string, transcript: strin
   return viewWorkRecord(workRecord!);
 }
 
-// A message in the service thread completes or corrects the account: Claude reads it all again.
-// A WorkRecord of a Visit keeps the Visit's Customer, as createWorkRecord does.
+// A message completes or corrects the account: Claude reads it all again.
+// A WorkRecord with a Customer keeps it; without one, the message can name who it is.
 export async function addMessage(professionalId: string, id: string, text: string) {
   const current = await findWorkRecord(professionalId, id);
   if (!current) return;
   const transcript = `${current.transcript}\n${text.trim()}`;
   const extraction = await extract(professionalId, transcript);
-  const resolved = current.visitId
+  const resolved = current.customerId
     ? { customerId: current.customerId, newCustomerName: null }
     : await resolveCustomer(professionalId, extraction);
   const customerId = resolved.customerId ?? current.customerId;
@@ -248,11 +237,6 @@ function findWorkRecord(professionalId: string, id: string) {
   });
 }
 
-export async function getWorkRecord(professionalId: string, id: string) {
-  const workRecord = await findWorkRecord(professionalId, id);
-  return workRecord && viewWorkRecord(workRecord);
-}
-
 async function viewWorkRecord(workRecord: WorkRecord) {
   const customer = workRecord.customerId
     ? await findCustomer(workRecord.professionalId, workRecord.customerId)
@@ -260,9 +244,6 @@ async function viewWorkRecord(workRecord: WorkRecord) {
   const paidCharge = await db.query.charges.findFirst({
     where: and(eq(charges.workRecordId, workRecord.id), eq(charges.status, 'paid')),
   });
-  const pixCharge = await findPixCharge(workRecord.id);
-  const pixAccount = await findPixAccount(workRecord.professionalId);
-  const service = workRecord.description ?? workRecord.title ?? 'Serviço';
   return {
     id: workRecord.id,
     createdAt: workRecord.createdAt,
@@ -273,23 +254,6 @@ async function viewWorkRecord(workRecord: WorkRecord) {
     amountCents: workRecord.amountCents,
     paymentMethod: workRecord.paymentMethod,
     paid: !!paidCharge,
-    // The service thread shows only a Pix Charge that was sent, and not one cancelled by cash.
-    charge:
-      pixCharge?.sentAt && pixCharge.status !== 'cancelled'
-        ? {
-            id: pixCharge.id,
-            status: pixCharge.status,
-            amountCents: pixCharge.amountCents,
-            sentAt: pixCharge.sentAt,
-            paidAt: pixCharge.paidAt,
-            pixCode: pixAccount && chargePixCode(pixCharge, pixAccount),
-          }
-        : null,
-    chargeCard:
-      customer && workRecord.amountCents
-        ? chargeCard({ customerName: customer.name, service, amountCents: workRecord.amountCents })
-        : null,
-    pixReady: !!pixAccount,
     transcript: workRecord.transcript,
     customerOptions: customer ? [] : await listCustomerOptions(workRecord.professionalId),
   };
@@ -310,69 +274,4 @@ async function listCustomerOptions(professionalId: string) {
     .limit(customerOptionCount);
   const unique = new Map([...visited, ...newest].map((customer) => [customer.id, customer]));
   return [...unique.values()].slice(0, customerOptionCount);
-}
-
-export async function listWorkRecords(professionalId: string) {
-  const rows = await db
-    .select({
-      id: workRecords.id,
-      createdAt: workRecords.createdAt,
-      title: workRecords.title,
-      amountCents: workRecords.amountCents,
-      customerName: customers.name,
-    })
-    .from(workRecords)
-    .leftJoin(customers, eq(customers.id, workRecords.customerId))
-    .where(eq(workRecords.professionalId, professionalId))
-    .orderBy(desc(workRecords.createdAt))
-    .limit(100);
-  const paid = rows.length
-    ? await db
-        .select({ workRecordId: charges.workRecordId })
-        .from(charges)
-        .where(
-          and(
-            inArray(
-              charges.workRecordId,
-              rows.map(({ id }) => id),
-            ),
-            eq(charges.status, 'paid'),
-          ),
-        )
-    : [];
-  const paidIds = new Set(paid.map(({ workRecordId }) => workRecordId));
-  return rows.map((row) => ({ ...row, paid: paidIds.has(row.id) }));
-}
-
-// "Cobrar no Pix" in the service thread: the Charge is made and sent once the Professional taps Confirmar.
-export async function chargeWorkRecord(professionalId: string, id: string) {
-  const professional = await findProfessional(professionalId);
-  const account = await findPixAccount(professional.id);
-  if (!account) return { refused: 'no_pix_account' as const };
-  const created = await createCharge(professional.id, id);
-  if (created.refused) return { refused: created.refused };
-  if (created.charge.sentAt) return { refused: 'already_sent' as const };
-  try {
-    await sendCharge(created.charge, professional, account);
-  } catch (error) {
-    console.error('Sending the Pix charge failed', error);
-    return { refused: 'send_failed' as const };
-  }
-  const workRecord = await findWorkRecord(professional.id, id);
-  return { workRecord: await viewWorkRecord(workRecord!) };
-}
-
-export async function confirmWorkRecordCharge(professionalId: string, id: string, received: boolean) {
-  const charge = await findPixCharge(id);
-  const workRecord = await findWorkRecord(professionalId, id);
-  if (!charge || !workRecord) return { refused: 'not_found' as const };
-  const result = await confirmChargePaid(professionalId, charge.id, received);
-  if (result.refused) return { refused: result.refused };
-  if (received) {
-    const { customer, amountCents } = result.charge;
-    const first = customer.name.split(' ')[0];
-    const text = `Caiu! Os ${formatWholeMoney(amountCents)} do ${first} já estão na sua conta.`;
-    await db.transaction((tx) => addNotice(tx, professionalId, 'billing', text));
-  }
-  return { workRecord: await viewWorkRecord(workRecord) };
 }

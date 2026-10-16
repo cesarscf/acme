@@ -3,22 +3,11 @@ import { auth } from '../auth';
 import { hasAiConsent } from '../conversations/service';
 import { transcribe } from '../transcription/transcribe';
 import { WorkRecordsModel } from './model';
-import {
-  addMessage,
-  chargeWorkRecord,
-  chooseCustomer,
-  confirmWorkRecordCharge,
-  createWorkRecord,
-  findBillingAssistant,
-  getWorkRecord,
-  listWorkRecords,
-  recordAudioUsage,
-} from './service';
+import { addMessage, chooseCustomer, createWorkRecord, findBillingAssistant, recordAudioUsage } from './service';
 
 export const workRecords = new Elysia()
   .use(auth)
   .model(WorkRecordsModel)
-  .get('/work-records', ({ professional }) => listWorkRecords(professional.id), { auth: true })
   .post(
     '/work-records/transcription',
     async ({ professional, body: { audio } }) => {
@@ -47,15 +36,6 @@ export const workRecords = new Elysia()
     },
     { auth: true, body: 'workRecords.New' },
   )
-  .get(
-    '/work-records/:id',
-    async ({ professional, params: { id } }) => {
-      const workRecord = await getWorkRecord(professional.id, id);
-      if (!workRecord) throw status(404, 'Work record not found');
-      return workRecord;
-    },
-    { auth: true, params: 'workRecords.WorkRecord' },
-  )
   .post(
     '/work-records/:id/messages',
     async ({ professional, params: { id }, body: { text } }) => {
@@ -76,25 +56,4 @@ export const workRecords = new Elysia()
       return result.workRecord;
     },
     { auth: true, params: 'workRecords.WorkRecord', body: 'workRecords.Customer' },
-  )
-  .post(
-    '/work-records/:id/charge',
-    async ({ professional, params: { id } }) => {
-      const result = await chargeWorkRecord(professional.id, id);
-      if (result.workRecord) return result.workRecord;
-      if (result.refused === 'work_record_not_found') throw status(404, 'Work record not found');
-      if (result.refused === 'send_failed') throw status(502, 'Sending failed');
-      throw status(409, result.refused);
-    },
-    { auth: true, params: 'workRecords.WorkRecord' },
-  )
-  .post(
-    '/work-records/:id/charge/confirmation',
-    async ({ professional, params: { id }, body: { received } }) => {
-      const result = await confirmWorkRecordCharge(professional.id, id, received);
-      if (result.workRecord) return result.workRecord;
-      if (result.refused === 'not_found') throw status(404, 'Charge not found');
-      throw status(409, result.refused);
-    },
-    { auth: true, params: 'workRecords.WorkRecord', body: 'workRecords.ChargeConfirmation' },
   );

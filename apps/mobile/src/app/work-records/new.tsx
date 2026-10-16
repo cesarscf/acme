@@ -6,13 +6,22 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, type TextInput, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
-import { useCreateWorkRecordMutation } from '@/hooks/data/work-records/use-create-work-record-mutation';
+import { Reply } from '@/components/chat-messages';
+import { Composer } from '@/components/composer';
+import { CustomerQuestion } from '@/components/customer-question';
+import { useChooseCustomerMutation } from '@/hooks/data/work-records/use-choose-customer-mutation';
+import {
+  useCreateWorkRecordMutation,
+  type WorkRecord,
+} from '@/hooks/data/work-records/use-create-work-record-mutation';
 import { useTranscriptionMutation } from '@/hooks/data/work-records/use-transcription-mutation';
+import { useWorkRecordMessageMutation } from '@/hooks/data/work-records/use-work-record-message-mutation';
 import { transcriptLines } from '@/lib/transcript';
 import { formatWhen } from '@/lib/when';
 
@@ -32,7 +41,9 @@ export default function RecordWorkRecord() {
 
   const lines = transcription.data ? transcriptLines(transcription.data.transcript) : [];
   const listening = !uri && !denied;
-  const summarizing = transcription.isPending || create.isPending || create.isSuccess;
+  // Without a Customer the screen asks who it is for; with one, it is already opening the Customer's thread.
+  const unknownCustomer = create.data && !create.data.customer ? create.data : null;
+  const summarizing = transcription.isPending || create.isPending || (create.isSuccess && !unknownCustomer);
   const talking = recording.durationMillis >= talkingAfterMillis;
   const nothingHeard = (transcription.error as { status?: number } | null)?.status === 422;
 
@@ -66,13 +77,24 @@ export default function RecordWorkRecord() {
 
   function summarize(transcript: string) {
     create.mutate(transcript, {
-      onSuccess: ({ id }) => router.replace({ pathname: '/work-records/[id]', params: { id } }),
+      onSuccess: ({ customer }) => customer && openThread(customer.id),
     });
   }
 
   useEffect(() => {
     start();
   }, []);
+
+  if (unknownCustomer) {
+    return (
+      <KeyboardAvoidingView behavior="padding" className="flex-1 bg-card" style={{ paddingTop: top + 16 }}>
+        <View className="flex-row px-5">
+          <BackButton />
+        </View>
+        <CustomerStep workRecord={unknownCustomer} lines={lines} bottom={bottom} />
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <View className="flex-1 bg-card px-5" style={{ paddingTop: top + 16, paddingBottom: bottom + 26 }}>
@@ -146,6 +168,77 @@ export default function RecordWorkRecord() {
         />
       )}
     </View>
+  );
+}
+
+function openThread(customerId: string) {
+  router.replace({ pathname: '/customers/[id]', params: { id: customerId } });
+}
+
+// The record was saved without a Customer: picking one, or writing a new one's name and WhatsApp, opens their thread.
+function CustomerStep({ workRecord, lines, bottom }: { workRecord: WorkRecord; lines: string[]; bottom: number }) {
+  const choose = useChooseCustomerMutation(workRecord.id);
+  const message = useWorkRecordMessageMutation(workRecord.id);
+  const input = useRef<TextInput>(null);
+  const [text, setText] = useState('');
+  const working = choose.isPending || message.isPending;
+  const newCustomerName = message.data?.newCustomerName;
+
+  function send() {
+    const said = text.trim();
+    if (!said || working) return;
+    setText('');
+    message.mutate(said, { onSuccess: ({ customer }) => customer && openThread(customer.id) });
+  }
+
+  return (
+    <>
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-4 px-5 pt-[22px] pb-4"
+        keyboardDismissMode="interactive"
+      >
+        <Text className="font-extrabold text-[29px] text-foreground leading-[33px] tracking-[-0.58px]">
+          Novo serviço
+        </Text>
+        {lines.map((line, index) => (
+          <View key={`${index}-${line}`}>
+            <Text className="font-semibold text-muted-foreground text-xs">Você</Text>
+            <Text selectable className="mt-0.5 font-normal text-base text-foreground leading-6">
+              {line}
+            </Text>
+          </View>
+        ))}
+        {newCustomerName ? (
+          <Reply
+            text={`Não achei ${newCustomerName} nos seus clientes. Me passe o WhatsApp com DDD para eu cadastrar.`}
+          />
+        ) : (
+          <CustomerQuestion
+            options={workRecord.customerOptions}
+            disabled={working}
+            onPick={(customerId) => choose.mutate(customerId, { onSuccess: () => openThread(customerId) })}
+            onOther={() => input.current?.focus()}
+          />
+        )}
+        {(choose.isError || message.isError) && (
+          <Text selectable className="font-normal text-destructive text-sm">
+            Não consegui anotar agora. Tente de novo.
+          </Text>
+        )}
+      </ScrollView>
+      <View className="px-3" style={{ paddingBottom: bottom + 10 }}>
+        <Composer
+          inputRef={input}
+          value={text}
+          onChangeText={setText}
+          placeholder={newCustomerName ? 'WhatsApp com DDD' : 'Nome e WhatsApp do cliente'}
+          canSend={!!text.trim() && !working}
+          onSend={send}
+          canListen
+        />
+      </View>
+    </>
   );
 }
 

@@ -5,25 +5,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useCSSVariable } from 'uniwind';
 import { Button } from '@/components/button';
-import { useWorkRecordQuery } from '@/hooks/data/work-records/use-work-record-query';
-import { formatMoney } from '@/lib/money';
+import { useCustomerThreadQuery } from '@/hooks/data/customers/use-customer-thread-query';
 import { qrCodePath } from '@/lib/qr-code';
 
 const qrCodeSize = 200;
 
 export default function PixQrCode() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { customerId, chargeId } = useLocalSearchParams<{ customerId: string; chargeId: string }>();
   const { bottom } = useSafeAreaInsets();
-  const { data: workRecord } = useWorkRecordQuery(id);
+  const { data: thread } = useCustomerThreadQuery(customerId);
   const dark = useCSSVariable('--color-foreground') as string;
-  const charge = workRecord?.charge;
-  if (!charge?.pixCode) return <View className="h-40 bg-card" />;
-  const { size, path } = qrCodePath(charge.pixCode);
-  const pixCode = charge.pixCode;
+  const pix = thread?.items.find((item) => item.type === 'pix' && item.chargeId === chargeId);
+  if (pix?.type !== 'pix' || !pix.pixCode) return <View className="h-40 bg-card" />;
+  const { size, path } = qrCodePath(pix.pixCode);
+  const pixCode = pix.pixCode;
 
   return (
     <View className="items-center bg-card px-5 pt-6" style={{ paddingBottom: bottom + 8 }}>
-      <Text className="font-extrabold text-[19px] text-foreground">Pix · {formatMoney(charge.amountCents)}</Text>
+      <Text className="font-extrabold text-[19px] text-foreground">Pix · {pix.amount}</Text>
       <Text className="mt-0.5 font-normal text-[13.5px] text-muted-foreground">
         Mostre para o cliente pagar na hora
       </Text>

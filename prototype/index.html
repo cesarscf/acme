@@ -71,8 +71,8 @@ body{margin:0;min-height:100%;display:flex;flex-direction:column;align-items:cen
 <div class="bar">
   <span>Protótipo · clique para navegar</span>
   <button type="button" onclick="location.reload()">Recomeçar</button>
-  <button type="button" onclick="window.__app && window.__app.jump('agenda')">Ir para a Agenda</button>
-  <button type="button" onclick="window.__app && window.__app.jump('joao')">Abrir um atendimento</button>
+  <button type="button" onclick="window.__app && window.__app.jump('clients')">Ir para Clientes</button>
+  <button type="button" onclick="window.__app && window.__app.jump('joao')">Abrir o João</button>
 </div>
 <div id="stage"><div id="phone"><div id="app"></div></div></div>
 <template id="tpl">
@@ -254,7 +254,7 @@ body{margin:0;min-height:100%;display:flex;flex-direction:column;align-items:cen
   </div>
   <div style="margin: 10px 20px 8px; background: #EEF0F3; border-radius: 14px; padding: 4px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px">
     <button class="b" style="{{tabA}}" onClick="{{tabAssist}}">Assistentes</button>
-    <button class="b" style="{{tabS}}" onClick="{{tabAgenda}}">Agenda</button>
+    <button class="b" style="{{tabS}}" onClick="{{tabClients}}">Clientes</button>
   </div>
   <div class="noscroll" style="flex: 1; overflow-y: auto; padding-bottom: 110px">
     <sc-if value="{{isTabAssist}}">
@@ -276,54 +276,39 @@ body{margin:0;min-height:100%;display:flex;flex-direction:column;align-items:cen
       </sc-for>
     </sc-if>
 
-    <sc-if value="{{isTabAgenda}}">
-      <div style="display: flex; align-items: center; gap: 6px; padding: 4px 14px 2px">
-        <button class="b" aria-label="Dia anterior" style="{{dayPrevStyle}}" onClick="{{dayPrev}}" disabled="{{dayAtStart}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>
-        <div style="flex: 1; text-align: center; font-weight: 700; font-size: 15px">{{dayLabel}}</div>
-        <button class="b" aria-label="Próximo dia" style="{{dayNextStyle}}" onClick="{{dayNext}}" disabled="{{dayAtEnd}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></button>
+    <sc-if value="{{isTabClients}}">
+      <div style="padding: 4px 20px 2px">
+        <div style="display: flex; align-items: center; gap: 8px; height: 42px; border-radius: 12px; background: #F0F2F4; padding: 0 12px">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6B7380" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.2-4.2"></path></svg>
+          <label style="position: absolute; left: -9999px" for="cq">Buscar cliente</label>
+          <input id="cq" value="{{clientQuery}}" onChange="{{onClientQuery}}" placeholder="Buscar cliente" autocomplete="off" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 15px; color: #14181F">
+        </div>
       </div>
-      <sc-if value="{{dayHasVisits}}">
-        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 20px 6px; min-height: 42px">
-          <span style="flex: 1; font-size: 13px; color: #5E6774">{{daySummary}}</span>
-          <sc-if value="{{dayCanConfirm}}">
-            <button class="b" style="height: 34px; padding: 0 12px; border-radius: 99px; border: 1px solid #DFE3E8; background: #fff; font-weight: 700; font-size: 13px" onClick="{{confirmDay}}">Pedir confirmação</button>
+      <sc-for list="{{clientSections}}" as="sec">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 14px 20px 2px; min-height: 30px">
+          <span style="flex: 1; font-size: 12px; font-weight: 700; color: #6B7380; letter-spacing: .04em">{{sec.t}}</span>
+          <sc-if value="{{sec.hasCta}}">
+            <button class="b" style="height: 30px; padding: 0 12px; border-radius: 99px; border: 1px solid #DFE3E8; background: #fff; font-weight: 700; font-size: 12.5px" onClick="{{sec.cta}}">Pedir confirmação</button>
           </sc-if>
         </div>
-        <sc-for list="{{dayRows}}" as="r">
+        <sc-for list="{{sec.rows}}" as="r">
           <button class="b row" style="gap: 12px" onClick="{{r.open}}">
-            <span style="width: 44px; font-size: 14px; font-weight: 700; flex: none">{{r.h}}</span>
-            <span style="{{r.bar}}"></span>
+            <div style="{{r.avatar}}">{{r.ini}}</div>
             <div style="flex: 1; min-width: 0">
-              <div style="font-weight: 700; font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.n}}</div>
-              <div style="font-size: 13.5px; color: #5E6774; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.d}}</div>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="flex: 1; min-width: 0; font-weight: 700; font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.n}}</span>
+                <span style="{{r.whenStyle}}">{{r.when}}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px">
+                <span style="flex: 1; min-width: 0; font-size: 13.5px; color: #5E6774; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.d}}</span>
+                <span class="pill" style="{{r.stStyle}}">{{r.st}}</span>
+              </div>
             </div>
-            <span class="pill" style="{{r.stStyle}}">{{r.st}}</span>
           </button>
         </sc-for>
-      </sc-if>
-      <sc-if value="{{dayEmpty}}">
-        <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px 40px 8px">
-          <div style="width: 52px; height: 52px; border-radius: 16px; background: #F0F2F4; display: flex; align-items: center; justify-content: center">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3A424E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
-          </div>
-          <div style="font-weight: 700; font-size: 16px; margin-top: 16px">Nenhuma visita neste dia</div>
-          <p style="margin: 6px 0 0; color: #5E6774; font-size: 14px; line-height: 1.5">Quando um cliente pedir horário, a Lia marca aqui. Você também pode pedir para ela.</p>
-        </div>
-      </sc-if>
-      <sc-if value="{{hasOpenJobs}}">
-        <div style="font-size: 12px; font-weight: 700; color: #6B7380; letter-spacing: .04em; padding: 20px 20px 4px">EM ANDAMENTO</div>
-        <sc-for list="{{openRows}}" as="r">
-          <button class="b row" onClick="{{r.open}}">
-            <div style="width: 44px; height: 44px; border-radius: 14px; background: #F0F2F4; display: flex; align-items: center; justify-content: center; flex: none">
-              <div style="{{r.m.wrap}}"><div style="{{r.m.body}}"><span style="{{r.m.eye}}"></span><span style="{{r.m.eye}}"></span></div></div>
-            </div>
-            <div style="flex: 1; min-width: 0">
-              <div style="font-weight: 700; font-size: 15.5px">{{r.n}}</div>
-              <div style="font-size: 13.5px; color: #5E6774; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.d}}</div>
-            </div>
-            <span class="pill" style="{{r.stStyle}}">{{r.st}}</span>
-          </button>
-        </sc-for>
+      </sc-for>
+      <sc-if value="{{clientsEmpty}}">
+        <div style="padding: 48px 40px 0; text-align: center; font-size: 14px; color: #5E6774; line-height: 1.5">Nenhum cliente com esse nome. Quando alguém novo chamar no WhatsApp, ele aparece aqui.</div>
       </sc-if>
     </sc-if>
   </div>
@@ -358,7 +343,7 @@ body{margin:0;min-height:100%;display:flex;flex-direction:column;align-items:cen
         <div style="{{hdr.m.wrap}}"><div style="{{hdr.m.body}}"><span style="{{hdr.m.eye}}"></span><span style="{{hdr.m.eye}}"></span></div></div>
       </sc-if>
       <sc-if value="{{hdr.isJob}}">
-        <div style="width: 28px; height: 28px; border-radius: 50%; background: #F0F2F4; display: flex; align-items: center; justify-content: center; flex: none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A424E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></div>
+        <div style="{{hdr.avatar}}">{{hdr.ini}}</div>
       </sc-if>
       <div style="min-width: 0">
         <div style="font-weight: 700; font-size: 14.5px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{hdr.title}}</div>
@@ -370,24 +355,31 @@ body{margin:0;min-height:100%;display:flex;flex-direction:column;align-items:cen
     </button>
   </div>
 
-  <sc-if value="{{hdr.isJob}}">
-    <div style="margin: 0 16px 6px; background: #fff; border: 1px solid #E9ECEF; border-radius: 16px; padding: 10px 10px 8px; display: flex; align-items: flex-start; flex: none">
-      <sc-for list="{{steps}}" as="sp">
-        <sc-if value="{{sp.notFirst}}"><span style="{{sp.lineStyle}}"></span></sc-if>
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; width: 66px">
-          <span style="{{sp.dotStyle}}">
-            <sc-if value="{{sp.done}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
-            <sc-if value="{{sp.skip}}"><span style="width: 8px; height: 2px; border-radius: 2px; background: #9AA1AB"></span></sc-if>
-          </span>
-          <span style="{{sp.labelStyle}}">{{sp.l}}</span>
-        </div>
-      </sc-for>
+  <sc-if value="{{pinOn}}">
+    <div style="margin: 0 16px 6px; background: #fff; border: 1px solid #E9ECEF; border-radius: 16px; padding: 10px 10px 8px; flex: none">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 8px">
+        <span style="font-size: 11px; font-weight: 700; color: #6B7380; letter-spacing: .04em; flex: none">{{pinLabel}}</span>
+        <span style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{pinTitle}}</span>
+        <span class="pill" style="{{pinStyle}}">{{pinSt}}</span>
+      </div>
+      <div style="display: flex; align-items: flex-start">
+        <sc-for list="{{steps}}" as="sp">
+          <sc-if value="{{sp.notFirst}}"><span style="{{sp.lineStyle}}"></span></sc-if>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; width: 66px">
+            <span style="{{sp.dotStyle}}">
+              <sc-if value="{{sp.done}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+              <sc-if value="{{sp.skip}}"><span style="width: 8px; height: 2px; border-radius: 2px; background: #9AA1AB"></span></sc-if>
+            </span>
+            <span style="{{sp.labelStyle}}">{{sp.l}}</span>
+          </div>
+        </sc-for>
+      </div>
     </div>
   </sc-if>
 
   <div class="noscroll" ref="{{chatRef}}" style="flex: 1; overflow-y: auto; padding: 8px 18px 16px; display: flex; flex-direction: column; gap: 12px">
     <sc-for list="{{msgs}}" as="m">
-      <div class="msg">
+      <div class="msg" data-hl="{{m.hl}}" style="{{m.wrapStyle}}">
         <!-- nasceu neste chat / divisor de dia -->
         <sc-if value="{{m.isSys}}">
           <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 0">
@@ -410,6 +402,59 @@ body{margin:0;min-height:100%;display:flex;flex-direction:column;align-items:cen
             <sc-if value="{{m.hasAct}}">
               <span>·</span><button class="b" style="font-weight: 700; color: {{accent}}; font-size: 12.5px; min-height: 32px" onClick="{{m.actFn}}">{{m.act}}</button>
             </sc-if>
+          </div>
+        </sc-if>
+        <!-- atividade do assistente na conversa de um cliente -->
+        <sc-if value="{{m.isRef}}">
+          <button class="b" style="display: flex; align-items: center; gap: 10px; width: 100%; background: #fff; border: 1px solid #E3E6EA; border-radius: 16px; padding: 10px 12px" onClick="{{m.go}}">
+            <div style="{{m.avatar}}">{{m.ini}}</div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 12px; color: #6B7380"><b style="color: #14181F">{{m.name}}</b> · {{m.when}}</div>
+              <div style="font-size: 14px; line-height: 1.4; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">{{m.text}}</div>
+              <div style="font-size: 12.5px; font-weight: 700; color: {{accent}}; margin-top: 4px">Ver na conversa {{m.de}}</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA1AB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+          </button>
+        </sc-if>
+        <!-- WhatsApp com o cliente -->
+        <sc-if value="{{m.isWa}}">
+          <div style="{{m.rowStyle}}">
+            <div style="{{m.bubbleStyle}}">
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; color: #0F6B45">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.4-4A8 8 0 1 1 8.6 19z"></path></svg>
+                {{m.label}}
+              </div>
+              <div style="font-size: 14px; line-height: 1.45; margin-top: 3px; color: #14181F">{{m.text}}</div>
+              <sc-if value="{{m.hasButtons}}">
+                <div style="display: flex; gap: 6px; margin-top: 8px">
+                  <sc-for list="{{m.buttons}}" as="wb">
+                    <span style="flex: 1; text-align: center; font-size: 12.5px; font-weight: 700; color: #0F6B45; background: #fff; border: 1px solid #CBE7D8; border-radius: 10px; padding: 6px 4px">{{wb}}</span>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+        <!-- atendimento anterior -->
+        <sc-if value="{{m.isPast}}">
+          <div class="card" style="padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: #FAFBFC">
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: #E3F4EC; display: flex; align-items: center; justify-content: center; flex: none">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0F6B45" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 11px; font-weight: 700; color: #6B7380; letter-spacing: .04em">ATENDIMENTO · {{m.when}}</div>
+              <div style="font-weight: 700; font-size: 14.5px; margin-top: 2px">{{m.title}}</div>
+              <div style="font-size: 12.5px; color: #5E6774; margin-top: 1px">{{m.sub}}</div>
+            </div>
+            <span class="pill" style="{{m.stStyle}}">{{m.st}}</span>
+          </div>
+        </sc-if>
+        <!-- começo de um atendimento -->
+        <sc-if value="{{m.isStart}}">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0 2px">
+            <span style="flex: 1; height: 1px; background: #D5D9DF"></span>
+            <span style="font-size: 12px; font-weight: 700; color: #3A424E; letter-spacing: .02em">Novo atendimento · {{m.text}}</span>
+            <span style="flex: 1; height: 1px; background: #D5D9DF"></span>
           </div>
         </sc-if>
         <!-- aviso -->
@@ -436,7 +481,7 @@ body{margin:0;min-height:100%;display:flex;flex-direction:column;align-items:cen
         <!-- bolha do usuário -->
         <sc-if value="{{m.isUser}}">
           <div style="display: flex; justify-content: flex-end">
-            <div style="max-width: 82%; background: #fff; border: 1px solid #E3E6EA; padding: 10px 14px; border-radius: 18px 18px 6px 18px; font-size: 15px; line-height: 1.45; box-shadow: 0 1px 2px rgba(0,0,0,.03)">{{m.text}}</div>
+            <div style="max-width: 82%; background: #fff; border: 1px solid #E3E6EA; padding: 10px 14px; border-radius: 18px 18px 6px 18px; font-size: 15px; line-height: 1.45; box-shadow: 0 1px 2px rgba(0,0,0,.03)"><sc-for list="{{m.parts}}" as="mp"><span style="{{mp.style}}">{{mp.t}}</span></sc-for></div>
           </div>
         </sc-if>
         <!-- conecte -->
@@ -731,7 +776,12 @@ body{margin:0;min-height:100%;display:flex;flex-direction:column;align-items:cen
     </sc-if>
     <div style="position: relative; background: #fff; border: 1px solid #E3E6EA; border-radius: 22px; padding: 12px 12px 10px; box-shadow: 0 4px 16px rgba(14,19,25,.06)">
       <label style="position: absolute; left: -9999px" for="cmp">Mensagem</label>
-      <input id="cmp" ref="{{inputRef}}" value="{{input}}" onChange="{{onInput}}" onKeyDown="{{onKey}}" placeholder="{{placeholder}}" disabled="{{composerOff}}" autocomplete="off" style="width: 100%; border: 0; outline: none; font: inherit; font-size: 15px; padding: 2px 4px 10px; background: transparent; color: #14181F">
+      <div style="position: relative">
+        <sc-if value="{{inputHasMention}}">
+          <div aria-hidden="true" style="position: absolute; inset: 0; padding: 2px 4px 10px; font-size: 15px; white-space: pre; overflow: hidden; color: #14181F; pointer-events: none"><sc-for list="{{inputParts}}" as="ip"><span style="{{ip.style}}">{{ip.t}}</span></sc-for></div>
+        </sc-if>
+        <input id="cmp" ref="{{inputRef}}" value="{{input}}" onChange="{{onInput}}" onKeyDown="{{onKey}}" placeholder="{{placeholder}}" disabled="{{composerOff}}" autocomplete="off" style="{{inputStyle}}">
+      </div>
       <div style="display: flex; align-items: center; gap: 8px">
         <button class="b" aria-label="Anexar foto" style="width: 36px; height: 36px; border-radius: 50%; border: 1px solid #E3E6EA; display: flex; align-items: center; justify-content: center; opacity: .4" disabled="{{true}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A424E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5l-8.2 8.2a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"></path></svg></button>
         <sc-if value="{{showAt}}">
@@ -1095,6 +1145,18 @@ var DAYS = [
 ];
 function dayShort(k) { var d = DAYS.filter((x) => x.k === k)[0]; return d ? d.short : k + '/10'; }
 
+var MENTION = /@(agenda|cobran[çc]as|caixa)\b/i;
+var MENTION_KEYS = { '@agenda': 'agenda', '@cobrancas': 'cobr', '@caixa': 'caixa' };
+var MENTION_BLUE = '#2563EB';
+function norm(t) { return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+function mentionParts(text) {
+  return text.split(/(@(?:agenda|cobran[çc]as|caixa)\b)/i).filter(Boolean).map((t) => ({ t: t, style: MENTION.test(t) && t[0] === '@' ? 'color:' + MENTION_BLUE + ';font-weight:600' : '' }));
+}
+var WEEK_SAMPLE = [
+  { h: 'Qua', n: 'Ana Beatriz', d: '09:00 · Limpeza de split · Guanabara', st: 'Confirmado', k: 'ok', de: 'da Ana' },
+  { h: 'Qui', n: 'Clínica Sorriso', d: '14:00 · Manutenção preventiva · Centro', st: 'Não enviado', k: 'none', de: 'da Clínica Sorriso' },
+  { h: 'Sex', n: 'Marcos Tavares', d: '10:30 · Visita técnica · Taquaral', st: 'Não enviado', k: 'none', de: 'do Marcos' }
+];
 function money(c) { var r = (c / 100).toFixed(2).split('.'); return 'R$ ' + r[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + r[1]; }
 function wholeMoney(c) { return c % 100 ? money(c) : 'R$ ' + String(c / 100).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
 
@@ -1117,70 +1179,117 @@ var REC_SCRIPTS = {
   }
 };
 
+function wa(t, buttons) { return { k: 'wa', out: true, t: t, buttons: buttons }; }
+function waIn(t) { return { k: 'wa', out: false, t: t }; }
+function past(when, title, sub, st) { return { k: 'past', when: when, title: title, sub: sub, st: st || 'Pago' }; }
+
 function seedJobs() {
   var j = {};
   j.joao = { id: 'joao', name: 'João Pereira', first: 'João', art: 'o', pron: 'ele', phone: '(19) 99812-4410', hood: 'Jardim América', title: 'Ar da sala não gela', rec: 'diag',
     visits: [{ day: 16, h: '08:00', what: 'Visita técnica', st: 'ok' }],
     ev: [
+      past('12 ABR', 'Limpeza de split 12.000 BTU', 'R$ 350,00 · Pix · a Lia lembra em outubro'),
+      { k: 'start', t: 'Ar da sala não gela' },
       { k: 'day', t: 'Qua, 14 out' },
-      { k: 'bot', who: 'lia', p: ['O João pediu uma visita no WhatsApp: o ar da sala não está gelando. Marquei no primeiro horário livre.'] },
+      waIn('Boa tarde! O ar da sala não está gelando, consegue vir dar uma olhada?'),
+      { k: 'bot', who: 'lia', p: ['O João pediu uma visita: o ar da sala não está gelando. Marquei no primeiro horário livre.'] },
+      wa('Oi, João! Marquei a visita para sex, 16/10, às 08:00, na Rua das Palmeiras, 120.'),
       { k: 'visit', v: 0 },
       { k: 'day', t: 'Ontem' },
-      { k: 'notice', t: 'Rotina: pedi para João Pereira confirmar a visita de hoje, 08:00.' },
-      { k: 'notice', t: 'João Pereira confirmou a visita de hoje, 08:00.' },
+      wa('Oi, João! Confirmando a visita de amanhã, às 08:00.', ['Confirmar', 'Remarcar']),
+      waIn('Confirmar'),
       { k: 'day', t: 'Hoje' },
       { k: 'bot', who: 'lia', p: ['Terminou a visita do João? Me conte como foi: o que você viu, o que fez e o que vem agora. Se precisar de orçamento, eu chamo a Olga.'] }
     ] };
   j.marta = { id: 'marta', name: 'Marta Lima', first: 'Marta', art: 'a', pron: 'ela', phone: '(19) 99640-2281', hood: 'Centro', title: 'Limpeza de split', rec: 'clean',
     visits: [{ day: 16, h: '10:30', what: 'Limpeza de split', st: 'wait' }],
     ev: [
+      { k: 'start', t: 'Limpeza de split' },
       { k: 'day', t: 'Ter, 13 out' },
-      { k: 'bot', who: 'lia', p: ['A Marta pediu uma limpeza de split. Marquei para hoje, às 10:30.'] },
+      waIn('Oi! Queria agendar uma limpeza do split do quarto.'),
+      { k: 'bot', who: 'lia', p: ['A Marta é cliente nova: chegou pelo WhatsApp. Marquei a limpeza para sexta, às 10:30.'] },
+      wa('Oi, Marta! Marquei a limpeza para sex, 16/10, às 10:30.'),
       { k: 'visit', v: 0 },
       { k: 'day', t: 'Ontem' },
-      { k: 'notice', t: 'Rotina: pedi para Marta Lima confirmar a visita de hoje, 10:30.' },
+      wa('Oi, Marta! Confirmando a visita de amanhã, às 10:30.', ['Confirmar', 'Remarcar']),
       { k: 'day', t: 'Hoje' },
       { k: 'bot', who: 'lia', p: ['A Marta ainda não respondeu. Se quiser, eu peço de novo.'] }
     ] };
-  j.sabor = { id: 'sabor', name: 'Restaurante Sabor', first: 'Restaurante Sabor', art: 'o', pron: 'eles', phone: '(19) 3251-7710', hood: 'Vila Nova', title: 'Manutenção preventiva', rec: 'prev', prevAmount: 48000, prevWhat: 'Manutenção preventiva de 3 splits',
+  j.sabor = { id: 'sabor', name: 'Restaurante Sabor', first: 'Restaurante Sabor', art: 'o', pron: 'eles', phone: '(19) 3251-7710', hood: 'Vila Nova', title: 'Manutenção de outubro', rec: 'prev', prevAmount: 48000, prevWhat: 'Manutenção preventiva de 3 splits',
     visits: [{ day: 16, h: '14:00', what: 'Manutenção preventiva', st: 'none' }],
     ev: [
+      past('15 SET', 'Manutenção de setembro', '3 splits · R$ 480,00 · Pix'),
+      past('14 AGO', 'Manutenção de agosto', '3 splits · R$ 480,00 · Pix'),
+      { k: 'start', t: 'Manutenção de outubro' },
       { k: 'day', t: 'Hoje' },
+      waIn('Boa tarde! Conseguem fazer a manutenção do mês hoje à tarde?'),
       { k: 'bot', who: 'lia', p: ['O Restaurante Sabor pediu para encaixar a manutenção do mês. Marquei às 14:00.', 'Como foi marcada hoje, a rotina não pediu a confirmação.'] },
+      wa('Boa tarde! Marquei a manutenção para hoje, às 14:00.'),
       { k: 'visit', v: 0 }
     ] };
   j.aurora = { id: 'aurora', name: 'Condomínio Aurora', first: 'Condomínio Aurora', art: 'o', pron: 'eles', phone: '(19) 3294-0012', hood: 'Cambuí', title: 'Manutenção do trimestre', rec: 'prev', prevAmount: 90000, prevWhat: 'Manutenção preventiva de 6 splits',
     visits: [{ day: 17, h: '08:00', what: 'Manutenção preventiva', st: 'ok' }],
     ev: [
+      past('18 JUL', 'Manutenção do trimestre', '6 splits · R$ 900,00 · Pix'),
+      past('22 ABR', 'Troca de 2 capacitores', 'R$ 260,00 · Dinheiro'),
+      { k: 'start', t: 'Manutenção do trimestre' },
       { k: 'day', t: 'Seg, 12 out' },
+      waIn('Bom dia! Podemos marcar a manutenção do trimestre?'),
       { k: 'bot', who: 'lia', p: ['O síndico do Condomínio Aurora pediu a manutenção do trimestre. Marquei para sábado, às 08:00.'] },
+      wa('Bom dia! Marquei a manutenção para sáb, 17/10, às 08:00.'),
       { k: 'visit', v: 0 },
       { k: 'day', t: 'Hoje' },
-      { k: 'notice', t: 'Condomínio Aurora confirmou a visita de amanhã, 08:00.' }
+      wa('Bom dia! Confirmando a visita de amanhã, às 08:00.', ['Confirmar', 'Remarcar']),
+      waIn('Confirmar')
     ] };
-  j.paulo = { id: 'paulo', name: 'Paulo Souza', first: 'Paulo', art: 'o', pron: 'ele', phone: '(19) 98123-5544', hood: 'Taquaral', title: 'Instalação de split 12k', recorded: true,
-    visits: [{ day: 15, h: '16:30', what: 'Visita para orçamento', st: 'ok' }],
+  j.paulo = { id: 'paulo', name: 'Paulo Souza', first: 'Paulo', art: 'o', pron: 'ele', phone: '(19) 98123-5544', hood: 'Taquaral', title: 'Instalação de split 12k', recorded: true, lastWhen: 'ontem',
+    visits: [{ day: 15, h: '16:30', what: 'Visita para orçamento', st: 'ok', past: true }],
     quote: { status: 'sent', items: [['Instalação de split 12.000 BTU', 150000], ['Material (cano, suporte e cabo)', 30000]], total: 180000, sent: 'ontem' },
     ev: [
-      { k: 'day', t: 'Ontem' },
+      { k: 'start', t: 'Instalação de split 12k' },
+      { k: 'day', t: 'Seg, 12 out' },
+      waIn('Olá, vi sua indicação com o Pedro. Faz instalação de split?'),
+      { k: 'bot', who: 'lia', p: ['O Paulo chegou por indicação do Pedro Alves. Marquei uma visita para orçamento.'] },
       { k: 'visit', v: 0 },
+      { k: 'day', t: 'Ontem' },
       { k: 'record', title: 'Visita registrada', when: 'Ontem, 17:10', rows: [['Cliente', 'Paulo Souza · Taquaral'], ['O que viu', 'Sala de 20 m², parede externa livre para a condensadora'], ['Próximo', 'Orçamento da instalação de split 12.000 BTU']], tr: ['Fui no Paulo Souza, quer instalar um split de 12 mil na sala.', 'Dá para pôr a condensadora na parede de fora. Manda um orçamento de 1.500 a instalação mais 300 de material.'] },
       { k: 'bot', who: 'olga', p: ['Pronto, mandei o orçamento para o Paulo no WhatsApp, com os botões Aprovar e Recusar. Te aviso quando ele responder.'] },
+      wa('Orçamento: instalação de split 12.000 BTU e material, R$ 1.800,00. Vale até 30/10.', ['Aprovar', 'Recusar']),
       { k: 'quote' },
       { k: 'day', t: 'Hoje' },
       { k: 'bot', who: 'olga', p: ['O Paulo ainda não respondeu. Amanhã eu lembro com jeito, uma vez só.'] }
     ] };
-  j.carlos = { id: 'carlos', name: 'Carlos Souza', first: 'Carlos', art: 'o', pron: 'ele', phone: '(19) 99733-1029', hood: 'Barão Geraldo', title: 'Limpeza de split', recorded: true, serviceDone: true, amount: 38000,
-    visits: [{ day: 15, h: '09:00', what: 'Limpeza de split', st: 'ok' }],
+  j.carlos = { id: 'carlos', name: 'Carlos Mendes', first: 'Carlos', art: 'o', pron: 'ele', phone: '(19) 99733-1029', hood: 'Barão Geraldo', title: 'Limpeza de 2 splits', recorded: true, serviceDone: true, amount: 38000, lastWhen: 'ontem',
+    visits: [{ day: 15, h: '09:00', what: 'Limpeza de split', st: 'ok', past: true }],
     charge: { status: 'sent', amount: 38000 },
     ev: [
+      past('20 MAR', 'Limpeza de 2 splits', 'R$ 380,00 · Pix'),
+      { k: 'start', t: 'Limpeza de 2 splits' },
       { k: 'day', t: 'Ontem' },
       { k: 'visit', v: 0 },
-      { k: 'record', title: 'Serviço registrado', when: 'Ontem, 10:20', rows: [['Cliente', 'Carlos Souza'], ['Serviço', 'Limpeza de 2 splits 9.000 BTU'], ['Valor', 'R$ 380,00 · Pix']], tr: ['Limpei os dois splits do Carlos, de 9 mil. Ficou 380 no Pix.'] },
+      { k: 'record', title: 'Serviço registrado', when: 'Ontem, 10:20', rows: [['Cliente', 'Carlos Mendes'], ['Serviço', 'Limpeza de 2 splits 9.000 BTU'], ['Valor', 'R$ 380,00 · Pix']], tr: ['Limpei os dois splits do Carlos, de 9 mil. Ficou 380 no Pix.'] },
       { k: 'bot', who: 'tina', p: ['Pronto, mandei o Pix para o Carlos no WhatsApp. Te aviso quando cair.'] },
+      wa('Pix de R$ 380,00 pela limpeza dos 2 splits. Copie o código ou use o QR Code.', ['Já paguei']),
       { k: 'pix' },
       { k: 'day', t: 'Hoje' },
-      { k: 'notice', t: 'Rotina: lembrei Carlos Souza do Pix de R$ 380,00.' }
+      wa('Oi, Carlos! Passando para lembrar do Pix de R$ 380,00 de ontem.', ['Já paguei'])
+    ] };
+  j.cida = { id: 'cida', name: 'Cida Ramos', first: 'Cida', art: 'a', pron: 'ela', phone: '(19) 99211-7731', hood: 'Cambuí', title: 'Instalação de split 9k', closed: true, recorded: true, serviceDone: true, amount: 190000, lastWhen: '02/10', lastD: 'Instalação de split 9.000 BTU · R$ 1.900',
+    visits: [{ day: 2, h: '09:00', what: 'Instalação', st: 'ok', past: true }],
+    charge: { status: 'paid', amount: 190000, paidAt: '17:20' },
+    ev: [
+      past('25 SET', 'Visita técnica', 'Grátis · virou orçamento'),
+      past('02 OUT', 'Instalação de split 9.000 BTU', 'R$ 1.900,00 · Pix'),
+      { k: 'day', t: 'Sex, 02 out' },
+      waIn('Ficou ótimo, obrigada! Já está gelando.'),
+      { k: 'bot', who: 'lia', p: ['Nenhum atendimento em aberto com a Cida. Se ela pedir de novo, eu marco aqui.'] }
+    ] };
+  j.pedro = { id: 'pedro', name: 'Pedro Alves', first: 'Pedro', art: 'o', pron: 'ele', phone: '(19) 99876-4120', hood: 'Nova Campinas', title: 'Limpeza de 3 splits', closed: true, recorded: true, serviceDone: true, amount: 54000, lastWhen: '28/08', lastD: 'Limpeza de 3 splits · R$ 540 · indicou o Paulo',
+    visits: [{ day: 0, h: '14:00', what: 'Limpeza', st: 'ok', past: true }],
+    charge: { status: 'paid', amount: 54000, paidAt: '16:05' },
+    ev: [
+      past('28 AGO', 'Limpeza de 3 splits', 'R$ 540,00 · Dinheiro'),
+      { k: 'notice', t: 'Pedro Alves indicou Paulo Souza.' }
     ] };
   return j;
 }
@@ -1207,6 +1316,12 @@ class Component extends DCLogic {
   }
   componentWillUnmount() { this.timers.forEach(clearTimeout); clearInterval(this.recIv); }
   componentDidUpdate() {
+    if (this.chatEl && this.state.focus) {
+      var hl = this.chatEl.querySelector('[data-hl="1"]');
+      if (hl && !this.focusShown) { this.focusShown = true; hl.scrollIntoView({ block: 'center' }); }
+      this.lastH = this.chatEl.scrollHeight;
+      return;
+    }
     if (this.chatEl) {
       var n = this.chatEl.scrollHeight;
       if (n !== this.lastH) { this.lastH = n; this.chatEl.scrollTo({ top: n, behavior: 'smooth' }); }
@@ -1221,7 +1336,17 @@ class Component extends DCLogic {
     this.timers.forEach(clearTimeout); this.timers = []; clearInterval(this.recIv);
     var s = this.initial();
     s.name = 'Carlos Souza'; s.team = AVAIL.slice(); s.sel = { lia: true, olga: true, tina: true }; s.profile = 'solo';
-    s.screen = 'home'; s.tab = 'agenda'; s.aiOk = true;
+    s.screen = 'home'; s.tab = 'clients'; s.aiOk = true;
+    var sample = { 'Chave Pix': 'carlos@email.com', 'Nome': 'Carlos Souza', 'Cidade': 'Campinas' };
+    AVAIL.forEach((id) => {
+      var ans = {};
+      SCRIPTS[id].steps.forEach((st, k) => {
+        if (st.text) { ans[k] = { l: sample[st.field], a: st.parse(sample[st.field]), f: sample[st.field] }; return; }
+        var o = st.opts.filter((x) => !x.soon)[0];
+        ans[k] = o;
+      });
+      s.convs[id] = { conn: 'skip', ans: ans, ok: true, extra: [], adjusting: false };
+    });
     if (where === 'joao') { s.screen = 'job'; s.jobId = 'joao'; }
     this.timers = [];
     this.setState(s);
@@ -1326,6 +1451,7 @@ class Component extends DCLogic {
           var rots = sc.steps.map((x, k) => c.ans[k].rot).filter(Boolean);
           msgs.push({ isLine: true, u: true, text: rots.length ? 'Rotina criada: ' + rots.join(', ') : 'Ficha combinada', hasAct: true, act: 'Desfazer', actFn: () => this.undo(id) });
           msgs.push(this.bot([sc.done]));
+          this.activity(id).forEach((r) => msgs.push(r));
         }
       }
     }
@@ -1340,31 +1466,32 @@ class Component extends DCLogic {
     return { isTestPix: true, code: TEST_PIX, copyLabel: this.state.copied ? 'Copiado' : 'Copiar código', copy: () => this.setState({ copied: true }) };
   }
   assistExtra(e, id) {
-    if (e.k === 'user') return { isUser: true, u: true, text: e.t };
+    if (e.k === 'user') return { isUser: true, u: true, text: e.t, parts: mentionParts(e.t) };
     if (e.k === 'bot') return this.bot(e.p);
     if (e.k === 'notice') return { isNotice: true, text: e.t };
-    if (e.k === 'w') return this.widget(e.w);
+    if (e.k === 'w') return this.widget(e.w, e.q);
     if (e.k === 'sugg') {
       var j = this.state.jobs[e.job];
-      if (j.recorded) return this.bot(['Terminou a visita de ' + j.name + ', hoje, 08:00?', 'Já está no atendimento ' + (j.art === 'a' ? 'da ' : 'do ') + j.first + '.']);
+      if (j.recorded) return this.bot(['Terminou a visita de ' + j.name + ', hoje, 08:00?', 'Já está na conversa ' + (j.art === 'a' ? 'da ' : 'do ') + j.first + ', em Clientes.']);
       return { isQ: true, q: 'Terminou a visita de ' + j.name + ', hoje, 08:00?', opts: [
         this.opt('A', 'Contar como foi', 'Conte o que fez. A equipe cuida do resto.', false, false, () => this.startRec(e.job)),
-        this.opt('B', 'Abrir o atendimento', 'Tudo do ' + j.first + ' num lugar só', false, false, () => this.openJob(e.job))] };
+        this.opt('B', 'Abrir a conversa do ' + j.first, 'O histórico com o cliente, num lugar só', false, false, () => this.openJob(e.job))] };
     }
     return { isLine: true, text: '' };
   }
 
   /* ---------- @ (proposta: o @ abre um widget com os dados na hora) ---------- */
-  atPick(key) {
-    this.setState({ atMenu: false, input: '' });
-    if (this.needAi(() => this.doAt(key))) return;
-    this.doAt(key);
+  // Escolher no menu só põe a menção no campo, para o profissional completar ("@agenda da semana que vem").
+  atPick(tag) {
+    var v = this.state.input.replace(/(^|\s)@$/, '$1');
+    this.setState({ atMenu: false, input: v + tag + ' ' });
+    if (this.inputEl) setTimeout(() => this.inputEl.focus(), 0);
   }
-  doAt(key) {
+  doAt(key, text) {
     var id = this.state.chatId;
-    var L = { agenda: ['@agenda de hoje', 'Buscando a agenda'], cobr: ['@cobranças em aberto', 'Buscando as cobranças'], caixa: ['@caixa do mês', 'Buscando o caixa'] }[key];
-    this.setState((s) => this.updConv(s, id, { extra: this.conv(s, id).extra.concat([{ k: 'user', t: L[0] }]) }));
-    this.think(id, L[1], id, (s) => this.updConv(s, id, { extra: this.conv(s, id).extra.concat([{ k: 'w', w: key }]) }), 1100);
+    var label = { agenda: 'Buscando a agenda', cobr: 'Buscando as cobranças', caixa: 'Buscando o caixa' }[key];
+    this.setState((s) => this.updConv(s, id, { extra: this.conv(s, id).extra.concat([{ k: 'user', t: text }]) }));
+    this.think(id, label, id, (s) => this.updConv(s, id, { extra: this.conv(s, id).extra.concat([{ k: 'w', w: key, q: text }]) }), 1100);
   }
 
   /* ---------- envio livre ---------- */
@@ -1385,6 +1512,8 @@ class Component extends DCLogic {
     if (!c.ok) return;
     if (this.needAi(() => this.send())) return;
     this.setState({ input: '', atMenu: false });
+    var mention = text.match(MENTION);
+    if (mention) { this.doAt(MENTION_KEYS[norm(mention[0])], text); return; }
     this.setState((x) => this.updConv(x, id, { extra: this.conv(x, id).extra.concat([{ k: 'user', t: text }]) }));
     this.think(id, null, id, (x) => this.updConv(x, id, { extra: this.conv(x, id).extra.concat([{ k: 'bot', p: ['Entendi. Vou cuidar disso e te aviso aqui quando terminar.'] }]) }), 1100);
   }
@@ -1494,10 +1623,12 @@ class Component extends DCLogic {
     }
     if (ev.which === 'quote') {
       this.jobThink(id, 'Mandando o orçamento', 'olga', (s) => this.pushJob(s, id, [
-        { k: 'bot', who: 'olga', p: ['Pronto, mandei o orçamento para ' + j.art + ' ' + j.first + ' no WhatsApp, com os botões Aprovar e Recusar. Te aviso quando ' + j.pron + ' responder.'] }, { k: 'quote' }],
+        { k: 'bot', who: 'olga', p: ['Pronto, mandei o orçamento para ' + j.art + ' ' + j.first + ' no WhatsApp, com os botões Aprovar e Recusar. Te aviso quando ' + j.pron + ' responder.'] },
+        wa('Orçamento: ' + s.jobs[id].quote.items.map((x) => x[0].toLowerCase()).join(' e ') + ', ' + money(s.jobs[id].quote.total) + '. Vale até 31/10.', ['Aprovar', 'Recusar']), { k: 'quote' }],
         { quote: Object.assign({}, s.jobs[id].quote, { status: 'sent', sent: 'agora' }) }), 1200);
       this.later(() => {
         this.setState((s) => this.pushJob(s, id, [
+          waIn('Aprovar'),
           { k: 'notice', t: j.name + ' aprovou o orçamento de ' + money(s.jobs[id].quote.total) + '.' },
           { k: 'q', who: 'lia', q: 'Quer que eu marque a troca do compressor com ' + j.art + ' ' + j.first + '?', res: null, opts: [
             { l: 'Seg, 19/10, às 08:00', s: 'O primeiro horário livre', act: 'book:19:08:00' },
@@ -1508,15 +1639,18 @@ class Component extends DCLogic {
       }, 5200);
     } else if (ev.which === 'ask') {
       this.jobThink(id, null, 'lia', (s) => this.pushJob(s, id, [
-        { k: 'bot', who: 'lia', p: ['Pronto, pedi para ' + j.art + ' ' + j.first + ' confirmar a visita no WhatsApp.'] }],
+        { k: 'bot', who: 'lia', p: ['Pronto, pedi para ' + j.art + ' ' + j.first + ' confirmar a visita no WhatsApp.'] },
+        wa('Oi, ' + j.first + '! Confirmando a visita de hoje, às ' + s.jobs[id].visits[0].h + '.', ['Confirmar', 'Remarcar'])],
         { visits: s.jobs[id].visits.map((v) => (v.past ? v : Object.assign({}, v, { st: 'sent' }))) }), 900);
-      this.later(() => this.setState((s) => this.pushJob(s, id, [{ k: 'notice', t: j.name + ' confirmou a visita de hoje, ' + s.jobs[id].visits[0].h + '.' }],
+      this.later(() => this.setState((s) => this.pushJob(s, id, [waIn('Confirmar')],
         { visits: s.jobs[id].visits.map((v) => (v.past ? v : Object.assign({}, v, { st: 'ok' }))) })), 3600);
     } else {
       this.jobThink(id, 'Gerando o Pix', 'tina', (s) => this.pushJob(s, id, [
-        { k: 'bot', who: 'tina', p: ['Pronto, mandei o Pix para ' + j.art + ' ' + j.first + ' no WhatsApp. Te aviso quando cair.'] }, { k: 'pix' }],
+        { k: 'bot', who: 'tina', p: ['Pronto, mandei o Pix para ' + j.art + ' ' + j.first + ' no WhatsApp. Te aviso quando cair.'] },
+        wa('Pix de ' + money(s.jobs[id].amount) + '. Copie o código ou use o QR Code.', ['Já paguei']), { k: 'pix' }],
         { charge: { status: 'sent', amount: s.jobs[id].amount } }), 1200);
       this.later(() => this.setState((s) => this.pushJob(s, id, [
+        waIn('Já paguei'),
         { k: 'q', who: 'tina', q: j.first + ' disse que já pagou. O dinheiro caiu?', res: null, opts: [{ l: 'Recebi', act: 'paidYes', strong: true }, { l: 'Não caiu', act: 'paidNo' }] }],
         { charge: Object.assign({}, s.jobs[id].charge, { status: 'asked' }) })), 4200);
     }
@@ -1536,7 +1670,9 @@ class Component extends DCLogic {
         var visits = s.jobs[id].visits.slice();
         if (move) { var k = visits.length - 1; visits[k] = Object.assign({}, visits[k], { day: day, h: h, st: 'sent' }); }
         else visits.push({ day: day, h: h, what: 'Troca do compressor', st: 'ok' });
-        var items = [{ k: 'line', u: true, t: (move ? 'Visita remarcada: ' : 'Visita marcada: ') + label.toLowerCase() }, { k: 'visit', v: visits.length - 1 },
+        var items = [{ k: 'line', u: true, t: (move ? 'Visita remarcada: ' : 'Visita marcada: ') + label.toLowerCase() },
+          wa('Oi, ' + j.first + '! ' + (move ? 'A visita mudou para ' : 'A troca do compressor ficou para ') + label.toLowerCase() + '.', move ? ['Confirmar', 'Remarcar'] : null),
+          { k: 'visit', v: visits.length - 1 },
           { k: 'bot', who: 'lia', p: [move ? 'Remarquei e mandei o novo horário para ' + j.art + ' ' + j.first + ' confirmar no WhatsApp.' : 'Marquei e avisei ' + j.art + ' ' + j.first + ' no WhatsApp. Na véspera eu confirmo com ' + j.pron + '.'] }];
         if (!move) items.push({ k: 'bot', who: 'lia', p: ['Quando terminar a troca, toque em Contar como foi.'] });
         return this.pushJob(s, id, items, Object.assign({ visits: visits, awaiting: null }, move ? {} : { execBooked: true }));
@@ -1579,9 +1715,11 @@ class Component extends DCLogic {
         { k: 'line', u: true, t: 'Lembrete criado: ' + j.name + ', abril' }], { done: Object.assign({}, j.done, { ret: true }) }), 1000);
     } else if (key === 'remind') {
       this.jobThink(id, null, 'olga', (st) => this.pushJob(st, id, [
+        wa('Oi, ' + j.first + '! Conseguiu ver o orçamento? Qualquer dúvida, é só falar.', ['Aprovar', 'Recusar']),
         { k: 'bot', who: 'olga', p: ['Lembrei ' + j.art + ' ' + j.first + ' do orçamento no WhatsApp, com jeito. Não insisto de novo.'] }], { done: Object.assign({}, j.done, { remind: true }) }), 1000);
     } else if (key === 'resend') {
       this.jobThink(id, null, 'tina', (st) => this.pushJob(st, id, [
+        wa('Pix de ' + money(j.charge.amount) + '. Copie o código ou use o QR Code.', ['Já paguei']),
         { k: 'bot', who: 'tina', p: ['Reenviei o Pix de ' + money(j.charge.amount) + ' para ' + j.art + ' ' + j.first + ' no WhatsApp.'] }], { done: Object.assign({}, j.done, { resend: true }) }), 1000);
     }
   }
@@ -1609,7 +1747,7 @@ class Component extends DCLogic {
     this.jobThink(id, null, 'lia', (s) => this.pushJob(s, id, [{ k: 'bot', who: 'lia', p: ['Anotado neste atendimento. Se precisar de alguém da equipe, escolha uma ação aqui embaixo.'] }]), 900);
   }
 
-  /* Status de um atendimento, usado na Agenda, no cabeçalho e no @agenda. */
+  /* Status do atendimento em andamento, usado na lista de Clientes, no cabeçalho e no @agenda. */
   status(j, v) {
     if (j.charge && j.charge.status === 'paid') return ['Pago', 'ok'];
     if (j.charge) return ['Pix enviado', 'sent'];
@@ -1645,15 +1783,46 @@ class Component extends DCLogic {
   buildJob(id) {
     var s = this.state, j = s.jobs[id], busy = this.jobBusy(id), msgs = [];
     j.ev.forEach((e, i) => msgs.push(this.jobMsg(j, e, i, busy)));
+    var f = s.focus;
+    if (f && f.job === id && msgs[f.i]) msgs[f.i] = Object.assign({}, msgs[f.i], { hl: '1', wrapStyle: 'border-radius:14px;background:#FFF4CC;box-shadow:0 0 0 8px #FFF4CC' });
     return msgs;
+  }
+  // O que o assistente fez na conversa de cada cliente, com link para a mensagem.
+  activity(who) {
+    var J = this.state.jobs, out = [];
+    Object.keys(J).forEach((id) => {
+      var j = J[id], day = '';
+      j.ev.forEach((e, i) => {
+        if (e.k === 'day') day = e.t;
+        var mine = (e.k === 'bot' && e.who === who) || (e.k === 'q' && e.who === who) || (who === 'lia' && e.k === 'notice' && e.t.indexOf('Rotina') === 0);
+        if (!mine) return;
+        out.push({ isRef: true, name: j.name, ini: this.initials(j.name), avatar: this.avatar(id, 34), when: day || 'Hoje', de: this.de(j),
+          text: e.k === 'bot' ? e.p[0] : e.k === 'q' ? e.q : e.t, go: () => this.openJobAt(id, i) });
+      });
+    });
+    return out;
+  }
+  openJobAt(id, i) {
+    this.focusShown = false;
+    this.setState({ screen: 'job', jobId: id, focus: { job: id, i: i }, input: '', atMenu: false });
+    clearTimeout(this.focusT);
+    this.focusT = setTimeout(() => this.setState({ focus: null }), 3000);
   }
   jobMsg(j, e, i, busy) {
     var id = j.id;
-    if (e.k === 'user') return { isUser: true, u: true, text: e.t };
+    if (e.k === 'user') return { isUser: true, u: true, text: e.t, parts: mentionParts(e.t) };
     if (e.k === 'bot') return this.bot(e.p, e.who);
     if (e.k === 'line') return { isLine: true, text: e.t };
     if (e.k === 'notice') return { isNotice: true, text: e.t };
     if (e.k === 'day') return { isSys: true, who: '', text: e.t };
+    if (e.k === 'start') return { isStart: true, text: e.t };
+    if (e.k === 'past') return { isPast: true, when: e.when, title: e.title, sub: e.sub, st: e.st, stStyle: STATUS.ok };
+    if (e.k === 'wa') {
+      return { isWa: true, text: e.t, hasButtons: !!(e.buttons && e.buttons.length), buttons: e.buttons || [],
+        label: e.out ? 'Enviado ' + (j.art === 'a' ? 'à ' : 'ao ') + j.first + ' no WhatsApp' : j.first + ' no WhatsApp',
+        rowStyle: 'display:flex;justify-content:' + (e.out ? 'flex-end' : 'flex-start'),
+        bubbleStyle: 'max-width:84%;padding:8px 12px;border:1px solid ' + (e.out ? '#CBE7D8;background:#EAF7F0;border-radius:14px 14px 4px 14px' : '#E3E6EA;background:#fff;border-radius:14px 14px 14px 4px') };
+    }
     if (e.k === 'visit') {
       var v = j.visits[e.v], st = this.status(j, v);
       if (v.past) st = ['Feita', 'ok'];
@@ -1734,13 +1903,13 @@ class Component extends DCLogic {
       asked.forEach((id) => {
         var j = jobs[id];
         jobs[id] = Object.assign({}, j, { visits: j.visits.map((v) => (v.day === day ? Object.assign({}, v, { st: 'sent' }) : v)),
-          ev: j.ev.concat([{ k: 'notice', t: 'Pedi para ' + j.name + ' confirmar a visita de ' + dayShort(day) + ', ' + j.visits[0].h + '.' }]) });
+          ev: j.ev.concat([wa('Oi, ' + j.first + '! Confirmando a visita de ' + dayShort(day) + ', às ' + j.visits[0].h + '.', ['Confirmar', 'Remarcar'])]) });
       });
       return { jobs: jobs };
     });
     this.say('Pedi a confirmação para ' + asked.length + (asked.length > 1 ? ' clientes' : ' cliente'));
     if (asked.indexOf('marta') >= 0) this.later(() => {
-      this.setState((st) => this.pushJob(st, 'marta', [{ k: 'notice', t: 'Marta Lima confirmou a visita de hoje, 10:30.' }], { visits: st.jobs.marta.visits.map((v) => Object.assign({}, v, { st: 'ok' })) }));
+      this.setState((st) => this.pushJob(st, 'marta', [waIn('Confirmar')], { visits: st.jobs.marta.visits.map((v) => Object.assign({}, v, { st: 'ok' })) }));
       this.say('Marta Lima confirmou');
     }, 3500);
   }
@@ -1757,21 +1926,48 @@ class Component extends DCLogic {
     });
     return rows.sort((a, b) => (a.h < b.h ? -1 : 1));
   }
-  openRows() {
-    var s = this.state, rows = [];
-    Object.keys(s.jobs).forEach((id) => {
-      var j = s.jobs[id];
-      if (j.visits.some((v) => v.day === 16)) return;
-      var who = null, d = '';
-      if (j.charge && j.charge.status !== 'paid') { who = 'tina'; d = 'Pix de ' + wholeMoney(j.charge.amount) + ' · esperando pagamento'; }
-      else if (j.serviceDone && !j.charge) { who = 'tina'; d = 'Serviço de ' + wholeMoney(j.amount) + ' · falta cobrar'; }
-      else if (j.quote && j.quote.status === 'sent') { who = 'olga'; d = 'Orçamento de ' + wholeMoney(j.quote.total) + ' · enviado ' + j.quote.sent; }
-      else if (j.quote && j.quote.status === 'approved' && !j.execBooked) { who = 'lia'; d = 'Orçamento aprovado · falta marcar'; }
-      if (!who) return;
-      var st = this.status(j);
-      rows.push({ n: j.name, d: d, st: st[0], stStyle: STATUS[st[1]], m: this.mascot(CAT[who], 22), open: () => this.openJob(id) });
+  avatar(id, size) {
+    var tones = [['#E7EEFF', '#2747A0'], ['#FFEBD9', '#9A4B0B'], ['#E3F4EC', '#0F6B45'], ['#F3E8FF', '#6B3FC4'], ['#FDE7F0', '#A3235F'], ['#E5F6F8', '#0E6B75']];
+    var k = 0; for (var i = 0; i < id.length; i++) k = (k + id.charCodeAt(i)) % tones.length;
+    return 'width:' + size + 'px;height:' + size + 'px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:' + Math.round(size * 0.36) + 'px;background:' + tones[k][0] + ';color:' + tones[k][1];
+  }
+  initials(name) { var w = name.split(' '); return (w[0][0] + (w[1] ? w[1][0] : '')).toUpperCase(); }
+  waitingText(j) {
+    if (j.charge && j.charge.status !== 'paid') return 'Pix de ' + wholeMoney(j.charge.amount) + ' · esperando pagamento';
+    if (j.serviceDone && !j.charge) return 'Serviço de ' + wholeMoney(j.amount) + ' · falta cobrar';
+    if (j.quote && j.quote.status === 'sent') return 'Orçamento de ' + wholeMoney(j.quote.total) + ' · enviado ' + j.quote.sent;
+    if (j.quote && j.quote.status === 'approved' && !j.execBooked) return 'Orçamento aprovado · falta marcar';
+    return null;
+  }
+  // Hoje: quem tem visita hoje. Esperando: orçamento ou Pix sem resposta. Recentes: o resto, com a próxima visita ou o último atendimento.
+  clientSections(query) {
+    var s = this.state, J = s.jobs, norm = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(), q = norm(query.trim());
+    var today = [], waiting = [], recent = [], unconf = 0;
+    Object.keys(J).forEach((id) => {
+      var j = J[id];
+      if (q && norm(j.name).indexOf(q) < 0) return;
+      var st = this.status(j), base = { n: j.name, ini: this.initials(j.name), avatar: this.avatar(id, 44), st: st[0], stStyle: STATUS[st[1]], open: () => this.openJob(id) };
+      var vToday = j.visits.filter((v) => v.day === 16)[0];
+      if (vToday) {
+        if (!vToday.past && !j.recorded && (vToday.st === 'wait' || vToday.st === 'none')) unconf++;
+        var after = j.execBooked && !j.serviceDone ? j.visits[j.visits.length - 1] : null;
+        today.push(Object.assign(base, { when: vToday.h, whenStyle: 'font-size:13px;font-weight:700;color:#14181F;flex:none',
+          d: after ? 'Próxima: ' + after.what.toLowerCase() + ', ' + dayShort(after.day) : vToday.what + (vToday.past ? ' · feita' : ' · ' + j.hood) }));
+        return;
+      }
+      var w = this.waitingText(j), small = 'font-size:12px;color:#6B7380;flex:none';
+      if (w) { waiting.push(Object.assign(base, { when: j.lastWhen || 'hoje', whenStyle: small, d: w })); return; }
+      var next = j.visits.filter((v) => !v.past && v.day >= 16)[0];
+      recent.push(Object.assign(base, { when: next ? dayShort(next.day) : j.lastWhen, whenStyle: small,
+        d: next ? 'Próxima: ' + next.what.toLowerCase() + ', ' + next.h : j.lastD, k: next ? next.day : 0 }));
     });
-    return rows;
+    today.sort((a, b) => (a.when < b.when ? -1 : 1));
+    recent.sort((a, b) => b.k - a.k);
+    return [
+      { t: 'HOJE', rows: today, hasCta: unconf > 0 && !q, cta: () => this.confirmDay() },
+      { t: 'ESPERANDO O CLIENTE', rows: waiting, hasCta: false },
+      { t: 'RECENTES', rows: recent, hasCta: false }
+    ].filter((x) => x.rows.length);
   }
 
   bot(p, who) {
@@ -1779,7 +1975,7 @@ class Component extends DCLogic {
     if (who) { var a = this.A(who); m.hasWho = true; m.who = a.name; m.role = a.role; m.ms = a.ms; }
     return m;
   }
-  widget(w) {
+  widget(w, q) {
     if (w === 'caixa') {
       var bars = [42, 58, 51, 74].map((v, i) => ({ l: 'S' + (i + 1), style: 'width:100%;height:' + v + 'px;border-radius:6px 6px 2px 2px;background:' + (i === 3 ? 'var(--ac)' : '#D7DCE2') }));
       return { isCaixa: true, bars: bars, tiles: [
@@ -1794,11 +1990,20 @@ class Component extends DCLogic {
         return { h: dayShort(j.visits[j.visits.length - 1].day), n: j.name, d: j.title + ' · ' + wholeMoney(j.amount), st: st[0], stStyle: STATUS[st[1]],
           bar: 'width:3px;align-self:stretch;border-radius:3px;flex:none;background:' + BAR[st[1]], tap: () => this.openJob(id) };
       });
-      return { isList: true, title: 'Cobranças em aberto', sub: rows.length + (rows.length > 1 ? ' clientes' : ' cliente'), rows: rows, hasCta: false, more: 'Ver na Agenda', moreFn: () => this.setState({ screen: 'home', tab: 'agenda', day: 16 }) };
+      return { isList: true, title: 'Cobranças em aberto', sub: rows.length + (rows.length > 1 ? ' clientes' : ' cliente'), rows: rows, hasCta: false, more: 'Ver os clientes', moreFn: () => this.setState({ screen: 'home', tab: 'clients', day: 16 }) };
     }
-    var today = this.dayRows(16), unconf = today.filter((r) => r.k === 'wait' || r.k === 'none').length;
-    return { isList: true, title: 'Agenda', sub: 'Hoje, sex 16 out · ' + today.length + ' visitas', rows: today, hasCta: unconf > 0, ctaL: 'Pedir confirmação', cta: () => { this.setState({ day: 16 }); this.confirmDay(); },
-      more: 'Ver a Agenda', moreFn: () => this.setState({ screen: 'home', tab: 'agenda', day: 16 }) };
+    var ask = norm(q || ''), more = 'Ver os clientes', moreFn = () => this.setState({ screen: 'home', tab: 'clients', day: 16 });
+    if (/semana/.test(ask)) {
+      var week = [];
+      [[19, 'Seg'], [20, 'Ter']].forEach((d) => this.dayRows(d[0]).forEach((r) => week.push(Object.assign({}, r, { h: d[1], d: r.h + ' · ' + r.d }))));
+      WEEK_SAMPLE.forEach((r) => week.push(Object.assign({}, r, { stStyle: STATUS[r.k], bar: 'width:3px;align-self:stretch;border-radius:3px;flex:none;background:' + BAR[r.k], tap: () => this.say('No app: abre a conversa ' + r.de) })));
+      var order = { Seg: 1, Ter: 2, Qua: 3, Qui: 4, Sex: 5 };
+      week.sort((a, b) => (order[a.h] - order[b.h]) || (a.d < b.d ? -1 : 1));
+      return { isList: true, title: 'Agenda', sub: 'Semana que vem, 19 a 23 out · ' + week.length + ' visitas', rows: week, hasCta: false, more: more, moreFn: moreFn };
+    }
+    var day = /amanh/.test(ask) ? 17 : 16, rows = this.dayRows(day), unconf = rows.filter((r) => r.k === 'wait' || r.k === 'none').length;
+    return { isList: true, title: 'Agenda', sub: (day === 16 ? 'Hoje, sex 16 out · ' : 'Amanhã, sáb 17 out · ') + rows.length + (rows.length === 1 ? ' visita' : ' visitas'), rows: rows,
+      hasCta: unconf > 0, ctaL: 'Pedir confirmação', cta: () => { this.setState({ day: day }); this.confirmDay(); }, more: more, moreFn: moreFn };
   }
   cut(msgs, ctx) {
     var s = this.state;
@@ -1884,14 +2089,12 @@ class Component extends DCLogic {
         open: () => this.setState({ screen: 'chat', chatId: id, atMenu: false, input: '' }) };
     });
 
-    /* início: agenda */
-    var di = DAYS.map((d) => d.k).indexOf(s.day), dayRows = this.dayRows(s.day), unconf = dayRows.filter((r) => r.k === 'wait' || r.k === 'none').length;
-    var openRows = s.day === 16 ? this.openRows() : [];
-    var arrow = (on) => 'width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #E3E6EA;background:#fff;opacity:' + (on ? 1 : 0.35);
+    /* início: clientes */
+    var clientSections = this.clientSections(s.clientQuery || '');
 
     var coachTexts = [
       ['Seus assistentes', 'Toque em um e conte o que ele deve fazer. Ele aprende com você, no chat.', 'top:' + (154 + Math.min(s.team.length, 3) * 68) + 'px'],
-      ['Agenda', 'Suas visitas ficam aqui. Toque numa para ver o atendimento inteiro, do pedido até o pagamento.', 'top:134px'],
+      ['Clientes', 'Cada cliente tem uma conversa com tudo o que aconteceu: visitas, o que você fez, orçamentos e pagamentos.', 'top:134px'],
       ['Contar o que fiz', 'Terminou uma visita? Toque aqui e conte o que fez. A equipe cuida do resto.', 'bottom:104px']
     ];
     var ct = s.screen === 'home' && s.coach >= 0 && s.coach < coachTexts.length ? coachTexts[s.coach] : null;
@@ -1900,7 +2103,7 @@ class Component extends DCLogic {
     var isChat = s.screen === 'chat', isJob = s.screen === 'job' && !!s.jobId;
     var hdr = { hasMascot: false, isJob: false, title: '', status: '', working: false, m: null, mt: null };
     var msgs = [], progressOn = false, progressText = '', progressCount = '', placeholder = 'Escreva aqui', ctx = null, chips = [], steps = [];
-    var showAt = false, composerOff = false;
+    var showAt = false, composerOff = false, pinOn = false, pinLabel = '', pinTitle = '', pinSt = '', pinStyle = '';
     if (isChat) {
       ctx = s.chatId;
       var b = this.buildAssist(s.chatId), sc2 = SCRIPTS[s.chatId];
@@ -1923,10 +2126,11 @@ class Component extends DCLogic {
       ctx = 'job:' + s.jobId;
       var jb = s.jobs[s.jobId], w2 = s.thinking && s.thinkFor === ctx, st = this.status(jb);
       msgs = this.cut(this.buildJob(s.jobId), ctx);
-      hdr = { isJob: true, title: jb.name, working: w2, status: w2 ? 'Trabalhando…' : jb.title + ' · ' + st[0] };
+      hdr = { isJob: true, title: jb.name, working: w2, status: w2 ? 'Trabalhando…' : jb.phone + ' · ' + jb.hood, avatar: this.avatar(jb.id, 28), ini: this.initials(jb.name) };
+      pinOn = !jb.closed; pinLabel = jb.charge && jb.charge.status === 'paid' ? 'CONCLUÍDO' : 'EM ANDAMENTO'; pinTitle = jb.title; pinSt = st[0]; pinStyle = STATUS[st[1]];
       steps = this.steps(jb);
       chips = this.jobChips(jb);
-      placeholder = w2 ? 'Escreva uma correção ou o próximo pedido' : jb.awaiting === 'quote' ? 'O serviço, a peça e o valor' : jb.awaiting === 'book' ? 'O dia e o horário' : 'Conte como foi ou peça algo à equipe';
+      placeholder = w2 ? 'Escreva uma correção ou o próximo pedido' : jb.awaiting === 'quote' ? 'O serviço, a peça e o valor' : jb.awaiting === 'book' ? 'O dia e o horário' : 'Conte à equipe sobre ' + jb.art + ' ' + jb.first;
     }
     var thinkingHere = s.thinking && s.thinkFor === ctx && (isChat || isJob);
     var thinkA = s.thinkWho && CAT[s.thinkWho] ? CAT[s.thinkWho] : CAT.lia;
@@ -1954,7 +2158,7 @@ class Component extends DCLogic {
       skipProfile: () => { var sel = {}; AVAIL.forEach((x) => { sel[x] = true; }); this.setState({ screen: 'team', profile: null, sel: sel }); },
       goReady: () => this.setState((st) => ({ screen: 'ready', team: AVAIL.filter((id) => st.sel[id]) })),
       goHome: () => this.setState((st) => ({ screen: 'home', coach: st.coach === -1 ? 0 : st.coach })),
-      goBack: () => this.setState((st) => ({ screen: 'home', atMenu: false, input: '', tab: st.screen === 'job' ? 'agenda' : st.tab })),
+      goBack: () => this.setState((st) => ({ screen: 'home', atMenu: false, input: '', focus: null, tab: st.screen === 'job' ? 'clients' : st.tab })),
       tapHeader: () => { if (isChat) this.setState({ teamSheet: s.chatId }); },
       name: s.name, onName: (e) => this.setState({ name: e.target.value }), nameEmpty: !s.name.trim(),
       segLabel: segLabel, segStyle: 'flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (s.segs.length ? '#14181F' : '#6B7380'),
@@ -1965,28 +2169,27 @@ class Component extends DCLogic {
       readyMascots: readyMascots, readyTitle: 'Pronto, ' + first + '!',
       initials: first.slice(0, 1).toUpperCase(), hello: 'Olá, ' + first,
       tapAvatar: () => this.say('No app: pergunta se quer sair da conta'),
-      tabA: s.tab === 'assist' ? tabOn : tabOff, tabS: s.tab === 'agenda' ? tabOn : tabOff,
-      tabAssist: () => this.setState({ tab: 'assist' }), tabAgenda: () => this.setState({ tab: 'agenda' }),
-      isTabAssist: s.tab === 'assist', isTabAgenda: s.tab === 'agenda',
+      tabA: s.tab === 'assist' ? tabOn : tabOff, tabS: s.tab === 'clients' ? tabOn : tabOff,
+      tabAssist: () => this.setState({ tab: 'assist' }), tabClients: () => this.setState({ tab: 'clients' }),
+      isTabAssist: s.tab === 'assist', isTabClients: s.tab === 'clients',
+      clientQuery: s.clientQuery || '', onClientQuery: (e) => this.setState({ clientQuery: e.target.value }),
+      clientSections: clientSections, clientsEmpty: clientSections.length === 0,
       homeRows: homeRows,
-      dayLabel: DAYS[di].l, dayAtStart: di === 0, dayAtEnd: di === DAYS.length - 1, dayPrevStyle: arrow(di > 0), dayNextStyle: arrow(di < DAYS.length - 1),
-      dayPrev: () => di > 0 && this.setState({ day: DAYS[di - 1].k }), dayNext: () => di < DAYS.length - 1 && this.setState({ day: DAYS[di + 1].k }),
-      dayHasVisits: dayRows.length > 0, dayEmpty: dayRows.length === 0, dayRows: dayRows,
-      daySummary: dayRows.length + (dayRows.length > 1 ? ' visitas' : ' visita') + (unconf && s.day >= 16 ? ' · ' + unconf + ' sem confirmação' : ''),
-      dayCanConfirm: unconf > 0 && s.day >= 16, confirmDay: () => this.confirmDay(),
-      hasOpenJobs: openRows.length > 0, openRows: openRows,
       startRecHome: () => this.startRec(this.nextRecJob()),
       coachOn: !!ct, coachTitle: ct ? ct[0] : '', coachText: ct ? ct[1] : '', coachStep: (s.coach + 1) + ' de ' + coachTexts.length,
       coachStyle: 'position:absolute;left:20px;right:20px;z-index:31;background:#fff;border-radius:18px;padding:16px;box-shadow:0 16px 40px rgba(0,0,0,.25);animation:in .25s ease-out;' + (ct ? ct[2] : ''),
-      coachNext: () => this.setState((st) => ({ coach: st.coach + 1, tab: st.coach === 0 ? 'agenda' : st.tab })),
+      coachNext: () => this.setState((st) => ({ coach: st.coach + 1, tab: st.coach === 0 ? 'clients' : st.tab })),
 
       hdr: hdr, msgs: msgs, steps: steps,
+      pinOn: isJob && pinOn, pinLabel: isJob ? pinLabel : '', pinTitle: isJob ? pinTitle : '', pinSt: isJob ? pinSt : '', pinStyle: isJob ? pinStyle : '',
       chatRef: this.chatRefFn, inputRef: this.inputRefFn,
       thinkingHere: thinkingHere, thinkLabel: s.thinkLabel, thinkM: this.mascot(thinkA, 22),
       progressOn: progressOn, progressText: progressText, progressCount: progressCount,
       showChips: isJob && chips.length > 0, chips: chips,
       input: s.input, placeholder: placeholder, composerOff: composerOff,
       onInput: (e) => { var v = e.target.value; this.setState({ input: v, atMenu: showAt && /(^|\s)@$/.test(v) }); },
+      inputHasMention: MENTION.test(s.input), inputParts: mentionParts(s.input),
+      inputStyle: 'position:relative;width:100%;border:0;outline:none;font:inherit;font-size:15px;padding:2px 4px 10px;background:transparent;caret-color:#14181F;color:' + (MENTION.test(s.input) ? 'transparent' : '#14181F'),
       onKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.send(); } },
       send: () => this.send(),
       sendStyle: 'width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:' + accent + ';opacity:' + (s.input.trim() && !thinkingHere ? 1 : 0.3),
@@ -1994,7 +2197,7 @@ class Component extends DCLogic {
       showAt: showAt, atStyle: 'width:36px;height:36px;border-radius:50%;border:1px solid #E3E6EA;display:flex;align-items:center;justify-content:center;background:' + (s.atMenu ? '#F0F2F4' : '#fff'),
       toggleAt: () => this.setState((st) => ({ atMenu: !st.atMenu })),
       atMenu: s.atMenu && showAt,
-      atItems: [{ tag: '@agenda', d: 'de hoje', k: 'agenda' }, { tag: '@cobranças', d: 'em aberto', k: 'cobr' }, { tag: '@caixa', d: 'do mês', k: 'caixa' }].map((x) => Object.assign(x, { pick: () => this.atPick(x.k) })),
+      atItems: [{ tag: '@agenda', d: 'de hoje, de amanhã, da semana que vem' }, { tag: '@cobranças', d: 'em aberto' }, { tag: '@caixa', d: 'do mês' }].map((x) => Object.assign(x, { pick: () => this.atPick(x.tag) })),
       qrOn: !!s.qr, qrTitle: s.qr ? 'Pix · ' + money(s.qr) : '', closeQr: () => this.setState({ qr: null }), qrCells: s.qr ? this.qrCells() : [],
 
       recTitle: r ? (r.phase === 'save' ? REC_SCRIPTS[r.script].title : 'Conte como foi') : '',
@@ -2005,11 +2208,11 @@ class Component extends DCLogic {
       recTime: r ? '0' + Math.floor(r.t / 60) + ':' + (r.t % 60 < 10 ? '0' : '') + (r.t % 60) : '00:00',
       cancelRec: () => this.cancelRec(), finishRec: () => this.finishRec(),
       recAsking: !!r && r.phase === 'pick',
-      recAskTitle: rj ? 'Pelo que você contou, é da visita ' + (rj.art === 'a' ? 'da ' : 'do ') + rj.first + '?' : '',
-      recAskSub: rj ? rj.name + ' · ' + dayShort(rv.day) + ', ' + rv.h + ' · ' + rv.what : '',
+      recAskTitle: rj ? 'Pelo que você contou, é ' + (rj.art === 'a' ? 'da ' : 'do ') + rj.name + '?' : '',
+      recAskSub: rj ? 'Vai para a visita de ' + dayShort(rv.day) + ', ' + rv.h + ' · ' + rv.what : '',
       recAskOpts: r && r.phase === 'pick' ? [this.opt('A', 'Sim, é essa', null, false, false, () => this.pickRec(r.jobId))]
-        .concat(this.recChoices().filter((c) => c.id !== r.jobId).map((c, k) => this.opt('BCDEFG'[k], c.j.name + ' · ' + dayShort(c.v.day) + ', ' + c.v.h, c.v.what, false, false, () => this.pickRec(c.id))))
-        .concat([{ l: 'Outro cliente', s: 'Sem visita marcada' }]).map((o, k) => (o.key ? Object.assign(o, { key: 'ABCDEFG'[k] }) : this.opt('ABCDEFG'[k], o.l, o.s, false, false, () => this.pickRec(null)))) : [],
+        .concat(this.recChoices().filter((c) => c.id !== r.jobId).map((c, k) => this.opt('BCDEFG'[k], c.j.name, c.v.what + ' · ' + dayShort(c.v.day) + ', ' + c.v.h, false, false, () => this.pickRec(c.id))))
+        .concat([{ l: 'Outro cliente', s: 'Sem visita marcada, ou cliente novo' }]).map((o, k) => (o.key ? Object.assign(o, { key: 'ABCDEFG'[k] }) : this.opt('ABCDEFG'[k], o.l, o.s, false, false, () => this.pickRec(null)))) : [],
 
       consentOn: !!s.consent,
       consentTitle: consentRec ? 'Antes de gravar' : 'Usar IA nas tarefas?',

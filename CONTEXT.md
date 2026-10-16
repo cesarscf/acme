@@ -63,9 +63,13 @@ _Avoid_: Job, schedule, automation
 Uma ida marcada à casa ou empresa de um Customer, num dia e horário.
 _Avoid_: Appointment, booking, agendamento
 
-**WorkRecord** (Atendimento):
-O registro do que foi feito numa Visit (o que fez, material usado, como o Customer pagou). É o que vira Charge.
-_Avoid_: Job, service, OS, ordem de serviço
+**Job** (Atendimento):
+Um caso de um Customer, do pedido até o pagamento: junta as Visits, os WorkRecords, a Quote e a Charge daquele pedido e anda pelas etapas Visita → Orçamento → Serviço → Pagamento. Um Customer tem vários Jobs ao longo do tempo, todos na conversa dele; no MVP, só um aberto por vez.
+_Avoid_: Case, ticket, OS, ordem de serviço, chamado
+
+**WorkRecord** (Registro: "Visita registrada" ou "Serviço registrado"):
+O que o Professional contou de uma Visit (o que viu, o que fez, material usado, valor, como o Customer pagou). Sem valor, é só o relato da visita ("Visita registrada"); com valor, é o serviço feito ("Serviço registrado") e vira Charge.
+_Avoid_: Atendimento, service, OS, ordem de serviço
 
 **PriceItem** (Serviço):
 Um item da tabela de preços do Professional, usado para montar Quotes.

@@ -88,6 +88,7 @@ async function bookJoao(schedulingAssistant: SchedulingAssistant, time = '14:00'
     time,
     durationMinutes: null,
     allowConflict: false,
+    title: null,
   });
   const [visit] = await db.select().from(visits).where(eq(visits.customerId, joao.id));
   return { joao, visit: visit! };
@@ -109,6 +110,7 @@ test('"Marca o João amanhã às 14h" creates the Customer and the Visit', async
             time: '14:00',
             durationMinutes: null,
             allowConflict: false,
+            title: null,
           }),
         ],
       };
@@ -143,6 +145,7 @@ test('a Visit at the time of another one gets a conflict warning, and is booked 
       time: '14:00',
       durationMinutes: null,
       allowConflict,
+      title: null,
     });
   let warning = '';
   claude.reply({ content: [book(false)] }, (request) => {

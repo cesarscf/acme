@@ -2,6 +2,7 @@ import { customers, db, priceItems, professionals, quoteItems, quotes } from '@a
 import { and, asc, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 import { formatMoney } from '../briefing/scripts';
 import { addNotice } from '../conversations/service';
+import { declineJob, openJob } from '../jobs/service';
 import { addDays, localDate } from '../visits/time';
 import { ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 
@@ -101,7 +102,9 @@ export async function upsertPriceItem(
 export async function createQuote(professionalId: string, customerId: string, items: NewQuoteItem[]) {
   const totalCents = items.reduce((total, item) => total + item.quantity * item.unitPriceCents, 0);
   return db.transaction(async (tx) => {
-    const [quote] = await tx.insert(quotes).values({ professionalId, customerId, totalCents }).returning();
+    // Outside a Job, the Quote opens one named after what it prices.
+    const jobId = await openJob(professionalId, customerId, items[0]!.description, tx);
+    const [quote] = await tx.insert(quotes).values({ professionalId, customerId, jobId, totalCents }).returning();
     await tx.insert(quoteItems).values(items.map((item, position) => ({ ...item, quoteId: quote!.id, position })));
     return quote!.id;
   });
@@ -238,6 +241,7 @@ onButtonClick('quote', async ({ originId, button, tx }) => {
   const [quote] = await tx
     .select({
       id: quotes.id,
+      jobId: quotes.jobId,
       status: quotes.status,
       totalCents: quotes.totalCents,
       validUntil: quotes.validUntil,
@@ -272,7 +276,7 @@ onButtonClick('quote', async ({ originId, button, tx }) => {
         suggestion: 'book_visit',
         customerId: quote.customerId,
       });
-    }
+    } else await declineJob(quote.jobId, tx);
   }
 
   await addNotice(tx, quote.professionalId, 'quotes', text);

@@ -67,6 +67,7 @@ async function bookVisit(professionalId: string, assistantId: string) {
     time: '14:00',
     durationMinutes: null,
     allowConflict: false,
+    title: null,
   });
   const { id: visitId } = JSON.parse(booked.text.slice(booked.text.indexOf('{')));
   return { customer, visitId: visitId as string };

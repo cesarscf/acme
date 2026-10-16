@@ -7,6 +7,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { TestClock } from 'pg-boss';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
+import { openJob } from '../jobs/service';
 import { ensureQuoteTemplates } from '../quotes/service';
 import { findRoutine, startRoutines, stopRoutines } from './service';
 
@@ -65,6 +66,7 @@ async function quoteSentAt(professionalId: string, sentAt: string, status: 'sent
     .values({
       professionalId,
       customerId: customer!.id,
+      jobId: await openJob(professionalId, customer!.id, 'Limpeza de split'),
       status,
       totalCents: 18000,
       sentAt: new Date(sentAt),

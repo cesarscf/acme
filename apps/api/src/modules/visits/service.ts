@@ -1,6 +1,7 @@
 import { customers, db, professionals, visits } from '@acme/db';
 import { and, asc, eq, getTableColumns, gte, lt, ne, type SQL, sql } from 'drizzle-orm';
 import { addNotice } from '../conversations/service';
+import { openJob } from '../jobs/service';
 import { ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 import { formatLocalDateTime, nextDay, toInstant } from './time';
 
@@ -82,10 +83,12 @@ function selectVisits(where: SQL | undefined) {
     .orderBy(asc(visits.scheduledAt));
 }
 
-export async function createVisit(professionalId: string, customerId: string, timing: VisitTiming) {
+// A Visit for a Customer without an open Job opens one, titled after what was asked.
+export async function createVisit(professionalId: string, customerId: string, timing: VisitTiming, title = 'Visita') {
+  const jobId = await openJob(professionalId, customerId, title);
   const [visit] = await db
     .insert(visits)
-    .values({ professionalId, customerId, ...timing })
+    .values({ professionalId, customerId, jobId, ...timing })
     .returning();
   return visit!;
 }

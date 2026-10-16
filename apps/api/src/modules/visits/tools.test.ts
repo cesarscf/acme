@@ -33,6 +33,7 @@ async function createVisit(
     time: '14:00',
     durationMinutes: null,
     allowConflict: false,
+    title: null,
     ...input,
   });
 }

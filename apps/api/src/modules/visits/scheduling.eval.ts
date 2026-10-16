@@ -28,6 +28,19 @@ describe('the scheduling Assistant', () => {
     expect(turn.calls).not.toContainEqual(called('createCustomer'));
   });
 
+  test('what the Customer asked for becomes the title of the Visit, and nothing is invented without it', async () => {
+    const assistant = await scriptedAssistant('scheduling');
+    const joao = await customerOf(assistant, 'João Pereira');
+
+    const asked = await say(assistant, 'marca o joão amanhã às 9h, o ar da sala dele não gela');
+    const plain = await say(assistant, 'e marca ele de novo depois de amanhã às 10h');
+
+    const titled = asked.calls.find(({ name }) => name === 'createVisit')!;
+    expect(titled.input).toMatchObject({ customerId: joao.id, date: addDays(today(), 1), time: '09:00' });
+    expect(String(titled.input.title)).toMatch(/ar/i);
+    expect(plain.calls).toContainEqual(called('createVisit', { date: addDays(today(), 2), title: null }));
+  });
+
   test('a transcribed audio with a new Customer registers her WhatsApp and books the Visit', async () => {
     const assistant = await scriptedAssistant('scheduling');
 

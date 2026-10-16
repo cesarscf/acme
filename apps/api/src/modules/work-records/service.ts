@@ -14,6 +14,7 @@ import {
 } from '../charges/service';
 import { addNotice } from '../conversations/service';
 import { createCustomer, findCustomer, toPhoneNumber } from '../customers/service';
+import { concludeJob, openJob } from '../jobs/service';
 import { findVisit, listVisits } from '../visits/service';
 import { addDays, formatLocalDateTime, localDate } from '../visits/time';
 import { type Extraction, extractWorkRecord } from './extract';
@@ -109,6 +110,7 @@ export async function createWorkRecord(professionalId: string, transcript: strin
       ...fields,
       ...(visit && { visitId: visit.id }),
       customerId,
+      jobId: visit ? visit.jobId : await jobFor(professionalId, { customerId, visitId: null, title: fields.title }),
       professionalId,
       paymentMethod: paymentMethod ?? (await findPaymentMethods(professionalId)).default,
       cashReceived: paymentMethod === 'cash' ? cashReceived : null,
@@ -130,12 +132,18 @@ export async function addMessage(professionalId: string, id: string, text: strin
     ? { customerId: current.customerId, newCustomerName: null }
     : await resolveCustomer(professionalId, extraction);
   const customerId = resolved.customerId ?? current.customerId;
+  const visitId = current.visitId ?? extraction.visitId;
+  const merged = merge(current, extraction);
   const [workRecord] = await db
     .update(workRecords)
     .set({
-      ...merge(current, extraction),
+      ...merged,
       customerId,
-      visitId: current.visitId ?? extraction.visitId,
+      visitId,
+      jobId:
+        current.jobId && customerId === current.customerId
+          ? current.jobId
+          : await jobFor(professionalId, { customerId, visitId, title: merged.title }),
       transcript,
     })
     .where(eq(workRecords.id, id))
@@ -146,6 +154,17 @@ export async function addMessage(professionalId: string, id: string, text: strin
   // Not saved: the thread asks for the WhatsApp right after, and the next message carries both again.
   const newCustomerName = customerId ? null : resolved.newCustomerName;
   return { ...(await viewWorkRecord(workRecord!)), newCustomerName };
+}
+
+// A WorkRecord goes into its Visit's Job, or into the Customer's open Job; without a Customer it waits for one.
+async function jobFor(
+  professionalId: string,
+  { customerId, visitId, title }: { customerId: string | null; visitId: string | null; title: string | null },
+) {
+  if (!customerId) return null;
+  const visit = visitId ? await findVisit(professionalId, visitId) : undefined;
+  if (visit?.customer.id === customerId) return visit.jobId;
+  return openJob(professionalId, customerId, title ?? 'Serviço');
 }
 
 // A Customer named in the thread is created there once the WhatsApp is known, as the Assistants do in their conversations.
@@ -173,9 +192,18 @@ export async function chooseCustomer(professionalId: string, id: string, custome
   const current = await findWorkRecord(professionalId, id);
   if (!current) return { refused: 'work_record_not_found' as const };
   if (!(await findCustomer(professionalId, customerId))) return { refused: 'customer_not_found' as const };
+  const sameCustomer = customerId === current.customerId;
+  const visitId = sameCustomer ? current.visitId : null;
   const [workRecord] = await db
     .update(workRecords)
-    .set({ customerId, visitId: customerId === current.customerId ? current.visitId : null })
+    .set({
+      customerId,
+      visitId,
+      jobId:
+        sameCustomer && current.jobId
+          ? current.jobId
+          : await jobFor(professionalId, { customerId, visitId, title: current.title }),
+    })
     .where(eq(workRecords.id, id))
     .returning();
   await settleCash(workRecord!);
@@ -185,7 +213,7 @@ export async function chooseCustomer(professionalId: string, id: string, custome
 // Cash already received becomes a paid Charge once the Customer and the amount are known; nothing goes to the Customer.
 // A Pix Charge not yet paid is cancelled, so it stops being reminded.
 async function settleCash(workRecord: WorkRecord) {
-  const { id, professionalId, customerId, amountCents, paymentMethod, cashReceived } = workRecord;
+  const { id, professionalId, customerId, jobId, amountCents, paymentMethod, cashReceived } = workRecord;
   if (paymentMethod !== 'cash' || !cashReceived || !customerId || !amountCents) return;
   await db.transaction(async (tx) => {
     const [pixCharge] = await tx
@@ -210,6 +238,7 @@ async function settleCash(workRecord: WorkRecord) {
         paidAt: new Date(),
       })
       .onConflictDoNothing({ target: [charges.workRecordId, charges.paymentMethod] });
+    if (jobId) await concludeJob(jobId, tx);
   });
 }
 

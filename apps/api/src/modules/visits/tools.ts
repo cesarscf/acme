@@ -92,6 +92,12 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
               .nullable()
               .describe(`Duração em minutos, se o profissional disser. Vazio usa ${defaultDurationMinutes}.`),
             allowConflict,
+            title: z
+              .string()
+              .nullable()
+              .describe(
+                'O que o cliente pediu, em poucas palavras, se o profissional disser (ex.: Ar da sala não gela). Vira o título do atendimento. Vazio usa "Visita".',
+              ),
           }),
           run: async (input) => {
             const customer = await findCustomer(professional.id, input.customerId);
@@ -106,7 +112,7 @@ export function visitTools({ professional }: Assistant): AssistantTool[] {
             };
             const conflicts = await findConflicts(professional.id, timing);
             if (conflicts.length && !input.allowConflict) return conflictWarning(conflicts);
-            const visit = await createVisit(professional.id, customer.id, timing);
+            const visit = await createVisit(professional.id, customer.id, timing, input.title?.trim() || undefined);
             return `Visita marcada: ${JSON.stringify(toResult({ ...visit, customer }))}`;
           },
         }),

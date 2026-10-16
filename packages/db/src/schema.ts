@@ -11,6 +11,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -273,6 +274,31 @@ export const customers = pgTable(
   (table) => [unique().on(table.professionalId, table.phoneNumber)],
 );
 
+export const jobStatus = pgEnum('job_status', ['open', 'done', 'declined']);
+
+// A Customer's case from the request to the payment; its Visits, Quotes and WorkRecords point at it.
+export const jobs = pgTable(
+  'jobs',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    professionalId: uuid()
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    customerId: uuid()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    title: text().notNull(),
+    status: jobStatus().notNull().default('open'),
+    openedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    closedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    index().on(table.professionalId, table.customerId),
+    // The MVP keeps one open Job per Customer: a new request goes into it.
+    uniqueIndex('jobs_one_open_per_customer').on(table.customerId).where(sql`${table.status} = 'open'`),
+  ],
+);
+
 export const visitStatus = pgEnum('visit_status', ['scheduled', 'confirmed', 'reschedule_requested', 'cancelled']);
 
 export const visits = pgTable(
@@ -285,6 +311,9 @@ export const visits = pgTable(
     customerId: uuid()
       .notNull()
       .references(() => customers.id, { onDelete: 'cascade' }),
+    jobId: uuid()
+      .notNull()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
     scheduledAt: timestamp({ withTimezone: true }).notNull(),
     durationMinutes: integer().notNull(),
     status: visitStatus().notNull().default('scheduled'),
@@ -329,6 +358,9 @@ export const quotes = pgTable(
     customerId: uuid()
       .notNull()
       .references(() => customers.id, { onDelete: 'cascade' }),
+    jobId: uuid()
+      .notNull()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
     status: quoteStatus().notNull().default('draft'),
     totalCents: integer().notNull(),
     sentAt: timestamp({ withTimezone: true }),
@@ -374,6 +406,8 @@ export const workRecords = pgTable(
     // Saved straight from the audio: what Claude could not tell stays null and is asked in the service thread.
     customerId: uuid().references(() => customers.id, { onDelete: 'cascade' }),
     visitId: uuid().references(() => visits.id, { onDelete: 'set null' }),
+    // Known once the Customer is: the Visit's Job, or the Customer's open one.
+    jobId: uuid().references(() => jobs.id, { onDelete: 'cascade' }),
     title: text(),
     description: text(),
     materials: text(),

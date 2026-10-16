@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, lt, lte, or, sql } from 'dri
 import { formatMoney, pixCity, pixKey, pixName } from '../briefing/scripts';
 import { addNotice } from '../conversations/service';
 import type { ConfirmationCard } from '../conversations/tools';
+import { concludeJob } from '../jobs/service';
 import { pixBrCode } from '../pix/br-code';
 import { ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 
@@ -79,6 +80,7 @@ export async function findCharge(professionalId: string, id: string) {
     .select({
       id: charges.id,
       workRecordId: charges.workRecordId,
+      jobId: workRecords.jobId,
       status: charges.status,
       amountCents: charges.amountCents,
       paymentMethod: charges.paymentMethod,
@@ -165,6 +167,7 @@ export async function confirmChargePaid(professionalId: string, id: string, rece
     .update(charges)
     .set(received ? { status: 'paid', paidAt: new Date() } : { status: 'pending' })
     .where(eq(charges.id, id));
+  if (received && charge.jobId) await concludeJob(charge.jobId);
   return { charge: (await findCharge(professionalId, id))! };
 }
 

@@ -1,7 +1,7 @@
-import { assistantMessages, assistantNotices, db, runningTurns, toolConfirmations } from '@acme/db';
+import { assistantMessages, assistantNotices, db, toolConfirmations } from '@acme/db';
 import type Anthropic from '@anthropic-ai/sdk';
 import { runRunnableTool } from '@anthropic-ai/sdk/lib/tools/BetaRunnableTool';
-import { and, eq, gt, isNull, lte } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { roles } from '../team/roles';
 import { claude, modelParams, recordUsage } from './claude';
 import {
@@ -14,6 +14,7 @@ import {
   toolUses,
 } from './history';
 import { systemPrompt } from './prompts';
+import { freeTurn, holdTurn, renewMs, renewTurn } from './running-turns';
 import type { Assistant } from './service';
 import { type AssistantTool, assistantTools, findTool } from './tools';
 
@@ -32,90 +33,16 @@ const truncatedText = 'Me perdi no meio dessa tarefa. Pode pedir de novo?';
 const cancelledResult = 'O profissional cancelou. Nada foi enviado ao cliente.';
 const abandonedResult = 'Não executado: o profissional mandou outra mensagem antes.';
 
-// One turn at a time per Assistant and per Customer thread, across API processes. A turn renews its row while it
-// runs, so the row of a process that died expires and frees the Assistant and the thread.
-const holdMs = 60_000;
-const renewMs = 20_000;
-
-function holdUntil() {
-  return new Date(Date.now() + holdMs);
-}
-
-export async function isWorking(assistantId: string) {
-  const [row] = await db
-    .select({ id: runningTurns.id })
-    .from(runningTurns)
-    .where(and(eq(runningTurns.assistantId, assistantId), gt(runningTurns.expiresAt, new Date())));
-  return !!row;
-}
-
-export async function isCustomerWorking(customerId: string) {
-  const [row] = await db
-    .select({ id: runningTurns.id })
-    .from(runningTurns)
-    .where(and(eq(runningTurns.customerId, customerId), gt(runningTurns.expiresAt, new Date())));
-  return !!row;
-}
-
-// Held from a message's arrival until its turn starts: picking who answers takes a Claude call, and a second message must wait.
-export async function claimCustomerThread(customerId: string) {
-  await db
-    .delete(runningTurns)
-    .where(and(eq(runningTurns.customerId, customerId), lte(runningTurns.expiresAt, new Date())));
-  const [claimed] = await db
-    .insert(runningTurns)
-    .values({ customerId, expiresAt: holdUntil() })
-    .onConflictDoNothing()
-    .returning({ id: runningTurns.id });
-  return !!claimed;
-}
-
-// Frees a claim whose turn never started; a started turn frees its row when it ends.
-export async function releaseCustomerThread(customerId: string) {
-  await db.delete(runningTurns).where(and(eq(runningTurns.customerId, customerId), isNull(runningTurns.assistantId)));
-}
-
-// In a Customer's thread the turn takes over the claim; in the Assistant's chat it holds a row of its own.
-async function holdTurn({ id: assistantId, customer }: Assistant) {
-  await db
-    .delete(runningTurns)
-    .where(and(eq(runningTurns.assistantId, assistantId), lte(runningTurns.expiresAt, new Date())));
-  if (!customer) {
-    const [held] = await db
-      .insert(runningTurns)
-      .values({ assistantId, expiresAt: holdUntil() })
-      .onConflictDoNothing()
-      .returning({ id: runningTurns.id });
-    return held?.id;
-  }
-  try {
-    const [held] = await db
-      .update(runningTurns)
-      .set({ assistantId, expiresAt: holdUntil() })
-      .where(and(eq(runningTurns.customerId, customer.id), isNull(runningTurns.assistantId)))
-      .returning({ id: runningTurns.id });
-    return held?.id;
-  } catch (error) {
-    if (isUniqueViolation(error)) return undefined;
-    throw error;
-  }
-}
-
-function isUniqueViolation(error: unknown) {
-  const cause = error instanceof Error && error.cause ? error.cause : error;
-  return (cause as { code?: string } | null)?.code === '23505';
-}
-
 // Starts the turn right away and streams its events; the turn finishes and is saved even if the app disconnects.
-// Undefined when the Assistant (or the thread) already has a turn running.
-export async function startTurn(assistant: Assistant, turn: (emit: (event: TurnEvent) => void) => Promise<TurnEvent>) {
-  const held = await holdTurn(assistant);
+export async function startTurn(
+  assistant: Assistant,
+  turn: (emit: (event: TurnEvent) => void) => Promise<TurnEvent>,
+  claimId?: string,
+) {
+  const held = await holdTurn(assistant.id, claimId);
   if (!held) return undefined;
   const renew = setInterval(() => {
-    db.update(runningTurns)
-      .set({ expiresAt: holdUntil() })
-      .where(eq(runningTurns.id, held))
-      .catch((error) => console.error(`Renewing the turn of Assistant ${assistant.id} failed`, error));
+    renewTurn(held).catch((error) => console.error(`Renewing the turn of Assistant ${assistant.id} failed`, error));
   }, renewMs);
   const events: TurnEvent[] = [];
   let finished = false;
@@ -130,10 +57,9 @@ export async function startTurn(assistant: Assistant, turn: (emit: (event: TurnE
     })
     .then(async (last) => {
       clearInterval(renew);
-      await db
-        .delete(runningTurns)
-        .where(eq(runningTurns.id, held))
-        .catch((error) => console.error(`Freeing the turn of Assistant ${assistant.id} failed`, error));
+      await freeTurn(held).catch((error) =>
+        console.error(`Freeing the turn of Assistant ${assistant.id} failed`, error),
+      );
       events.push(last);
       finished = true;
       wake();

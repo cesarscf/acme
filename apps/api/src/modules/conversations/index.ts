@@ -3,8 +3,9 @@ import { auth } from '../auth';
 import { getConversation } from './history';
 import { ConversationsModel } from './model';
 import { findOpenSuggestion } from './notices';
+import { isWorking } from './running-turns';
 import { findAssistant, hasAiConsent } from './service';
-import { answerSuggestion, decide, findPendingConfirmation, isWorking, sendText, startTurn } from './turn';
+import { answerSuggestion, decide, findPendingConfirmation, sendText, startTurn } from './turn';
 
 export const conversations = new Elysia()
   .use(auth)

@@ -1,14 +1,8 @@
 import { Elysia, sse, status } from 'elysia';
 import { auth } from '../auth';
+import { claimCustomerThread, releaseClaim } from '../conversations/running-turns';
 import { findAssistant, hasAiConsent } from '../conversations/service';
-import {
-  claimCustomerThread,
-  decide,
-  releaseCustomerThread,
-  sendText,
-  startTurn,
-  type TurnEvent,
-} from '../conversations/turn';
+import { decide, sendText, startTurn, type TurnEvent } from '../conversations/turn';
 import { CustomersModel } from './model';
 import { listCustomerSections } from './sections';
 import { chooseAssistant, findThreadConfirmation, inCustomerThread, runTeam } from './team-messages';
@@ -36,15 +30,20 @@ export const customers = new Elysia()
       const thread = await getCustomerThread(professional.id, id);
       if (!thread) throw status(404, 'Customer not found');
       if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
-      if (!(await claimCustomerThread(id))) throw status(409, 'The team is working');
+      const claim = await claimCustomerThread(id);
+      if (!claim) throw status(409, 'The team is working');
       let turn: AsyncGenerator<TurnEvent> | undefined;
       try {
         const chosen = await chooseAssistant(professional.id, thread, text);
         if (!chosen) throw status(409, 'No Assistant on the team');
         const assistant = await inCustomerThread(chosen, thread);
-        turn = await startTurn(assistant, (emit) => runTeam(assistant, (first, to) => sendText(first, text, to), emit));
+        turn = await startTurn(
+          assistant,
+          (emit) => runTeam(assistant, (first, to) => sendText(first, text, to), emit),
+          claim,
+        );
       } finally {
-        await releaseCustomerThread(id);
+        await releaseClaim(claim);
       }
       if (!turn) throw status(409, 'Assistant is working');
       for await (const event of turn) yield sse({ data: event });
@@ -56,20 +55,23 @@ export const customers = new Elysia()
     async function* ({ professional, params: { id, confirmationId }, body: { confirmed } }) {
       const confirmation = await findThreadConfirmation(professional.id, id, confirmationId);
       if (!confirmation) throw status(404, 'No pending confirmation');
-      if (!(await claimCustomerThread(id))) throw status(409, 'The team is working');
+      const claim = await claimCustomerThread(id);
+      if (!claim) throw status(409, 'The team is working');
       let turn: AsyncGenerator<TurnEvent> | undefined;
       try {
         const thread = await getCustomerThread(professional.id, id);
         const owner = await findAssistant(professional.id, confirmation.assistantId);
         if (!thread || !owner) throw status(404, 'No pending confirmation');
         const assistant = await inCustomerThread(owner, thread);
-        turn = await startTurn(assistant, (emit) =>
-          runTeam(assistant, (first, to) => decide(first, confirmation, confirmed, to), emit),
+        turn = await startTurn(
+          assistant,
+          (emit) => runTeam(assistant, (first, to) => decide(first, confirmation, confirmed, to), emit),
+          claim,
         );
       } finally {
-        await releaseCustomerThread(id);
+        await releaseClaim(claim);
       }
-      if (!turn) throw status(409, 'Assistant is working');
+      if (!turn) throw status(409, 'The team is working');
       for await (const event of turn) yield sse({ data: event });
     },
     { auth: true, params: 'customers.Confirmation', body: 'customers.Decision' },

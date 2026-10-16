@@ -48,6 +48,35 @@ export type OutboundMessage =
 type GraphSendResult = { contacts: { wa_id: string }[]; messages: { id: string }[] };
 
 const buttonHandlers: Partial<Record<OriginType, (click: ButtonClick) => unknown>> = {};
+const templates = new Map<string, TemplateDefinition>();
+
+// A template is kept by name so a sent message can be read back as the Customer saw it.
+export function defineTemplate<const T extends TemplateDefinition>(template: T) {
+  templates.set(template.name, template);
+  return template;
+}
+
+// The text and buttons the Customer saw, or what they wrote or tapped.
+export function readMessage(message: WhatsappMessage) {
+  const payload = message.payload as OutboundMessage;
+  if (message.direction === 'inbound' || payload.type === 'text') return { text: message.text ?? '', buttons: [] };
+  if (payload.type === 'interactive') {
+    const { body, action } = payload.interactive;
+    return { text: body.text, buttons: action.buttons.map(({ reply }) => reply.title) };
+  }
+  const components = (templates.get(payload.template.name)?.components ?? []) as {
+    type: string;
+    text?: string;
+    buttons?: { text: string }[];
+  }[];
+  const parameters = (payload.template.components?.find(({ type }) => type === 'body')?.parameters ??
+    []) as TextParameter[];
+  const body = components.find(({ type }) => type === 'BODY')?.text ?? '';
+  return {
+    text: body.replace(/\{\{(\d+)\}\}/g, (_, index) => parameters[Number(index) - 1]?.text ?? ''),
+    buttons: components.find(({ type }) => type === 'BUTTONS')?.buttons?.map(({ text }) => text) ?? [],
+  };
+}
 
 export function onButtonClick(type: OriginType, handler: (click: ButtonClick) => unknown) {
   buttonHandlers[type] = handler;

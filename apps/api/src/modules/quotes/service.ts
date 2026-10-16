@@ -4,7 +4,7 @@ import { formatMoney } from '../briefing/scripts';
 import { addNotice } from '../conversations/service';
 import { declineJob, openJob } from '../jobs/service';
 import { addDays, localDate } from '../visits/time';
-import { ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
+import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 
 type Professional = { id: string; name: string; timezone: string };
 type NewQuoteItem = { priceItemId: string | null; description: string; quantity: number; unitPriceCents: number };
@@ -18,7 +18,7 @@ const buttons = {
   ],
 } as const;
 
-const quoteTemplate = {
+const quoteTemplate = defineTemplate({
   name: 'quote',
   language: 'pt_BR',
   category: 'UTILITY',
@@ -40,9 +40,9 @@ const quoteTemplate = {
     },
     buttons,
   ],
-} as const;
+});
 
-const quoteReminderTemplate = {
+const quoteReminderTemplate = defineTemplate({
   name: 'quote_reminder',
   language: 'pt_BR',
   category: 'UTILITY',
@@ -54,7 +54,7 @@ const quoteReminderTemplate = {
     },
     buttons,
   ],
-} as const;
+});
 
 const buttonActions = ['approve', 'decline'] as const;
 

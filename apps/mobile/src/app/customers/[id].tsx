@@ -168,7 +168,46 @@ function ItemView({ item }: { item: ThreadItem }) {
       return <AmountCard icon="quote" tone="orange" amount={item.total} detail={item.detail} status={item.status} />;
     case 'pix':
       return <AmountCard icon="pix" tone="accent" amount={item.amount} detail={item.detail} status={item.status} />;
+    case 'whatsapp':
+      return <WhatsappBubble item={item} />;
   }
+}
+
+// Sent to the Customer on the right in green, with the buttons they got; what they sent on the left in white.
+function WhatsappBubble({ item }: { item: Item<'whatsapp'> }) {
+  const outbound = item.direction === 'outbound';
+  return (
+    <View className={`flex-row ${outbound ? 'justify-end' : 'justify-start'}`}>
+      <View
+        className={`max-w-[84%] border px-3 py-2 ${
+          outbound
+            ? 'rounded-t-[14px] rounded-bl-[14px] rounded-br-[4px] border-whatsapp-border bg-whatsapp'
+            : 'rounded-t-[14px] rounded-br-[14px] rounded-bl-[4px] border-border bg-card'
+        }`}
+      >
+        <View className="flex-row items-center gap-[5px]">
+          <Icon name="whatsapp" size={12} color="--color-accent-foreground" strokeWidth={2.2} />
+          <Text className="font-bold text-[11.5px] text-accent-foreground">{item.label}</Text>
+        </View>
+        <Text selectable className="mt-[3px] font-normal text-foreground text-sm leading-5">
+          {item.text}
+        </Text>
+        {item.buttons.length > 0 && (
+          <View className="mt-2 flex-row gap-1.5">
+            {item.buttons.map((button) => (
+              <Text
+                key={button}
+                numberOfLines={1}
+                className="flex-1 overflow-hidden rounded-[10px] border border-whatsapp-border bg-card px-1 py-1.5 text-center font-bold text-[12.5px] text-accent-foreground"
+              >
+                {button}
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
 }
 
 function DayDivider({ label }: { label: string }) {

@@ -5,7 +5,7 @@ import { addNotice } from '../conversations/service';
 import type { ConfirmationCard } from '../conversations/tools';
 import { concludeJob } from '../jobs/service';
 import { pixBrCode } from '../pix/br-code';
-import { ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
+import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 
 type Professional = { id: string; name: string; timezone: string };
 export type ChargeWithCustomer = NonNullable<Awaited<ReturnType<typeof findCharge>>>;
@@ -19,7 +19,7 @@ const paidButton = { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY', text: 'JÃ
 const examplePixCode =
   '00020126430014br.gov.bcb.pix0121carlos@exemplo.com.br5204000053039865406320.005802BR5915Carlos Eletrica6009Sao Paulo62070503***63046F76';
 
-const chargeTemplate = {
+const chargeTemplate = defineTemplate({
   name: 'pix_charge',
   language: 'pt_BR',
   category: 'UTILITY',
@@ -31,9 +31,9 @@ const chargeTemplate = {
     },
     paidButton,
   ],
-} as const;
+});
 
-const chargeReminderTemplate = {
+const chargeReminderTemplate = defineTemplate({
   name: 'pix_charge_reminder',
   language: 'pt_BR',
   category: 'UTILITY',
@@ -45,7 +45,7 @@ const chargeReminderTemplate = {
     },
     paidButton,
   ],
-} as const;
+});
 
 const buttonActions = ['paid'] as const;
 

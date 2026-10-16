@@ -2,13 +2,13 @@ import { customers, db, professionals, visits } from '@acme/db';
 import { and, asc, eq, getTableColumns, gte, lt, ne, type SQL, sql } from 'drizzle-orm';
 import { addNotice } from '../conversations/service';
 import { openJob } from '../jobs/service';
-import { ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
+import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 import { formatLocalDateTime, nextDay, toInstant } from './time';
 
 type VisitTiming = { scheduledAt: Date; durationMinutes: number };
 export type VisitWithCustomer = Awaited<ReturnType<typeof selectVisits>>[number];
 
-const visitConfirmationTemplate = {
+const visitConfirmationTemplate = defineTemplate({
   name: 'visit_confirmation',
   language: 'pt_BR',
   category: 'UTILITY',
@@ -26,7 +26,7 @@ const visitConfirmationTemplate = {
       ],
     },
   ],
-} as const;
+});
 
 // The payload carries the time the message asked about, so a tap on a message older than a reschedule is caught.
 const buttonActions = ['confirm', 'reschedule'] as const;

@@ -14,7 +14,7 @@ export function ConfirmationCard({
   confirmation: Confirmation;
   disabled: boolean;
   onDecide: (confirmed: boolean) => void;
-  // The service thread answers with the Professional's own bubble (Confirmar / Cancelar), as in the prototype.
+  // Without it the card shows no Confirmado / Cancelado line once decided; the caller closes it instead.
   decisionLine?: boolean;
 }) {
   return (
@@ -31,7 +31,7 @@ export function ConfirmationCard({
         </View>
         <View className="gap-2 px-4 pt-2 pb-3">
           {confirmation.rows.map(({ label, value }) => (
-            <Row key={label} label={label} value={value} />
+            <Row key={`${label}-${value}`} label={label} value={value} />
           ))}
           {confirmation.notices.map((notice) => (
             <Row key={notice} label="Aviso" value={notice} />

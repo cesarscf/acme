@@ -166,7 +166,12 @@ test('a section without anyone is left out, and a Customer with nothing yet is R
   const { data } = await api.customers.get({ query: {}, headers });
 
   expect(data!.sections).toEqual([
-    { key: 'recent', title: 'RECENTES', rows: [expect.objectContaining({ id: ana.id, status: null })] },
+    {
+      key: 'recent',
+      title: 'RECENTES',
+      rows: [expect.objectContaining({ id: ana.id, status: null })],
+      confirmation: null,
+    },
   ]);
 });
 

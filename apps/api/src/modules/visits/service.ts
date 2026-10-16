@@ -2,7 +2,7 @@ import { customers, db, professionals, visits } from '@acme/db';
 import { and, asc, eq, getTableColumns, gte, lt, ne, type SQL, sql } from 'drizzle-orm';
 import { addNotice } from '../conversations/notices';
 import { openJob } from '../jobs/service';
-import { formatLocalDateTime, nextDay, toInstant } from '../time/time';
+import { formatLocalDateTime, localDate, nextDay, toInstant } from '../time/time';
 import { defineTemplate, ensureTemplate, onButtonClick, sendMessage } from '../whatsapp/service';
 
 type VisitTiming = { scheduledAt: Date; durationMinutes: number };
@@ -140,6 +140,27 @@ async function sendConfirmationTemplate(visit: VisitWithCustomer, professional: 
     },
     origin: { type: 'visit', id: visit.id },
   });
+}
+
+// "Pedir confirmação" in Hoje: each listed Customer gets one message, about their first Visit still to confirm today.
+export async function requestTodaysConfirmations(professionalId: string, visitIds: string[]) {
+  const [professional] = await db
+    .select({ id: professionals.id, name: professionals.name, timezone: professionals.timezone })
+    .from(professionals)
+    .where(eq(professionals.id, professionalId));
+  const today = localDate(new Date(), professional!.timezone);
+  const listed = (await listVisits(professionalId, professional!.timezone, today, today)).filter(
+    ({ id, status, scheduledAt }) => visitIds.includes(id) && status === 'scheduled' && scheduledAt > new Date(),
+  );
+  const firstOfEach = [...new Map(listed.toReversed().map((visit) => [visit.customer.id, visit])).values()].reverse();
+  for (const visit of firstOfEach) await sendVisitConfirmation(visit, professional!);
+  if (firstOfEach.length) {
+    const names = firstOfEach.map(({ customer }) => customer.name);
+    const who = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`;
+    const text = `Pedi para ${who} confirmar${names.length === 1 ? '' : 'em'} a visita de hoje.`;
+    await db.transaction((tx) => addNotice(tx, professionalId, 'scheduling', text));
+  }
+  return { sent: firstOfEach.length };
 }
 
 export async function requestDueVisitConfirmations(

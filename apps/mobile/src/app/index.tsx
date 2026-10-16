@@ -4,11 +4,13 @@ import { useCallback, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCSSVariable } from 'uniwind';
+import { ConfirmationCard } from '@/components/confirmation-card';
 import { CustomerAvatar } from '@/components/customer-avatar';
 import { Icon } from '@/components/icons';
 import { Mascot } from '@/components/mascot';
 import { StatusPill } from '@/components/status-pill';
 import { useSignOutMutation } from '@/hooks/data/auth/use-sign-out-mutation';
+import { useAskConfirmationsMutation } from '@/hooks/data/customers/use-ask-confirmations-mutation';
 import { type CustomerRow, useCustomersQuery } from '@/hooks/data/customers/use-customers-query';
 import { useProfessionalQuery } from '@/hooks/data/professional/use-professional-query';
 import { type Assistant, useTeamQuery } from '@/hooks/data/team/use-team-query';
@@ -241,6 +243,8 @@ function Customers() {
   const [query, setQuery] = useState('');
   const placeholder = useCSSVariable('--color-muted-foreground') as string;
   const { data, isLoadingError, refetch } = useCustomersQuery(query.trim());
+  const ask = useAskConfirmationsMutation();
+  const [asking, setAsking] = useState(false);
 
   // A Visit booked or a Pix paid elsewhere moves a Customer between sections, so the list catches up on the way back.
   useFocusEffect(
@@ -281,9 +285,37 @@ function Customers() {
       ) : (
         data?.sections.map((section) => (
           <View key={section.key}>
-            <Text className="px-5 pt-3.5 pb-0.5 font-bold text-muted-foreground text-xs tracking-[0.48px]">
-              {section.title}
-            </Text>
+            <View className="flex-row items-center justify-between px-5 pt-3.5 pb-0.5">
+              <Text className="font-bold text-muted-foreground text-xs tracking-[0.48px]">{section.title}</Text>
+              {section.confirmation && !asking && (
+                <Pressable
+                  className="min-h-8 justify-center active:opacity-60"
+                  accessibilityRole="button"
+                  onPress={() => setAsking(true)}
+                >
+                  <Text className="font-bold text-[13px] text-primary">Pedir confirmação</Text>
+                </Pressable>
+              )}
+            </View>
+            {section.confirmation && asking && (
+              <View className="px-5 pt-1.5 pb-2">
+                <ConfirmationCard
+                  confirmation={{ id: 'today', type: 'confirmation', status: 'pending', ...section.confirmation.card }}
+                  disabled={ask.isPending}
+                  decisionLine={false}
+                  onDecide={(confirmed) =>
+                    confirmed
+                      ? ask.mutate(section.confirmation!.visitIds, { onSuccess: () => setAsking(false) })
+                      : setAsking(false)
+                  }
+                />
+                {ask.isError && (
+                  <Text selectable className="pt-2 font-normal text-destructive text-sm">
+                    Não consegui pedir agora. Tente de novo.
+                  </Text>
+                )}
+              </View>
+            )}
             {section.rows.map((row) => (
               <CustomerRowView key={row.id} row={row} today={section.key === 'today'} />
             ))}

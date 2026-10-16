@@ -7,6 +7,8 @@ export type Tone = 'ok' | 'wait' | 'none' | 'sent';
 export type Pill = { label: string; tone: Tone };
 export type StepState = 'done' | 'current' | 'todo' | 'optional' | 'skipped';
 type Visit = typeof visits.$inferSelect;
+
+const justSentMs = 15 * 60_000;
 export type JobDetail = Awaited<ReturnType<typeof listJobs>>[number];
 
 // Each Job with what it gathers, oldest first.
@@ -94,6 +96,8 @@ export function jobStatus(detail: JobDetail, visit?: Visit, now = new Date()): P
   if (current.status === 'confirmed') return { label: 'Confirmado', tone: 'ok' };
   if (current.status === 'reschedule_requested') return { label: 'Pediu para remarcar', tone: 'wait' };
   if (current.confirmationRequestedFor?.getTime() === current.scheduledAt.getTime()) {
+    // Asking is the Visit's last change, so a recent change is the message that just went out.
+    if (now.getTime() - current.updatedAt.getTime() < justSentMs) return { label: 'Enviado agora', tone: 'sent' };
     return { label: 'Sem resposta', tone: 'wait' };
   }
   return { label: 'Não enviado', tone: 'none' };

@@ -1,6 +1,7 @@
 import { db, professionals } from '@acme/db';
 import { eq } from 'drizzle-orm';
 import { formatWholeMoney } from '../charges/service';
+import type { ConfirmationCard } from '../conversations/tools';
 import {
   hasEnded,
   type JobDetail,
@@ -30,6 +31,8 @@ export async function listCustomerSections(professionalId: string, query = '', n
   );
 
   const today: (Row & { at: number })[] = [];
+  // The first Visit today of each Customer who has not confirmed yet, for "Pedir confirmação".
+  const unconfirmed: { visitId: string; name: string; scheduledAt: Date }[] = [];
   const waiting: (Row & { at: number })[] = [];
   const upcoming: (Row & { at: number })[] = [];
   const recent: (Row & { at: number })[] = [];
@@ -40,6 +43,14 @@ export async function listCustomerSections(professionalId: string, query = '', n
       detail.visits.filter(({ status }) => status !== 'cancelled').map((visit) => ({ detail, visit })),
     );
 
+    const toAsk = live.find(
+      ({ detail, visit }) =>
+        daysAgo(visit.scheduledAt, timeZone, now) === 0 &&
+        visit.status === 'scheduled' &&
+        !hasEnded(visit, now) &&
+        !detail.workRecords.some(({ visitId }) => visitId === visit.id),
+    );
+    if (toAsk) unconfirmed.push({ visitId: toAsk.visit.id, name: customer.name, scheduledAt: toAsk.visit.scheduledAt });
     const visitToday = live.find(({ visit }) => daysAgo(visit.scheduledAt, timeZone, now) === 0);
     if (visitToday) {
       const { detail, visit } = visitToday;
@@ -92,17 +103,44 @@ export async function listCustomerSections(professionalId: string, query = '', n
   }
 
   const byTime = (a: { at: number }, b: { at: number }) => a.at - b.at;
+  unconfirmed.sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
   const sections = [
-    { key: 'today' as const, title: 'HOJE', rows: today.sort(byTime) },
-    { key: 'waiting' as const, title: 'ESPERANDO O CLIENTE', rows: waiting.sort(byTime).reverse() },
+    {
+      key: 'today' as const,
+      title: 'HOJE',
+      rows: today.sort(byTime),
+      confirmation: unconfirmed.length ? confirmationOf(unconfirmed, timeZone) : null,
+    },
+    { key: 'waiting' as const, title: 'ESPERANDO O CLIENTE', rows: waiting.sort(byTime).reverse(), confirmation: null },
     // The next Visit first, the soonest on top; then the last activity, newest first.
-    { key: 'recent' as const, title: 'RECENTES', rows: [...upcoming.sort(byTime), ...recent.sort(byTime).reverse()] },
+    {
+      key: 'recent' as const,
+      title: 'RECENTES',
+      rows: [...upcoming.sort(byTime), ...recent.sort(byTime).reverse()],
+      confirmation: null,
+    },
   ];
   return {
     sections: sections
       .filter(({ rows }) => rows.length)
       .map(({ rows, ...section }) => ({ ...section, rows: rows.map(({ at, ...row }) => row) })),
   };
+}
+
+// The card shown before asking everyone at once; the ids are the Visits it lists, so what is sent is what was shown.
+function confirmationOf(unconfirmed: { visitId: string; name: string; scheduledAt: Date }[], timeZone: string) {
+  const count = unconfirmed.length === 1 ? '1 cliente' : `${unconfirmed.length} clientes`;
+  const card: ConfirmationCard = {
+    title: 'Para confirmar: pedir a confirmação de hoje',
+    subtitle: count,
+    rows: unconfirmed.map(({ name, scheduledAt }) => ({ label: localTime(scheduledAt, timeZone), value: name })),
+    notices: [
+      'Nada é enviado agora.',
+      'Depois que você confirmar, cada cliente recebe uma mensagem no WhatsApp com os botões Confirmar e Remarcar.',
+    ],
+    question: `Confirma: pedir a confirmação de ${count}?`,
+  };
+  return { visitIds: unconfirmed.map(({ visitId }) => visitId), card };
 }
 
 // "Instalação de split 9.000 BTU · R$ 1.900", the last Job of a Customer.

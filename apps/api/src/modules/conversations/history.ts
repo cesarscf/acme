@@ -2,6 +2,7 @@ import { assistantMessages, db, jobs, toolConfirmations } from '@acme/db';
 import type Anthropic from '@anthropic-ai/sdk';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { AssistantRole } from '../team/catalog';
+import { agendaCard } from '../visits/agenda';
 import { loadNotices, loadTimedItems } from './notices';
 import type { Assistant } from './service';
 import { assistantTools, type ConfirmationCard, findTool } from './tools';
@@ -16,6 +17,7 @@ export type ConversationItem =
   | { id: string; type: 'professional'; text: string }
   | { id: string; type: 'assistant'; text: string }
   | { id: string; type: 'notice'; text: string }
+  | ({ id: string; type: 'agenda' } & Awaited<ReturnType<typeof agendaCard>>)
   | { id: string; type: 'activity'; customer: { id: string; name: string }; itemId: string; text: string; at: Date }
   | { id: string; type: 'handoff'; role: AssistantRole; text: string }
   | ({ id: string; type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard)
@@ -62,6 +64,8 @@ export async function messageItems(assistant: Assistant, customerId: string | nu
     .where(eq(toolConfirmations.assistantId, assistant.id));
   const tools = assistantTools(assistant);
   const timed: TimedItems[] = [];
+  // In the Assistant's chat, the Visits listed for an @agenda message show as the Agenda card, once per message.
+  let agendaAsked = false;
   for (const message of messages) {
     const items: ConversationItem[] = [];
     // A teammate's request shows as the handoff of whoever asked, not as the Professional's words.
@@ -70,8 +74,15 @@ export async function messageItems(assistant: Assistant, customerId: string | nu
       .join('\n\n')
       .trim();
     if (text) items.push({ id: message.id, type: message.role === 'user' ? 'professional' : 'assistant', text });
+    if (message.role === 'user' && text) agendaAsked = !customerId && /(^|\s)@agenda\b/u.test(text);
     for (const block of message.content) {
       if (block.type !== 'tool_use') continue;
+      if (block.name === 'listVisits' && agendaAsked) {
+        agendaAsked = false;
+        const { from, to } = block.input as { from: string; to: string };
+        items.push({ id: block.id, type: 'agenda', ...(await agendaCard(assistant.professional, from, to)) });
+        continue;
+      }
       if (block.name === 'askTeammate') {
         const { role, message: request } = block.input as { role: AssistantRole; message: string };
         items.push({ id: block.id, type: 'handoff', role, text: request });

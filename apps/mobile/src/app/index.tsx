@@ -1,6 +1,6 @@
-import { Link, router, useFocusEffect } from 'expo-router';
+import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCSSVariable } from 'uniwind';
@@ -32,7 +32,13 @@ export default function Home() {
   const { data: me } = useProfessionalQuery();
   const { data: team, refetch: refetchTeam } = useTeamQuery();
   const signOut = useSignOutMutation();
-  const [tab, setTab] = useState<'assistants' | 'customers'>('assistants');
+  // The Agenda card's "Ver os clientes" comes back here on the Clientes tab.
+  const params = useLocalSearchParams<{ tab?: 'assistants' | 'customers' }>();
+  const [tab, setTab] = useState<'assistants' | 'customers'>(params.tab ?? 'assistants');
+
+  useEffect(() => {
+    if (params.tab) setTab(params.tab);
+  }, [params.tab]);
   const [coach, setCoach] = useState(() => (SecureStore.getItem(coachSeenKey) ? -1 : 0));
   const recordAfterConsent = useRef(false);
   const name = me && firstName(me.name);

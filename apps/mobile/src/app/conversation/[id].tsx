@@ -5,6 +5,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActivityCard } from '@/components/activity-card';
+import { AgendaCard } from '@/components/agenda-card';
 import { BackButton } from '@/components/back-button';
 import { BirthLine, BriefingProgress, BriefingThread } from '@/components/briefing-thread';
 import { Notice, ProfessionalBubble, Reply } from '@/components/chat-messages';
@@ -191,6 +192,8 @@ function Chat({
             <Reply key={item.id} text={item.text} />
           ) : item.type === 'notice' ? (
             <Notice key={item.id} text={item.text} />
+          ) : item.type === 'agenda' ? (
+            <AgendaCard key={item.id} agenda={item} />
           ) : item.type === 'activity' ? (
             <ActivityCard key={item.id} customer={item.customer} itemId={item.itemId} text={item.text} at={item.at} />
           ) : item.type === 'suggestion' ? (

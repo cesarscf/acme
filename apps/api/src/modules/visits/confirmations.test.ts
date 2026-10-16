@@ -129,18 +129,17 @@ test('Confirmar sends each Customer one message, the rows show "Enviado agora", 
   ]);
 });
 
-test('Visits of another Professional or of another day are not asked', async () => {
-  const { customer, visit } = await professionalWithDay();
+test('Visits of another Professional, or already past, are not asked', async () => {
+  const { headers, customer, visit } = await professionalWithDay();
   const joao = await customer('João Pereira');
   const joaos = await visit(joao.id, later('23:00'));
-  const tomorrows = await visit(joao.id, toInstant(addDays(localDate(new Date(), timeZone), 1), '09:00', timeZone));
+  const past = await visit(joao.id, toInstant(addDays(localDate(new Date(), timeZone), -1), '09:00', timeZone));
   const other = await professionalWithDay();
 
   const stranger = await api.visits.confirmations.post({ visitIds: [joaos.id] }, { headers: other.headers });
-  const own = await professionalWithDay();
-  const notToday = await api.visits.confirmations.post({ visitIds: [tomorrows.id] }, { headers: own.headers });
+  const before = await api.visits.confirmations.post({ visitIds: [past.id] }, { headers });
 
   expect(stranger.data).toEqual({ sent: 0 });
-  expect(notToday.data).toEqual({ sent: 0 });
+  expect(before.data).toEqual({ sent: 0 });
   expect(await listMessages({ phoneNumberId: platformNumber, waId: joao.phoneNumber })).toEqual([]);
 });

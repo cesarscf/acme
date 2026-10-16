@@ -1,7 +1,6 @@
 import { db, professionals } from '@acme/db';
 import { eq } from 'drizzle-orm';
 import { formatWholeMoney } from '../charges/service';
-import type { ConfirmationCard } from '../conversations/tools';
 import {
   hasEnded,
   type JobDetail,
@@ -13,6 +12,7 @@ import {
   waitingFor,
 } from '../jobs/progress';
 import { daysAgo, localTime, shortDay } from '../time/time';
+import { confirmationsCard } from '../visits/confirmation-card';
 import { findCustomers, formatPhoneNumber } from './service';
 
 type Row = { id: string; name: string; when: string; detail: string; status: Pill | null };
@@ -109,7 +109,16 @@ export async function listCustomerSections(professionalId: string, query = '', n
       key: 'today' as const,
       title: 'HOJE',
       rows: today.sort(byTime),
-      confirmation: unconfirmed.length ? confirmationOf(unconfirmed, timeZone) : null,
+      confirmation: unconfirmed.length
+        ? confirmationsCard(
+            unconfirmed.map(({ visitId, name, scheduledAt }) => ({
+              visitId,
+              name,
+              when: localTime(scheduledAt, timeZone),
+            })),
+            'Para confirmar: pedir a confirmação de hoje',
+          )
+        : null,
     },
     { key: 'waiting' as const, title: 'ESPERANDO O CLIENTE', rows: waiting.sort(byTime).reverse(), confirmation: null },
     // The next Visit first, the soonest on top; then the last activity, newest first.
@@ -125,22 +134,6 @@ export async function listCustomerSections(professionalId: string, query = '', n
       .filter(({ rows }) => rows.length)
       .map(({ rows, ...section }) => ({ ...section, rows: rows.map(({ at, ...row }) => row) })),
   };
-}
-
-// The card shown before asking everyone at once; the ids are the Visits it lists, so what is sent is what was shown.
-function confirmationOf(unconfirmed: { visitId: string; name: string; scheduledAt: Date }[], timeZone: string) {
-  const count = unconfirmed.length === 1 ? '1 cliente' : `${unconfirmed.length} clientes`;
-  const card: ConfirmationCard = {
-    title: 'Para confirmar: pedir a confirmação de hoje',
-    subtitle: count,
-    rows: unconfirmed.map(({ name, scheduledAt }) => ({ label: localTime(scheduledAt, timeZone), value: name })),
-    notices: [
-      'Nada é enviado agora.',
-      'Depois que você confirmar, cada cliente recebe uma mensagem no WhatsApp com os botões Confirmar e Remarcar.',
-    ],
-    question: `Confirma: pedir a confirmação de ${count}?`,
-  };
-  return { visitIds: unconfirmed.map(({ visitId }) => visitId), card };
 }
 
 // "Instalação de split 9.000 BTU · R$ 1.900", the last Job of a Customer.

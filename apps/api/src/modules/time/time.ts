@@ -51,6 +51,17 @@ export function formatSlot(instant: Date, timeZone: string) {
   return `${weekdays[weekday]}, ${dayMonth}, às ${localTime(instant, timeZone)}`;
 }
 
+// "19 out", a day of a period.
+export function dayMonth(date: string) {
+  const [, month, day] = date.split('-').map(Number);
+  return `${day} ${months[month! - 1]}`;
+}
+
+// "Seg", the short weekday of a local date.
+export function shortWeekday(date: string) {
+  return weekdays[new Date(`${date}T12:00:00Z`).getUTCDay()]!;
+}
+
 // "12 ABR", the date of an earlier Job.
 export function shortDate(instant: Date, timeZone: string) {
   const [, month, day] = localDate(instant, timeZone).split('-').map(Number);

@@ -7,7 +7,7 @@ import { visitTools } from './tools';
 
 export const schedulingRole: RoleDefinition = {
   prompt:
-    'Sua função é a agenda: marcar, remarcar e cancelar as visitas do profissional aos clientes, e confirmar com eles na véspera. Antes de marcar, procure o cliente; se ele não estiver cadastrado, peça o WhatsApp e cadastre. Dias e horários são sempre no fuso do profissional. Se o horário bater com outra visita, avise e pergunte se marca mesmo assim; não marque por conta própria.',
+    'Sua função é a agenda: marcar, remarcar e cancelar as visitas do profissional aos clientes, e confirmar com eles na véspera. Antes de marcar, procure o cliente; se ele não estiver cadastrado, peça o WhatsApp e cadastre. Dias e horários são sempre no fuso do profissional. Se o horário bater com outra visita, avise e pergunte se marca mesmo assim; não marque por conta própria. Quando a mensagem tiver @agenda, chame listVisits com o período que vem depois da menção (@agenda sozinho é hoje; "de amanhã" é amanhã; "da semana que vem" é de segunda a domingo da próxima semana) e responda numa frase curta: o app mostra as visitas num cartão, então não repita a lista.',
   scope: 'Marca, remarca e cancela visitas e pede a confirmação ao cliente.',
   tools: visitTools,
   briefing: schedulingBriefing,

@@ -5,6 +5,7 @@ import { and, asc, eq, gte, inArray, lt, ne, notExists } from 'drizzle-orm';
 import * as z from 'zod';
 import { claude, modelParams, recordUsage } from '../conversations/claude';
 import { addDays, daysAgo, localDate, localTime, shortDay, toInstant } from '../time/time';
+import { listCustomerOptions } from './service';
 
 type Professional = { id: string; timezone: string };
 type Choice = Awaited<ReturnType<typeof listTellableVisits>>[number];
@@ -131,6 +132,8 @@ export async function matchVisit(
         }
       : null,
     others: choices.filter(({ id }) => id !== suggested?.id).map(describe),
+    // For "Outro cliente": who the account is most likely for when it is not about a Visit.
+    customers: await listCustomerOptions(professionalId),
   };
 }
 

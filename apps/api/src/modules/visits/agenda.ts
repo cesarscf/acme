@@ -1,6 +1,6 @@
 import { db, workRecords } from '@acme/db';
 import { inArray } from 'drizzle-orm';
-import { hasEnded, jobStatus, listJobs } from '../jobs/progress';
+import { jobStatus, listJobs } from '../jobs/progress';
 import { addDays, dayMonth, localDate, localTime, shortWeekday } from '../time/time';
 import { confirmationsCard } from './confirmation-card';
 import { listVisits } from './service';
@@ -44,9 +44,10 @@ export async function agendaCard(
       status: jobStatus(detail, visit, now),
     };
   });
+  // Only a Visit still to start can be asked about, as requestVisitConfirmations does.
   const toAsk = found.filter(
     (visit) =>
-      visit.status === 'scheduled' && !hasEnded(visit, now) && !told.some(({ visitId }) => visitId === visit.id),
+      visit.status === 'scheduled' && visit.scheduledAt > now && !told.some(({ visitId }) => visitId === visit.id),
   );
   const firstOfEach = [...new Map(toAsk.toReversed().map((visit) => [visit.customer.id, visit])).values()].reverse();
   const count = found.length === 0 ? 'Nenhuma visita' : found.length === 1 ? '1 visita' : `${found.length} visitas`;

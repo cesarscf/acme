@@ -72,6 +72,7 @@ test("Claude suggests today's Visit that fits what was said, even before it ends
       detail: 'Vai para a visita de hoje, 08:00 · Ar da sala não gela',
     },
     others: [{ visitId: martasVisit.id, customerName: 'Marta Lima', detail: 'Limpeza de split · hoje, 23:00' }],
+    customers: expect.arrayContaining([{ id: joao.id, name: 'João Pereira' }]),
   });
   // Nothing is saved before the choice.
   expect(await db.select().from(workRecords).where(eq(workRecords.visitId, joaosVisit.id))).toEqual([]);
@@ -146,7 +147,7 @@ test('without a Visit to tell, or when Claude finds none, nothing is suggested',
 
   const { data: empty } = await api['work-records'].match.post({ transcript: 'Limpei um split.' }, { headers });
 
-  expect(empty).toEqual({ suggested: null, others: [] });
+  expect(empty).toEqual({ suggested: null, others: [], customers: [] });
   expect(claude.requests.length).toBe(requests);
 
   const joao = await customer('João Pereira');
@@ -156,6 +157,7 @@ test('without a Visit to tell, or when Claude finds none, nothing is suggested',
   expect(data).toEqual({
     suggested: null,
     others: [{ visitId: joaosVisit.id, customerName: 'João Pereira', detail: 'Ar da sala não gela · hoje, 08:00' }],
+    customers: [{ id: joao.id, name: 'João Pereira' }],
   });
 });
 

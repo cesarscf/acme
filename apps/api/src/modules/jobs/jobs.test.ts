@@ -183,17 +183,18 @@ test("a WorkRecord of a Visit goes into the Visit's Job; one without a Visit goe
   ]);
 });
 
-test('a WorkRecord whose Customer is chosen later goes into that Customer’s Job', async () => {
+test('a WorkRecord for "Outro cliente" picked from the list goes into that Customer’s open Job, not a Visit', async () => {
   const team = await professionalWithTeam();
   const visit = await bookVisit(team, 'Ar da sala não gela');
   claude.reply(extracted({ title: 'Troca de capacitor', amountCents: 35000 }));
-  const { data } = await api['work-records'].post({ transcript: 'Troquei o capacitor.' }, { headers: team.headers });
-  expect(data!.customer).toBeNull();
 
-  await api['work-records']({ id: data!.id }).patch({ customerId: team.joao.id }, { headers: team.headers });
+  const { data } = await api['work-records'].post(
+    { transcript: 'Troquei o capacitor.', customerId: team.joao.id },
+    { headers: team.headers },
+  );
 
   const [workRecord] = await db.select().from(workRecords).where(eq(workRecords.id, data!.id));
-  expect(workRecord!.jobId).toBe(visit.jobId);
+  expect(workRecord).toMatchObject({ customerId: team.joao.id, jobId: visit.jobId, visitId: null });
 });
 
 test('a paid Pix Charge concludes the Job, and the next request opens a new one', async () => {

@@ -4,7 +4,8 @@ import { queryClient } from '@/lib/query-client';
 import { conversationKeys } from '../conversation/keys';
 import { customerKeys } from '../customers/keys';
 
-function createWorkRecord(variables: { transcript: string; visitId?: string }) {
+// Where the account goes: the Visit picked, a Customer picked, or (customer) what was written about a new one.
+function createWorkRecord(variables: { transcript: string; visitId?: string; customerId?: string; customer?: string }) {
   return unwrap(api['work-records'].post(variables));
 }
 

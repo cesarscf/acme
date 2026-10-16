@@ -53,7 +53,7 @@ export async function loadTimedItems(assistant: Assistant) {
     ({ id, text, createdAt, suggestion, suggestionAnswer, customerId, customerName }) => {
       if (customerId && customerName && !suggestion) {
         const customer = { id: customerId, name: customerName };
-        return { at: createdAt, jobId: null, items: [activity(customer, `notice:${id}`, text, createdAt)] };
+        return { at: createdAt, jobId: null, items: [activity(customer, `notice:${id}`, null, text, createdAt)] };
       }
       const items: ConversationItem[] = [{ id, type: 'notice', text }];
       if (suggestion && customerName && suggestionText) {
@@ -79,6 +79,7 @@ async function threadActivity(assistantId: string): Promise<TimedItems[]> {
   const said = await db
     .select({
       id: assistantMessages.id,
+      jobId: assistantMessages.jobId,
       content: assistantMessages.content,
       createdAt: assistantMessages.createdAt,
       customer: { id: customers.id, name: customers.name },
@@ -87,17 +88,24 @@ async function threadActivity(assistantId: string): Promise<TimedItems[]> {
     .innerJoin(customers, eq(customers.id, assistantMessages.customerId))
     .where(and(eq(assistantMessages.assistantId, assistantId), eq(assistantMessages.role, 'assistant')))
     .orderBy(asc(assistantMessages.createdAt));
-  return said.flatMap(({ id, content, createdAt, customer }) => {
+  return said.flatMap(({ id, jobId, content, createdAt, customer }) => {
     const text = (content as { type: string; text?: string }[])
       .flatMap((block) => (block.type === 'text' && block.text ? [block.text] : []))
       .join('\n\n')
       .trim();
-    return text ? [{ at: createdAt, jobId: null, items: [activity(customer, id, text, createdAt)] }] : [];
+    return text ? [{ at: createdAt, jobId: null, items: [activity(customer, id, jobId, text, createdAt)] }] : [];
   });
 }
 
-function activity(customer: { id: string; name: string }, itemId: string, text: string, at: Date): ConversationItem {
-  return { id: `activity:${itemId}`, type: 'activity', customer, itemId, text, at };
+// jobId: a message of a Job already concluded sits inside that Job's card, which the link opens instead.
+function activity(
+  customer: { id: string; name: string },
+  itemId: string,
+  jobId: string | null,
+  text: string,
+  at: Date,
+): ConversationItem {
+  return { id: `activity:${itemId}`, type: 'activity', customer, itemId, jobId, text, at };
 }
 
 export async function findOpenSuggestion(assistantId: string, id: string) {

@@ -12,18 +12,13 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/back-button';
-import { Reply } from '@/components/chat-messages';
+import { ProfessionalBubble, Reply } from '@/components/chat-messages';
 import { Composer } from '@/components/composer';
 import { CustomerQuestion } from '@/components/customer-question';
 import { OptionRow } from '@/components/option-row';
-import { useChooseCustomerMutation } from '@/hooks/data/work-records/use-choose-customer-mutation';
-import {
-  useCreateWorkRecordMutation,
-  type WorkRecord,
-} from '@/hooks/data/work-records/use-create-work-record-mutation';
+import { useCreateWorkRecordMutation } from '@/hooks/data/work-records/use-create-work-record-mutation';
 import { useMatchVisitMutation, type VisitMatch } from '@/hooks/data/work-records/use-match-visit-mutation';
 import { useTranscriptionMutation } from '@/hooks/data/work-records/use-transcription-mutation';
-import { useWorkRecordMessageMutation } from '@/hooks/data/work-records/use-work-record-message-mutation';
 import { transcriptLines } from '@/lib/transcript';
 import { formatWhen } from '@/lib/when';
 
@@ -41,16 +36,15 @@ export default function RecordWorkRecord() {
   const [startedAt] = useState(() => new Date());
   const [uri, setUri] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
+  // Nothing is saved until the Professional picks a Visit, or a Customer after "Outro cliente".
+  const [askingCustomer, setAskingCustomer] = useState(false);
 
   const transcript = transcription.data?.transcript;
   const lines = transcript ? transcriptLines(transcript) : [];
   const listening = !uri && !denied;
-  // Without a Customer the screen asks who it is for; with one, it is already opening the Customer's thread.
-  const unknownCustomer = create.data && !create.data.customer ? create.data : null;
-  // Nothing is saved until the Professional says which Visit the account is about.
-  const choosing = match.data && !create.isPending && !create.isSuccess ? match.data : null;
+  const choosingVisit = match.data && !askingCustomer && !create.isPending && !create.isSuccess ? match.data : null;
   const searching = transcription.isPending || match.isPending;
-  const summarizing = create.isPending || (create.isSuccess && !unknownCustomer);
+  const summarizing = create.isPending || create.isSuccess;
   const talking = recording.durationMillis >= talkingAfterMillis;
   const nothingHeard = (transcription.error as { status?: number } | null)?.status === 422;
 
@@ -59,6 +53,7 @@ export default function RecordWorkRecord() {
     setDenied(!granted);
     if (!granted) return;
     setUri(null);
+    setAskingCustomer(false);
     transcription.reset();
     match.reset();
     create.reset();
@@ -84,17 +79,17 @@ export default function RecordWorkRecord() {
   }
 
   function findVisit(said: string) {
+    // With no Visit to tell, the question is straight away which Customer it is.
     match.mutate(
       { transcript: said, visitId },
-      // With no Visit to tell, the account goes straight to "De qual cliente é este serviço?".
-      { onSuccess: ({ suggested, others }) => !suggested && !others.length && save(said) },
+      { onSuccess: ({ suggested, others }) => setAskingCustomer(!suggested && !others.length) },
     );
   }
 
-  function save(said: string, chosenVisitId?: string) {
+  function saveOnVisit(said: string, chosenVisitId: string) {
     create.mutate(
       { transcript: said, visitId: chosenVisitId },
-      { onSuccess: ({ customer }) => customer && openThread(customer.id) },
+      { onSuccess: ({ customer }) => openThread(customer!.id) },
     );
   }
 
@@ -102,13 +97,19 @@ export default function RecordWorkRecord() {
     start();
   }, []);
 
-  if (unknownCustomer) {
+  if (askingCustomer && transcript && match.data) {
     return (
       <KeyboardAvoidingView behavior="padding" className="flex-1 bg-card" style={{ paddingTop: top + 16 }}>
         <View className="flex-row px-5">
           <BackButton />
         </View>
-        <CustomerStep workRecord={unknownCustomer} lines={lines} bottom={bottom} />
+        <CustomerStep
+          transcript={transcript}
+          lines={lines}
+          options={match.data.customers}
+          create={create}
+          bottom={bottom}
+        />
       </KeyboardAvoidingView>
     );
   }
@@ -134,19 +135,12 @@ export default function RecordWorkRecord() {
               : 'Conte como foi: de qual cliente é, o que você fez, o material, o valor e se precisa de orçamento. A transcrição aparece aqui quando você terminar.'}
           </Text>
         )}
-        {lines.map((line, index) => (
-          <View key={`${index}-${line}`}>
-            <Text className="font-semibold text-muted-foreground text-xs">Você</Text>
-            <Text selectable className="mt-0.5 font-normal text-base text-foreground leading-6">
-              {line}
-            </Text>
-          </View>
-        ))}
-        {choosing && transcript && (choosing.suggested || choosing.others.length > 0) && (
+        <TranscriptLines lines={lines} />
+        {choosingVisit && transcript && (
           <VisitQuestion
-            match={choosing}
-            onPick={(chosen) => save(transcript, chosen)}
-            onOtherCustomer={() => save(transcript)}
+            match={choosingVisit}
+            onPick={(chosen) => saveOnVisit(transcript, chosen)}
+            onOtherCustomer={() => setAskingCustomer(true)}
           />
         )}
         {transcription.isError && (
@@ -181,11 +175,11 @@ export default function RecordWorkRecord() {
         />
       ) : match.isError && transcript ? (
         <BarButton label="Tentar de novo" onPress={() => findVisit(transcript)} />
-      ) : create.isError && transcript ? (
-        <BarButton label="Tentar de novo" onPress={() => save(transcript, create.variables?.visitId)} />
+      ) : create.isError && transcript && create.variables?.visitId ? (
+        <BarButton label="Tentar de novo" onPress={() => saveOnVisit(transcript, create.variables!.visitId!)} />
       ) : denied ? (
         <BarButton label="Tentar de novo" onPress={start} />
-      ) : choosing ? null : (
+      ) : choosingVisit ? null : (
         <RecordingBar
           millis={recording.durationMillis}
           talking={talking}
@@ -196,6 +190,17 @@ export default function RecordWorkRecord() {
       )}
     </View>
   );
+}
+
+function TranscriptLines({ lines }: { lines: string[] }) {
+  return lines.map((line, index) => (
+    <View key={`${index}-${line}`}>
+      <Text className="font-semibold text-muted-foreground text-xs">Você</Text>
+      <Text selectable className="mt-0.5 font-normal text-base text-foreground leading-6">
+        {line}
+      </Text>
+    </View>
+  ));
 }
 
 // "Pelo que você contou, é do João Pereira?": the suggested Visit, the others that can be told, or another Customer.
@@ -251,20 +256,36 @@ function openThread(customerId: string) {
   router.dismissTo({ pathname: '/customers/[id]', params: { id: customerId } });
 }
 
-// The record was saved without a Customer: picking one, or writing a new one's name and WhatsApp, opens their thread.
-function CustomerStep({ workRecord, lines, bottom }: { workRecord: WorkRecord; lines: string[]; bottom: number }) {
-  const choose = useChooseCustomerMutation(workRecord.id);
-  const message = useWorkRecordMessageMutation(workRecord.id);
+// "De qual cliente é este serviço?": one of the likely Customers, or a new one's name and WhatsApp written below.
+// Nothing is saved until the Customer is known, so leaving here leaves nothing behind.
+function CustomerStep({
+  transcript,
+  lines,
+  options,
+  create,
+  bottom,
+}: {
+  transcript: string;
+  lines: string[];
+  options: VisitMatch['customers'];
+  create: ReturnType<typeof useCreateWorkRecordMutation>;
+  bottom: number;
+}) {
   const input = useRef<TextInput>(null);
   const [text, setText] = useState('');
-  const working = choose.isPending || message.isPending;
-  const newCustomerName = message.data?.newCustomerName;
+  // What was written so far about the new Customer: the name first, then the WhatsApp the API asks for.
+  const [written, setWritten] = useState('');
+  const unknown = create.error as { status?: number; value?: { newCustomerName?: string | null } } | null;
+  const newCustomerName = unknown?.status === 409 ? unknown.value?.newCustomerName : null;
+  const working = create.isPending || create.isSuccess;
 
   function send() {
     const said = text.trim();
     if (!said || working) return;
+    const customer = [written, said].filter(Boolean).join(' ');
     setText('');
-    message.mutate(said, { onSuccess: ({ customer }) => customer && openThread(customer.id) });
+    setWritten(customer);
+    create.mutate({ transcript, customer }, { onSuccess: ({ customer: saved }) => openThread(saved!.id) });
   }
 
   return (
@@ -277,27 +298,25 @@ function CustomerStep({ workRecord, lines, bottom }: { workRecord: WorkRecord; l
         <Text className="font-extrabold text-[29px] text-foreground leading-[33px] tracking-[-0.58px]">
           Conte como foi
         </Text>
-        {lines.map((line, index) => (
-          <View key={`${index}-${line}`}>
-            <Text className="font-semibold text-muted-foreground text-xs">Você</Text>
-            <Text selectable className="mt-0.5 font-normal text-base text-foreground leading-6">
-              {line}
-            </Text>
-          </View>
-        ))}
+        <TranscriptLines lines={lines} />
+        {written && <ProfessionalBubble text={written} />}
         {newCustomerName ? (
           <Reply
             text={`Não achei ${newCustomerName} nos seus clientes. Me passe o WhatsApp com DDD para eu cadastrar.`}
           />
+        ) : written && unknown?.status === 409 ? (
+          <Reply text="Não entendi de qual cliente é. Escreva o nome e o WhatsApp com DDD." />
         ) : (
           <CustomerQuestion
-            options={workRecord.customerOptions}
+            options={options}
             disabled={working}
-            onPick={(customerId) => choose.mutate(customerId, { onSuccess: () => openThread(customerId) })}
+            onPick={(customerId) =>
+              create.mutate({ transcript, customerId }, { onSuccess: () => openThread(customerId) })
+            }
             onOther={() => input.current?.focus()}
           />
         )}
-        {(choose.isError || message.isError) && (
+        {create.isError && unknown?.status !== 409 && (
           <Text selectable className="font-normal text-destructive text-sm">
             Não consegui anotar agora. Tente de novo.
           </Text>

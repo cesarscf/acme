@@ -5,9 +5,12 @@ const text = (maxLength: number) => t.String({ minLength: 1, maxLength, pattern:
 export const WorkRecordsModel = {
   // expo-audio records M4A, which file-type reads as video/mp4 on Android.
   'workRecords.Audio': t.Object({ audio: t.File({ type: ['audio/*', 'video/mp4'], maxSize: '25m' }) }),
-  'workRecords.New': t.Object({ transcript: text(20_000), visitId: t.Optional(t.String({ format: 'uuid' })) }),
+  // Where the account goes: a Visit, a Customer, or (customer) the name and WhatsApp of one not found yet.
+  'workRecords.New': t.Object({
+    transcript: text(20_000),
+    visitId: t.Optional(t.String({ format: 'uuid' })),
+    customerId: t.Optional(t.String({ format: 'uuid' })),
+    customer: t.Optional(text(500)),
+  }),
   'workRecords.Match': t.Object({ transcript: text(20_000), visitId: t.Optional(t.String({ format: 'uuid' })) }),
-  'workRecords.Message': t.Object({ text: text(2000) }),
-  'workRecords.WorkRecord': t.Object({ id: t.String({ format: 'uuid' }) }),
-  'workRecords.Customer': t.Object({ customerId: t.String({ format: 'uuid' }) }),
 };

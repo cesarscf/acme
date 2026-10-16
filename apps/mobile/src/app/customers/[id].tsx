@@ -32,8 +32,9 @@ type Speaker = Item<'assistant'>['assistant'];
 type Message = Parameters<ReturnType<typeof useSendCustomerMessageMutation>['mutate']>[0];
 
 export default function CustomerScreen() {
-  // focus: the item an Assistant's activity card points at, opened highlighted.
-  const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
+  // focus: the item an Assistant's activity card points at, opened highlighted; job: its Job, whose card
+  // holds the item once the Job is concluded.
+  const { id, focus, job } = useLocalSearchParams<{ id: string; focus?: string; job?: string }>();
   const thread = useCustomerThreadQuery(id);
   const { refetch } = thread;
 
@@ -47,7 +48,8 @@ export default function CustomerScreen() {
     return <LoadError message="Não conseguimos abrir a conversa do cliente." onRetry={() => thread.refetch()} />;
   }
   if (!thread.data) return <View className="flex-1 bg-background" />;
-  return <Thread thread={thread.data} focus={focus} />;
+  const inThread = focus && thread.data.items.some((item) => item.id === focus);
+  return <Thread thread={thread.data} focus={inThread ? focus : job && `past_job:${job}`} />;
 }
 
 const highlightMs = 3000;

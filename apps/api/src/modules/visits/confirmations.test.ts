@@ -143,3 +143,12 @@ test('Visits of another Professional, or already past, are not asked', async () 
   expect(before.data).toEqual({ sent: 0 });
   expect(await listMessages({ phoneNumberId: platformNumber, waId: joao.phoneNumber })).toEqual([]);
 });
+
+test('a Visit already started today is not offered for confirmation, since asking would send nothing', async () => {
+  const { customer, visit, today } = await professionalWithDay();
+  const joao = await customer('João Pereira');
+  // Started ten minutes ago and still going (30 minutes long).
+  await visit(joao.id, new Date(Date.now() - 10 * 60_000));
+
+  expect((await today())?.confirmation ?? null).toBeNull();
+});

@@ -4,7 +4,7 @@ import { hasAiConsent } from '../conversations/service';
 import { transcribe } from '../transcription/transcribe';
 import { matchVisit } from './match';
 import { WorkRecordsModel } from './model';
-import { addMessage, chooseCustomer, createWorkRecord, findBillingAssistant, recordAudioUsage } from './service';
+import { createWorkRecord, findBillingAssistant, recordAudioUsage } from './service';
 
 export const workRecords = new Elysia()
   .use(auth)
@@ -40,32 +40,12 @@ export const workRecords = new Elysia()
   )
   .post(
     '/work-records',
-    async ({ professional, body: { transcript, visitId } }) => {
+    async ({ professional, body: { transcript, ...chosen } }) => {
       if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
-      const workRecord = await createWorkRecord(professional.id, transcript, visitId);
-      if (!workRecord) throw status(404, 'Visit not found');
-      return workRecord;
+      const result = await createWorkRecord(professional.id, transcript, chosen);
+      if (result.workRecord) return result.workRecord;
+      if (result.refused === 'customer_unknown') return status(409, { newCustomerName: result.newCustomerName });
+      throw status(404, result.refused === 'visit_not_found' ? 'Visit not found' : 'Customer not found');
     },
     { auth: true, body: 'workRecords.New' },
-  )
-  .post(
-    '/work-records/:id/messages',
-    async ({ professional, params: { id }, body: { text } }) => {
-      if (!(await hasAiConsent(professional.id))) throw status(403, 'AI consent required');
-      const workRecord = await addMessage(professional.id, id, text);
-      if (!workRecord) throw status(404, 'Work record not found');
-      return workRecord;
-    },
-    { auth: true, params: 'workRecords.WorkRecord', body: 'workRecords.Message' },
-  )
-  .patch(
-    '/work-records/:id',
-    async ({ professional, params: { id }, body: { customerId } }) => {
-      const result = await chooseCustomer(professional.id, id, customerId);
-      if ('refused' in result) {
-        throw status(404, result.refused === 'customer_not_found' ? 'Customer not found' : 'Work record not found');
-      }
-      return result.workRecord;
-    },
-    { auth: true, params: 'workRecords.WorkRecord', body: 'workRecords.Customer' },
   );

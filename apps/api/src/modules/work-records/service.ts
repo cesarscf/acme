@@ -85,21 +85,35 @@ async function extract(professionalId: string, transcript: string) {
   );
 }
 
-// From an ended Visit's "Registrar serviço", the WorkRecord is about that Visit and its Customer, whatever the audio says.
-export async function createWorkRecord(professionalId: string, transcript: string, visitId?: string) {
-  const visit = visitId ? await findVisit(professionalId, visitId) : undefined;
-  if (visitId && !visit) return undefined;
-  const text = transcript.trim();
+// Saved only once the Professional said where it goes: a Visit, a Customer, or a new Customer's name and WhatsApp.
+// The Visit comes only from that choice, never from the audio, so a rejected Visit is not used.
+export async function createWorkRecord(
+  professionalId: string,
+  transcript: string,
+  chosen: { visitId?: string; customerId?: string; customer?: string },
+) {
+  const visit = chosen.visitId ? await findVisit(professionalId, chosen.visitId) : undefined;
+  if (chosen.visitId && !visit) return { refused: 'visit_not_found' as const };
+  if (chosen.customerId && !(await findCustomer(professionalId, chosen.customerId))) {
+    return { refused: 'customer_not_found' as const };
+  }
+  const text = [transcript.trim(), chosen.customer?.trim()].filter(Boolean).join('\n');
   const extraction = await extract(professionalId, text);
-  const { cashReceived, paymentMethod, newCustomer, ...fields } = extraction;
-  const { customerId } = visit ? { customerId: visit.customer.id } : await resolveCustomer(professionalId, extraction);
+  const { cashReceived, paymentMethod, newCustomer, customerId: _, visitId: __, ...fields } = extraction;
+  const resolved = visit
+    ? { customerId: visit.customer.id, newCustomerName: null }
+    : chosen.customerId
+      ? { customerId: chosen.customerId, newCustomerName: null }
+      : await resolveCustomer(professionalId, extraction);
+  const { customerId } = resolved;
+  if (!customerId) return { refused: 'customer_unknown' as const, newCustomerName: resolved.newCustomerName };
   const [workRecord] = await db
     .insert(workRecords)
     .values({
       ...fields,
-      ...(visit && { visitId: visit.id }),
+      visitId: visit?.id ?? null,
       customerId,
-      jobId: visit ? visit.jobId : await jobFor(professionalId, { customerId, visitId: null, title: fields.title }),
+      jobId: visit ? visit.jobId : await openJob(professionalId, customerId, fields.title ?? 'Serviço'),
       professionalId,
       paymentMethod: paymentMethod ?? (await findPaymentMethods(professionalId)).default,
       cashReceived: paymentMethod === 'cash' ? cashReceived : null,
@@ -107,7 +121,7 @@ export async function createWorkRecord(professionalId: string, transcript: strin
     })
     .returning();
   await settleCash(workRecord!);
-  return viewWorkRecord(workRecord!);
+  return { workRecord: await viewWorkRecord(workRecord!) };
 }
 
 // A message completes or corrects the account: Claude reads it all again.
@@ -177,28 +191,6 @@ function merge(current: WorkRecord, extraction: Extraction) {
   };
 }
 
-export async function chooseCustomer(professionalId: string, id: string, customerId: string) {
-  const current = await findWorkRecord(professionalId, id);
-  if (!current) return { refused: 'work_record_not_found' as const };
-  if (!(await findCustomer(professionalId, customerId))) return { refused: 'customer_not_found' as const };
-  const sameCustomer = customerId === current.customerId;
-  const visitId = sameCustomer ? current.visitId : null;
-  const [workRecord] = await db
-    .update(workRecords)
-    .set({
-      customerId,
-      visitId,
-      jobId:
-        sameCustomer && current.jobId
-          ? current.jobId
-          : await jobFor(professionalId, { customerId, visitId, title: current.title }),
-    })
-    .where(eq(workRecords.id, id))
-    .returning();
-  await settleCash(workRecord!);
-  return { workRecord: await viewWorkRecord(workRecord!) };
-}
-
 // Cash already received becomes a paid Charge once the Customer and the amount are known; nothing goes to the Customer.
 // A Pix Charge not yet paid is cancelled, so it stops being reminded.
 async function settleCash(workRecord: WorkRecord) {
@@ -255,12 +247,11 @@ async function viewWorkRecord(workRecord: WorkRecord) {
     paymentMethod: workRecord.paymentMethod,
     paid: !!paidCharge,
     transcript: workRecord.transcript,
-    customerOptions: customer ? [] : await listCustomerOptions(workRecord.professionalId),
   };
 }
 
-// Who the service is most likely for: Customers with a recent Visit, then the newest Customers.
-async function listCustomerOptions(professionalId: string) {
+// Who an account without a Visit is most likely for: Customers with a recent Visit, then the newest Customers.
+export async function listCustomerOptions(professionalId: string) {
   const professional = await findProfessional(professionalId);
   const visited = (await listRecentVisits(professional)).map(({ customerId, customerName }) => ({
     id: customerId,

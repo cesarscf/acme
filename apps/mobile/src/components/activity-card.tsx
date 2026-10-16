@@ -8,11 +8,13 @@ import { Icon } from './icons';
 export function ActivityCard({
   customer,
   itemId,
+  jobId,
   text,
   at,
 }: {
   customer: { id: string; name: string };
   itemId: string;
+  jobId: string | null;
   text: string;
   at: Date;
 }) {
@@ -23,7 +25,12 @@ export function ActivityCard({
       style={{ borderCurve: 'continuous' }}
       accessibilityRole="button"
       accessibilityHint={`Abre a conversa do ${first} nessa mensagem`}
-      onPress={() => router.push({ pathname: '/customers/[id]', params: { id: customer.id, focus: itemId } })}
+      onPress={() =>
+        router.push({
+          pathname: '/customers/[id]',
+          params: { id: customer.id, focus: itemId, ...(jobId && { job: jobId }) },
+        })
+      }
     >
       <CustomerAvatar id={customer.id} name={customer.name} size={34} />
       <View className="min-w-0 flex-1">

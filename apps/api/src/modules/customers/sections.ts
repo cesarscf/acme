@@ -47,7 +47,7 @@ export async function listCustomerSections(professionalId: string, query = '', n
       ({ detail, visit }) =>
         daysAgo(visit.scheduledAt, timeZone, now) === 0 &&
         visit.status === 'scheduled' &&
-        !hasEnded(visit, now) &&
+        visit.scheduledAt > now &&
         !detail.workRecords.some(({ visitId }) => visitId === visit.id),
     );
     if (toAsk) unconfirmed.push({ visitId: toAsk.visit.id, name: customer.name, scheduledAt: toAsk.visit.scheduledAt });

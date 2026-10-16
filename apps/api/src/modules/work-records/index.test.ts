@@ -11,6 +11,7 @@ import { startFakeClaude } from '../conversations/fake-claude';
 import { createCustomer } from '../customers/service';
 import { startFakeOpenRouter } from '../transcription/fake-openrouter';
 import { createVisit } from '../visits/service';
+import { addMessage } from './service';
 
 const api = treaty(app);
 const claude = startFakeClaude();
@@ -114,7 +115,7 @@ test('the audio and the WorkRecord need the AI consent', async () => {
   expect(created.status).toBe(403);
 });
 
-test('"troquei o capacitor do João, 350 no Pix" is saved straight away with Customer, Visit, service, amount and Pix', async () => {
+test('"Outro cliente": the account is saved with the Customer Claude found, never on a Visit the Professional did not pick', async () => {
   const { professional, headers } = await professionalWith();
   await newCustomer(professional.id, 'Marta Lima');
   const joao = await newCustomer(professional.id, 'João Pereira');
@@ -149,10 +150,9 @@ test('"troquei o capacitor do João, 350 no Pix" is saved straight away with Cus
     paymentMethod: 'pix',
     paid: false,
     transcript: 'Troquei o capacitor do João, 350 no Pix.',
-    customerOptions: [],
   });
   const [saved] = await db.select().from(workRecords).where(eq(workRecords.id, data!.id));
-  expect(saved!.visitId).toBe(visit.id);
+  expect(saved).toMatchObject({ visitId: null, jobId: visit.jobId });
   const request = claude.requests.at(-1)!;
   expect(userContent(request)).toContain('<relato>Troquei o capacitor do João, 350 no Pix.</relato>');
   expect(userContent(request)).toContain('Formas aceitas: pix (Pix), cash (dinheiro)');
@@ -164,15 +164,18 @@ test("what Claude cannot back up stays blank, and the PaymentMethod falls back t
   const { professional, headers } = await professionalWith({
     paymentMethods: { accepted: ['pix', 'cash'], default: 'cash' },
   });
-  await newCustomer(professional.id, 'João Pereira');
+  const joao = await newCustomer(professional.id, 'João Pereira');
   claude.reply(
     filled({ customer: 'C99', visit: 'V7', description: ' Limpeza do split ', materials: '', amountCents: -10 }),
   );
 
-  const { data } = await api['work-records'].post({ transcript: 'Limpei o split do Carlos.' }, { headers });
+  const { data } = await api['work-records'].post(
+    { transcript: 'Limpei o split do Carlos.', customerId: joao.id },
+    { headers },
+  );
 
   expect(data).toMatchObject({
-    customer: null,
+    customer: { id: joao.id },
     title: null,
     description: 'Limpeza do split',
     materials: null,
@@ -207,53 +210,57 @@ test('cash already received makes a paid Charge and sends nothing to the Custome
   expect(await db.select().from(whatsappMessages).where(eq(whatsappMessages.waId, joao.phoneNumber))).toEqual([]);
 });
 
-test('without a Customer the thread offers the likely ones, and picking one completes it, paid Charge included', async () => {
+test('"Outro cliente" saves nothing until the Customer is known; picking one from the list saves it there', async () => {
   const { professional, headers } = await professionalWith();
   const other = await signInNewProfessional();
   const stranger = await newCustomer(other.professional.id, 'Outro');
   const joao = await newCustomer(professional.id, 'João Pereira');
-  const marta = await newCustomer(professional.id, 'Marta Lima');
-  await createVisit(professional.id, joao.id, { scheduledAt: new Date(), durationMinutes: 60 });
   claude.reply(filled({ title: 'Limpeza de split', amountCents: 20000, paymentMethod: 'cash', cashReceived: true }));
 
-  const { data: created } = await api['work-records'].post(
+  const unknown = await api['work-records'].post(
     { transcript: 'Limpei o split, recebi 200 em dinheiro.' },
     { headers },
   );
-  const strangers = await api['work-records']({ id: created!.id }).patch({ customerId: stranger.id }, { headers });
-  const { data: chosen } = await api['work-records']({ id: created!.id }).patch({ customerId: joao.id }, { headers });
-
-  expect(created).toMatchObject({ customer: null, paid: false });
-  expect(created!.customerOptions).toEqual([
-    { id: joao.id, name: 'João Pereira' },
-    { id: marta.id, name: 'Marta Lima' },
-  ]);
-  expect(strangers.status).toBe(404);
-  expect(chosen).toMatchObject({ customer: { id: joao.id }, paid: true, customerOptions: [] });
-});
-
-test('a message in the thread is read with the whole account and completes what was missing', async () => {
-  const { professional, headers } = await professionalWith();
-  const joao = await newCustomer(professional.id, 'João Pereira');
-  claude.reply(filled({ title: 'Limpeza de split', amountCents: 35000, paymentMethod: 'pix' }));
-  const { data: created } = await api['work-records'].post({ transcript: 'Limpei o split, 350 no Pix.' }, { headers });
-  claude.reply((request) => filled({ customer: refOf(request, 'João Pereira'), title: 'Limpeza completa de split' }));
-
-  const { data, status } = await api['work-records']({ id: created!.id }).messages.post(
-    { text: 'Foi na casa do João.' },
+  const strangers = await api['work-records'].post(
+    { transcript: 'Limpei o split, recebi 200 em dinheiro.', customerId: stranger.id },
+    { headers },
+  );
+  claude.reply(filled({ title: 'Limpeza de split', amountCents: 20000, paymentMethod: 'cash', cashReceived: true }));
+  const { data: chosen } = await api['work-records'].post(
+    { transcript: 'Limpei o split, recebi 200 em dinheiro.', customerId: joao.id },
     { headers },
   );
 
-  expect(status).toBe(200);
-  expect(userContent(claude.requests.at(-1)!)).toContain(
-    '<relato>Limpei o split, 350 no Pix.\nFoi na casa do João.</relato>',
+  expect(unknown.error?.status === 409 && unknown.error.value).toEqual({ newCustomerName: null });
+  expect(strangers.status).toBe(404);
+  expect(chosen).toMatchObject({ customer: { id: joao.id }, paid: true });
+  const saved = await db.select().from(workRecords).where(eq(workRecords.professionalId, professional.id));
+  expect(saved).toHaveLength(1);
+});
+
+test('a correction is read with the whole account and completes what was missing, keeping the Customer', async () => {
+  const { professional, headers } = await professionalWith();
+  const joao = await newCustomer(professional.id, 'João Pereira');
+  await newCustomer(professional.id, 'Marta Lima');
+  claude.reply(filled({ title: 'Limpeza de split' }));
+  const { data: created } = await api['work-records'].post(
+    { transcript: 'Limpei o split.', customerId: joao.id },
+    { headers },
   );
-  expect(data).toMatchObject({
+  claude.reply((request) =>
+    filled({ customer: refOf(request, 'Marta Lima'), title: 'Limpeza completa de split', amountCents: 35000 }),
+  );
+
+  const corrected = await addMessage(professional.id, created!.id, 'A Marta indicou, ficou 350 no Pix.');
+
+  expect(userContent(claude.requests.at(-1)!)).toContain(
+    '<relato>Limpei o split.\nA Marta indicou, ficou 350 no Pix.</relato>',
+  );
+  expect(corrected).toMatchObject({
     customer: { id: joao.id },
     title: 'Limpeza completa de split',
     amountCents: 35000,
-    paymentMethod: 'pix',
-    transcript: 'Limpei o split, 350 no Pix.\nFoi na casa do João.',
+    transcript: 'Limpei o split.\nA Marta indicou, ficou 350 no Pix.',
   });
 });
 
@@ -269,32 +276,37 @@ test('a Customer named in the audio who is not a Customer yet is created with th
 
   const saved = await db.select().from(customers).where(eq(customers.professionalId, professional.id));
   expect(saved).toEqual([expect.objectContaining({ name: 'Carlos Souza', phoneNumber: `55${phoneNumber}` })]);
-  expect(data).toMatchObject({ customer: { id: saved[0]!.id, name: 'Carlos Souza' }, customerOptions: [] });
+  expect(data).toMatchObject({ customer: { id: saved[0]!.id, name: 'Carlos Souza' } });
 });
 
-test('a new Customer named in the thread is asked for the WhatsApp, then created and linked', async () => {
+test('a new Customer named for "Outro cliente" is asked for the WhatsApp, then created and linked', async () => {
   const { professional, headers } = await professionalWith();
   const joao = await newCustomer(professional.id, 'João Pereira');
   const phoneNumber = `119${String(randomInt(1e8)).padStart(8, '0')}`;
-  claude.reply(filled({ title: 'Limpeza de split' }));
-  const { data: created } = await api['work-records'].post({ transcript: 'Limpei o split.' }, { headers });
-  const thread = api['work-records']({ id: created!.id }).messages;
+  claude.reply(filled({ title: 'Limpeza de split', newCustomer: { name: 'Carlos Souza', phoneNumber: null } }));
 
-  claude.reply(filled({ newCustomer: { name: 'Carlos Souza', phoneNumber: null } }));
-  const { data: named } = await thread.post({ text: 'Foi do Carlos Souza.' }, { headers });
+  const named = await api['work-records'].post(
+    { transcript: 'Limpei o split.', customer: 'Foi do Carlos Souza.' },
+    { headers },
+  );
   claude.reply(
     filled({
+      title: 'Limpeza de split',
       newCustomer: { name: 'Carlos Souza', phoneNumber: `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2)}` },
     }),
   );
-  const { data: linked } = await thread.post({ text: phoneNumber }, { headers });
+  const { data: linked } = await api['work-records'].post(
+    { transcript: 'Limpei o split.', customer: `Foi do Carlos Souza. ${phoneNumber}` },
+    { headers },
+  );
 
-  expect(named).toMatchObject({ customer: null, newCustomerName: 'Carlos Souza' });
+  expect(named.error?.status === 409 && named.error.value).toEqual({ newCustomerName: 'Carlos Souza' });
   const saved = await db.select().from(customers).where(eq(customers.professionalId, professional.id));
   expect(saved.map(({ name }) => name).sort()).toEqual(['Carlos Souza', joao.name]);
   const carlos = saved.find(({ name }) => name === 'Carlos Souza')!;
   expect(carlos.phoneNumber).toBe(`55${phoneNumber}`);
-  expect(linked).toMatchObject({ customer: { id: carlos.id }, newCustomerName: null, title: 'Limpeza de split' });
+  expect(linked).toMatchObject({ customer: { id: carlos.id }, title: 'Limpeza de split' });
+  expect(await db.select().from(workRecords).where(eq(workRecords.professionalId, professional.id))).toHaveLength(1);
 });
 
 test('a WhatsApp that is already a Customer links that Customer instead of creating another', async () => {
@@ -345,10 +357,7 @@ test('cash received after the Pix went out settles the service: a paid cash Char
     filled({ customer: refOf(request, 'João Pereira'), paymentMethod: 'cash', cashReceived: true }),
   );
 
-  const { data } = await api['work-records']({ id: created!.id }).messages.post(
-    { text: 'Ele acabou me pagando em dinheiro.' },
-    { headers },
-  );
+  const data = await addMessage(professional.id, created!.id, 'Ele acabou me pagando em dinheiro.');
 
   expect(data).toMatchObject({ paid: true });
   const saved = await db.select().from(charges).where(eq(charges.workRecordId, created!.id));
@@ -376,12 +385,9 @@ test('a corrected amount reaches the Pix Charge not yet paid, and never a paid o
   const paid = await pixChargeFor(await savedWorkRecord(created[1]!.id), 'paid');
 
   claude.reply(filled({ amountCents: 40000 }));
-  const { data } = await api['work-records']({ id: created[0]!.id }).messages.post(
-    { text: 'Na verdade foram 400.' },
-    { headers },
-  );
+  const data = await addMessage(professional.id, created[0]!.id, 'Na verdade foram 400.');
   claude.reply(filled({ amountCents: 40000 }));
-  await api['work-records']({ id: created[1]!.id }).messages.post({ text: 'Na verdade foram 400.' }, { headers });
+  await addMessage(professional.id, created[1]!.id, 'Na verdade foram 400.');
 
   expect(data).toMatchObject({ amountCents: 40000 });
   const [pendingNow] = await db.select().from(charges).where(eq(charges.id, pending.id));
@@ -390,7 +396,7 @@ test('a corrected amount reaches the Pix Charge not yet paid, and never a paid o
   expect(paidNow!.amountCents).toBe(35000);
 });
 
-test('a later message does not replace the Customer of a WorkRecord registered from a Visit', async () => {
+test('a later correction does not replace the Customer or the Visit of a WorkRecord registered from a Visit', async () => {
   const { professional, headers } = await professionalWith();
   const joao = await newCustomer(professional.id, 'João Pereira');
   await newCustomer(professional.id, 'Marta Lima');
@@ -405,10 +411,7 @@ test('a later message does not replace the Customer of a WorkRecord registered f
   );
   claude.reply((request) => filled({ customer: refOf(request, 'Marta Lima'), amountCents: 35000 }));
 
-  const { data } = await api['work-records']({ id: created!.id }).messages.post(
-    { text: 'A Marta indicou, foram 350.' },
-    { headers },
-  );
+  const data = await addMessage(professional.id, created!.id, 'A Marta indicou, foram 350.');
 
   expect(data).toMatchObject({ customer: { id: joao.id }, amountCents: 35000 });
   expect((await savedWorkRecord(created!.id)).visitId).toBe(visit.id);

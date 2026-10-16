@@ -195,7 +195,14 @@ function Chat({
           ) : item.type === 'agenda' ? (
             <AgendaCard key={item.id} agenda={item} />
           ) : item.type === 'activity' ? (
-            <ActivityCard key={item.id} customer={item.customer} itemId={item.itemId} text={item.text} at={item.at} />
+            <ActivityCard
+              key={item.id}
+              customer={item.customer}
+              itemId={item.itemId}
+              jobId={item.jobId}
+              text={item.text}
+              at={item.at}
+            />
           ) : item.type === 'suggestion' ? (
             <SuggestionCard
               key={`suggestion-${item.id}`}

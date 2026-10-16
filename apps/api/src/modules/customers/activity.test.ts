@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { randomInt } from 'node:crypto';
+import { db, jobs } from '@acme/db';
 import { createApp as createEmulator } from '@acme/meta-emulator/app';
 import { treaty } from '@elysia/eden';
+import { eq } from 'drizzle-orm';
 import { app } from '../../app';
 import { signInNewProfessional } from '../auth/test-auth';
 import { startFakeClaude } from '../conversations/fake-claude';
+import { concludeJob, openJob } from '../jobs/service';
 import { addDays, localDate } from '../time/time';
 import { createVisit, ensureVisitConfirmationTemplate, requestDueVisitConfirmations } from '../visits/service';
 import { createCustomer } from './service';
@@ -65,6 +68,7 @@ test("the Lia's message in João's thread shows in her chat as an activity card 
       type: 'activity',
       customer: { id: joao.id, name: 'João Pereira' },
       itemId: message.id,
+      jobId: null,
       text: liaAsks,
       at: expect.any(Date),
     },
@@ -94,4 +98,26 @@ test("a Routine's notice about João shows in his thread and as an activity card
       customer: expect.objectContaining({ id: joao.id }),
     }),
   ]);
+});
+
+test("a message of a Job concluded since links to that Job's card in the thread", async () => {
+  const { professional, headers, joao, chat, thread } = await liaAndJoao();
+  const jobId = await openJob(professional.id, joao.id, 'Ar da sala não gela');
+  claude.reply({ content: [{ type: 'text', text: liaAsks }] });
+  await drain(
+    api.customers({ id: joao.id }).messages.post({ text: 'Como ficou a visita?', role: 'scheduling' }, { headers }),
+  );
+
+  await concludeJob(jobId);
+  // Concluded yesterday: a Job concluded today stays pinned until the day ends.
+  await db
+    .update(jobs)
+    .set({ closedAt: new Date(Date.now() - 86_400_000) })
+    .where(eq(jobs.id, jobId));
+
+  const [card] = await chat();
+  expect(card).toMatchObject({ type: 'activity', jobId });
+  const items = await thread();
+  expect(items.some((item) => item.id === (card as { itemId: string }).itemId)).toBe(false);
+  expect(items.some((item) => item.id === `past_job:${jobId}`)).toBe(true);
 });

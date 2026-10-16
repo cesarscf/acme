@@ -18,7 +18,15 @@ export type ConversationItem =
   | { id: string; type: 'assistant'; text: string }
   | { id: string; type: 'notice'; text: string }
   | ({ id: string; type: 'agenda' } & Awaited<ReturnType<typeof agendaCard>>)
-  | { id: string; type: 'activity'; customer: { id: string; name: string }; itemId: string; text: string; at: Date }
+  | {
+      id: string;
+      type: 'activity';
+      customer: { id: string; name: string };
+      itemId: string;
+      jobId: string | null;
+      text: string;
+      at: Date;
+    }
   | { id: string; type: 'handoff'; role: AssistantRole; text: string }
   | ({ id: string; type: 'confirmation'; status: 'pending' | 'confirmed' | 'cancelled' } & ConfirmationCard)
   | {

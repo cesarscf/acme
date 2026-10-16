@@ -10,6 +10,7 @@
     "check-types": "tsc",
     "test": "bun --env-file=../../.env test",
     "test:claude": "CLAUDE_LIVE=1 bun --env-file=../../.env test src/modules/conversations/claude.live.test.ts",
+    "seed:customer-thread": "bun --env-file=../../.env src/scripts/seed-customer-thread.ts",
     "evals": "bun --env-file=../../.env test --concurrent --max-concurrency=5 --timeout=180000 ./src/modules/*/*.eval.ts"
   },
   "dependencies": {

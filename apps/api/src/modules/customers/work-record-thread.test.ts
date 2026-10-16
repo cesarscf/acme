@@ -121,7 +121,7 @@ test('a service registered with an amount lands in the Customer thread, with the
   expect(data!.items[card]).toMatchObject({ label: 'Serviço registrado' });
   expect(data!.items[card + 1]).toMatchObject({
     type: 'assistant',
-    text: 'Registrei o serviço do João. Escolha o que a equipe faz agora:',
+    text: 'Registrei o serviço de João. Escolha o que a equipe faz agora:',
     assistant: { id: billingAssistant.id },
   });
   expect(data!.actions).toContainEqual({ key: 'charge', label: 'Cobrar no Pix', role: 'billing', done: false });
@@ -137,7 +137,7 @@ test('a visit registered without an amount asks how much the service was, and of
   expect(data!.items[card]).toMatchObject({ label: 'Visita registrada' });
   expect(data!.items[card + 1]).toMatchObject({
     type: 'assistant',
-    text: 'Registrei a visita do João. Se já fez o serviço, quanto ficou? Me diga aqui embaixo.',
+    text: 'Registrei a visita de João. Se já fez o serviço, quanto ficou? Me diga aqui embaixo.',
   });
   expect(data!.actions).toEqual([]);
 });

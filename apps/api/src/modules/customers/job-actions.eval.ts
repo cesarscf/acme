@@ -50,12 +50,12 @@ describe('the actions above the Customer thread', () => {
     expect(turn.end).toEqual({ type: 'awaiting_confirmation' });
   });
 
-  test('"Lembrar o João" makes the Olga send the Quote again', async () => {
+  test('"Lembrar do orçamento" makes the Olga send the Quote again', async () => {
     const { professionalId, joao, visit, quote } = await joaosJob();
     await visit(at(-1, '09:00'), new Date(Date.now() - 2 * 86_400_000));
     const sent = await quote('sent');
 
-    const turn = await sayInThread(professionalId, joao.id, 'Lembrar o João', 'quotes');
+    const turn = await sayInThread(professionalId, joao.id, 'Lembrar do orçamento', 'quotes');
 
     expect(turn.calls).toContainEqual(called('sendQuote', { quoteId: sent.id }));
     expect(turn.end).toEqual({ type: 'awaiting_confirmation' });

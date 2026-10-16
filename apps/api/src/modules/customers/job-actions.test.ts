@@ -99,14 +99,14 @@ test('Pedir confirmação is checked once asked, and gone once the Customer conf
   expect(keys((await job.thread()).actions)).toEqual(['record', 'quote', 'reschedule']);
 });
 
-test('a Quote sent offers Lembrar o João', async () => {
+test('a Quote sent offers Lembrar do orçamento', async () => {
   const job = await joaosJob();
   await visit(job, at(-1, '09:00'));
   await service(job).then(({ id }) => db.update(workRecords).set({ amountCents: null }).where(eq(workRecords.id, id)));
   await quote(job, 'sent');
 
   expect((await job.thread()).actions).toEqual([
-    { key: 'remind_quote', label: 'Lembrar o João', role: 'quotes', done: false },
+    { key: 'remind_quote', label: 'Lembrar do orçamento', role: 'quotes', done: false },
   ]);
 });
 
@@ -133,7 +133,7 @@ test('a Quote approved makes the Lia ask to book the execution in the first free
   expect(actions).toEqual([]);
   expect(items.at(-1)).toMatchObject({
     type: 'question',
-    text: 'Quer que eu marque a execução com o João? Estes horários estão livres:',
+    text: 'Quer que eu marque a execução com João? Estes horários estão livres:',
     assistant: { name: 'Lia' },
     role: 'scheduling',
     options: [

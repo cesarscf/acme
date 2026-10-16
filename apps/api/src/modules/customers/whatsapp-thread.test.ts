@@ -120,7 +120,7 @@ test('what was sent to the Customer shows on the right with its buttons, and wha
   await tap(phoneNumber, 0);
   await write(phoneNumber, 'Paguei agora, confere aí');
 
-  const sent = { direction: 'outbound', label: 'Enviado ao João no WhatsApp' };
+  const sent = { direction: 'outbound', label: 'Enviado a João no WhatsApp' };
   const answered = { direction: 'inbound', label: 'João no WhatsApp', buttons: [] };
   expect(await whatsappIn(joao)).toMatchObject([
     { ...sent, text: expect.stringContaining('Podemos confirmar?'), buttons: ['Confirmar', 'Remarcar'] },

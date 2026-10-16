@@ -25,7 +25,7 @@ export function ActivityCard({
       className="flex-row items-center gap-2.5 rounded-2xl border border-border bg-card px-3 py-2.5 active:bg-secondary"
       style={{ borderCurve: 'continuous' }}
       accessibilityRole="button"
-      accessibilityHint={`Abre a conversa do ${first} nessa mensagem`}
+      accessibilityHint={`Abre a conversa de ${first} nessa mensagem`}
       onPress={() =>
         router.push({
           pathname: '/customers/[id]',
@@ -41,7 +41,7 @@ export function ActivityCard({
         <Text numberOfLines={2} className="mt-0.5 font-normal text-foreground text-sm leading-5">
           {text}
         </Text>
-        <Text className="mt-1 font-bold text-[12.5px] text-primary">Ver na conversa do {first}</Text>
+        <Text className="mt-1 font-bold text-[12.5px] text-primary">Ver na conversa de {first}</Text>
       </View>
       <Icon name="chevronRight" size={16} color="--color-muted-foreground" />
     </Pressable>

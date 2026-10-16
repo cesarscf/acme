@@ -103,13 +103,13 @@ test('the "Para confirmar: cobrar no Pix" card is as in the prototype', () => {
       { label: 'Serviço', value: 'Limpeza de split + troca de capacitor' },
       { label: 'Valor', value: expect.stringMatching(/^R\$\s350,00$/) },
       { label: 'Forma', value: 'Pix (link e QR Code)' },
-      { label: 'Envio', value: 'WhatsApp do João' },
+      { label: 'Envio', value: 'WhatsApp de João' },
     ],
     notices: [
-      'Nada é enviado ao João agora.',
-      'Depois que você confirmar, ele recebe o link do Pix no WhatsApp e eu aviso quando o dinheiro cair.',
+      'Nada é enviado a João agora.',
+      'Depois que você confirmar, João recebe o link do Pix no WhatsApp e eu aviso quando o dinheiro cair.',
     ],
-    question: expect.stringMatching(/^Confirma: cobrar R\$\s350 do João\?$/),
+    question: expect.stringMatching(/^Confirma: cobrar R\$\s350 de João\?$/),
   });
 });
 

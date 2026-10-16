@@ -9,7 +9,7 @@ export function toPhoneNumber(typed: string) {
   if (national.length === 10 || national.length === 11) return `55${national}`;
 }
 
-// "João" for "João Pereira", as the Assistants call the Customer in the app.
+// "João" for "João Pereira"; texts put no article before it, since the app does not know the Customer's gender.
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0]!;
 }

@@ -204,7 +204,7 @@ function TranscriptLines({ lines }: { lines: string[] }) {
   ));
 }
 
-// "Pelo que você contou, é do João Pereira?": the suggested Visit, the others that can be told, or another Customer.
+// "Pelo que você contou, é de João Pereira?": the suggested Visit, the others that can be told, or another Customer.
 function VisitQuestion({
   match,
   onPick,

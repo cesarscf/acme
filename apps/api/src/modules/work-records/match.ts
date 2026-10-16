@@ -121,7 +121,7 @@ export async function matchVisit(
       ? {
           visitId: suggested.id,
           customerName: suggested.customerName,
-          question: `Pelo que você contou, é do ${suggested.customerName}?`,
+          question: `Pelo que você contou, é de ${suggested.customerName}?`,
           detail: `Vai para a visita de ${when(suggested.scheduledAt, professional.timezone)} · ${suggested.title}`,
         }
       : null,

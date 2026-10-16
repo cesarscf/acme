@@ -192,13 +192,13 @@ export function chargeCard({
       { label: 'Serviço', value: service },
       { label: 'Valor', value: formatMoney(amountCents) },
       { label: 'Forma', value: 'Pix (link e QR Code)' },
-      { label: 'Envio', value: `WhatsApp do ${first}` },
+      { label: 'Envio', value: `WhatsApp de ${first}` },
     ],
     notices: [
-      `Nada é enviado ao ${first} agora.`,
-      'Depois que você confirmar, ele recebe o link do Pix no WhatsApp e eu aviso quando o dinheiro cair.',
+      `Nada é enviado a ${first} agora.`,
+      `Depois que você confirmar, ${first} recebe o link do Pix no WhatsApp e eu aviso quando o dinheiro cair.`,
     ],
-    question: `Confirma: cobrar ${formatWholeMoney(amountCents)} do ${first}?`,
+    question: `Confirma: cobrar ${formatWholeMoney(amountCents)} de ${first}?`,
   };
 }
 

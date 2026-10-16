@@ -68,7 +68,7 @@ test("Claude suggests today's Visit that fits what was said, even before it ends
     suggested: {
       visitId: joaosVisit.id,
       customerName: 'João Pereira',
-      question: 'Pelo que você contou, é do João Pereira?',
+      question: 'Pelo que você contou, é de João Pereira?',
       detail: 'Vai para a visita de hoje, 08:00 · Ar da sala não gela',
     },
     others: [{ visitId: martasVisit.id, customerName: 'Marta Lima', detail: 'Limpeza de split · hoje, 23:00' }],
@@ -137,7 +137,7 @@ test('from a Visit (the Lia asking, or "Contar como foi") that Visit is suggeste
   expect(claude.requests.length).toBe(requests);
   expect(data!.suggested).toMatchObject({
     visitId: joaosVisit.id,
-    question: 'Pelo que você contou, é do João Pereira?',
+    question: 'Pelo que você contou, é de João Pereira?',
   });
 });
 

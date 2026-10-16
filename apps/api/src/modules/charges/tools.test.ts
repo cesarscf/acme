@@ -89,7 +89,7 @@ test('sendCharge shows the prototype card and, once run, sends the Pix to the Cu
 
   expect(card).toMatchObject({
     title: 'Para confirmar: cobrar no Pix',
-    question: expect.stringMatching(/^Confirma: cobrar R\$\s350 do João\?$/),
+    question: expect.stringMatching(/^Confirma: cobrar R\$\s350 de João\?$/),
   });
   expect(sent).toEqual({ text: 'Pix enviado para João Pereira no WhatsApp.', isError: false });
   expect(await listMessages({ phoneNumberId: platformNumber, waId: joao.phoneNumber })).toEqual([

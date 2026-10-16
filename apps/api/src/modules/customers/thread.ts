@@ -103,18 +103,18 @@ export async function getCustomerThread(professionalId: string, customerId: stri
         }
       : null,
     items: withDays(items, timeZone, now),
-    actions: current?.job.status === 'open' ? jobActions(current, customer.name, team, messages) : [],
+    actions: current?.job.status === 'open' ? jobActions(current, team, messages) : [],
   };
 }
 
 // The Job's next steps for where it stands, each done by the Assistant of its Role, as in the prototype.
-function jobActions(detail: JobDetail, customerName: string, team: Team, messages: WhatsappMessage[]): Action[] {
-  return stepActions(detail, customerName, messages).filter(
+function jobActions(detail: JobDetail, team: Team, messages: WhatsappMessage[]): Action[] {
+  return stepActions(detail, messages).filter(
     ({ role }) => role === null || team.some((assistant) => assistant.role === role),
   );
 }
 
-function stepActions(detail: JobDetail, customerName: string, messages: WhatsappMessage[]): Action[] {
+function stepActions(detail: JobDetail, messages: WhatsappMessage[]): Action[] {
   const { quote, sentPix, service, executionBooked, recorded } = facts(detail);
   const sends = (originId: string) =>
     messages.filter((message) => message.direction === 'outbound' && message.originId === originId).length;
@@ -136,7 +136,7 @@ function stepActions(detail: JobDetail, customerName: string, messages: Whatsapp
   if (quote?.status === 'approved' && !executionBooked) return [];
   if (quote?.status === 'sent') {
     const reminded = !!quote.followedUpAt || sends(quote.id) > 1;
-    return [{ key: 'remind_quote', label: `Lembrar o ${firstName(customerName)}`, role: 'quotes', done: reminded }];
+    return [{ key: 'remind_quote', label: 'Lembrar do orçamento', role: 'quotes', done: reminded }];
   }
   if (!lastVisit || (recorded && !executionBooked)) return [];
   const actions: Action[] = [
@@ -165,7 +165,7 @@ async function executionQuestion(
     type: 'question',
     id: `execution_question:${quote.id}`,
     at: quote.updatedAt,
-    text: `Quer que eu marque a execução com o ${firstName(customerName)}? Estes horários estão livres:`,
+    text: `Quer que eu marque a execução com ${firstName(customerName)}? Estes horários estão livres:`,
     assistant,
     role: 'scheduling',
     options: [
@@ -262,8 +262,8 @@ function jobItems(
         id: `work_record_reply:${workRecord.id}`,
         at: workRecord.createdAt,
         text: service
-          ? `Registrei o serviço do ${first}. Escolha o que a equipe faz agora:`
-          : `Registrei a visita do ${first}. Se já fez o serviço, quanto ficou? Me diga aqui embaixo.`,
+          ? `Registrei o serviço de ${first}. Escolha o que a equipe faz agora:`
+          : `Registrei a visita de ${first}. Se já fez o serviço, quanto ficou? Me diga aqui embaixo.`,
         assistant: speaker(billing),
       });
     }
@@ -362,7 +362,7 @@ function whatsappItems(
       id: `whatsapp:${message.id}`,
       at,
       direction: message.direction,
-      label: outbound ? `Enviado ao ${first} no WhatsApp` : `${first} no WhatsApp`,
+      label: outbound ? `Enviado a ${first} no WhatsApp` : `${first} no WhatsApp`,
       text,
       buttons,
     });
